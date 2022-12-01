@@ -1,2 +1,6 @@
 Buena documentación de kafka
 https://medium.com/@mcortegana93/introducci%C3%B3n-a-apache-kafka-b67cd7b92ebd
+
+
+kRAFT
+https://developer.confluent.io/learn/kraft/
