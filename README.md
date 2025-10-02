@@ -1,7 +1,7 @@
 # Repositorio Big Data
 
 Bienvenido al repositorio oficial de materiales de **Big Data** creado y mantenido por  
-**David Granados Zafra**, profesor de **Sistemas y Aplicaciones Informáticas** en el [IES San Vicente](https://iessanvicente.es).
+**David Granados Zafra**, profesor de **Sistemas y Aplicaciones Informáticas** en el [IES San Vicente](https://iessanvicente.com).
 
 
 ## Objetivo del repositorio
