@@ -1,0 +1,23 @@
+[
+  {
+    "id": 1,
+    "name": "Laptop",
+    "description": "Un portátil de alto rendimiento",
+    "price": 1299.99,
+    "tax": 129.99
+  },
+  {
+    "id": 2,
+    "name": "Teclado Mecánico",
+    "description": "Teclado con switches Cherry MX Red",
+    "price": 150.0,
+    "tax": 31.5
+  },
+  {
+    "id": 3,
+    "name": "Monitor Ultrawide",
+    "description": null,
+    "price": 499.50,
+    "tax": 104.89
+  }
+]
