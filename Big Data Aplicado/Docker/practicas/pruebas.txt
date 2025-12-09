@@ -1,0 +1,30 @@
+docker run --name postgres-david \
+  -e POSTGRES_USER=david \
+  -e POSTGRES_PASSWORD=david \
+  -e POSTGRES_DB=david \
+  -p 5432:5432 \
+  -d postgres:latest
+
+
+  Base de datos.
+
+
+  -- 1. Crear la tabla 'clientes'
+CREATE TABLE IF NOT EXISTS clientes (
+    id SERIAL PRIMARY KEY,
+    nombre VARCHAR(100) NOT NULL,
+    email VARCHAR(100) UNIQUE NOT NULL,
+    telefono VARCHAR(20),
+    ciudad VARCHAR(50),
+    fecha_registro TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 2. Insertar algunos datos falsos (Dummy Data)
+INSERT INTO clientes (nombre, email, telefono, ciudad) VALUES
+('Ana García', 'ana.garcia@email.com', '600123456', 'Madrid'),
+('Carlos López', 'carlos.lopez@email.com', '600987654', 'Barcelona'),
+('Lucía Mendez', 'lucia.mendez@email.com', '600555444', 'Valencia'),
+('David Granados', 'david.granados@email.com', '600111222', 'Alicante');
+
+-- 3. Confirmar que los datos se han guardado
+SELECT * FROM clientes;
