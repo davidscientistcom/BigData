@@ -1,0 +1,259 @@
+<!doctype html>
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+    <title>SQLAlchemy - Bonus Track: Relaciones y Performance</title>
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/5.0.4/reset.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/5.0.4/reveal.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/5.0.4/theme/dracula.min.css" id="theme">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+
+    <style>
+        :root {
+            --neon-green: #39ff14;
+            --neon-blue: #04d9ff;
+            --neon-purple: #bd93f9;
+            --neon-pink: #ff79c6;
+            --db-red: #ff5555;
+            --db-orange: #ffb86c;
+        }
+
+        .reveal {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 30px;
+        }
+
+        .reveal h1, .reveal h2, .reveal h3, .reveal h4 {
+            text-transform: none;
+            font-family: 'Montserrat', sans-serif;
+        }
+
+        .reveal h1 { color: var(--neon-pink); text-shadow: 0 0 10px rgba(255, 121, 198, 0.5); }
+        .accent { color: var(--neon-blue); font-weight: bold; }
+        .concept { color: var(--neon-green); font-weight: bold; }
+        .danger { color: var(--db-red); font-weight: bold; }
+        
+        .reveal pre {
+            box-shadow: 0 0 20px rgba(0,0,0,0.6);
+            border-radius: 8px;
+            width: 92%;
+            margin: 20px auto;
+            border: 1px solid #44475a;
+        }
+        .reveal pre code {
+            padding: 15px;
+            font-family: 'Fira Code', 'Consolas', monospace;
+            font-size: 0.85em;
+            line-height: 1.35;
+            max-height: 520px;
+        }
+
+        /* Visualización N+1 */
+        .n-plus-one-container {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 20px;
+            font-family: monospace;
+            font-size: 0.7em;
+        }
+        .query-bar {
+            padding: 8px;
+            border-radius: 4px;
+            color: white;
+            text-align: left;
+            position: relative;
+        }
+        .q-main { background: var(--neon-blue); width: 100%; }
+        .q-sub { background: var(--db-red); width: 80%; margin-left: 20px; opacity: 0.8; }
+        
+        /* Comparativa de estrategias */
+        .strategy-box {
+            border: 1px solid white;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 8px;
+            text-align: left;
+        }
+        .strat-title { font-weight: bold; font-size: 1.1em; margin-bottom: 5px; display: block;}
+        
+    </style>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+<div class="reveal">
+    <div class="slides">
+
+        <section data-background-gradient="linear-gradient(to bottom right, #1a1c2c, #4a1c40)">
+            <h1>Bonus Track</h1>
+            <h3>Relaciones y el Problema N+1</h3>
+            <p><small>Optimización de Consultas en SQLAlchemy</small></p>
+            <div style="font-size: 3em; margin-top: 20px;">🕸️ 🚀 📉</div>
+        </section>
+
+        <section>
+            <h2>Modelado de Relaciones</h2>
+            <p>Usamos <code>relationship()</code> para la navegación en Python.</p>
+            
+            <pre><code class="language-python" data-trim data-noescape>
+from sqlalchemy.orm import relationship
+from typing import List
+
+class User(Base):
+    __tablename__ = "usuario"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    
+    # Navegación: User -> muchos Posts
+    # "posts" no es una columna real en la tabla usuario.
+    # Es una abstracción del ORM.
+    posts: Mapped[List["Post"]] = relationship(back_populates="user")
+
+class Post(Base):
+    __tablename__ = "post"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("usuario.id"))
+    
+    # Navegación: Post -> un User
+    user: Mapped["User"] = relationship(back_populates="posts")
+            </code></pre>
+            <small class="fragment" style="color: var(--neon-blue);">Nota: `ForeignKey` define la constraint SQL. `relationship` define la ruta del grafo de objetos.</small>
+        </section>
+
+        <section>
+            <h3 class="danger">El Problema N+1</h3>
+            <p>El error más común de rendimiento en ORMs.</p>
+            <p>Ocurre por el <strong>Lazy Loading</strong> (Carga Perezosa) por defecto.</p>
+
+            <pre><code class="language-python" data-trim data-noescape>
+# 1. Traemos TODOS los usuarios (1 Consulta)
+users = session.scalars(select(User)).all() 
+
+for user in users:
+    # 2. Accedemos a .posts dentro del bucle
+    # ¡ALERTA! Esto dispara una consulta SQL EXTRA por cada usuario.
+    print(user.posts)
+            </code></pre>
+            
+            <div class="n-plus-one-container fragment">
+                <div class="query-bar q-main">SELECT * FROM usuario (1 query)</div>
+                <div class="query-bar q-sub">SELECT * FROM post WHERE user_id = 1</div>
+                <div class="query-bar q-sub">SELECT * FROM post WHERE user_id = 2</div>
+                <div class="query-bar q-sub">SELECT * FROM post WHERE user_id = ... N</div>
+            </div>
+        </section>
+
+        <section>
+            <h2>La Solución: <span class="concept">Eager Loading</span></h2>
+            <p>Le decimos a SQLAlchemy que traiga los datos relacionados <strong>de antemano</strong>.</p>
+            <p>Usamos <code>options()</code> en la consulta.</p>
+
+            <pre><code class="language-python" data-trim data-noescape>
+from sqlalchemy.orm import selectinload
+
+# Solicitamos usuarios Y sus posts en la misma "operación"
+stmt = select(User).options(
+    selectinload(User.posts)
+)
+
+users = session.scalars(stmt).all()
+            </code></pre>
+            <div class="fragment" style="border: 1px solid var(--neon-green); padding: 10px; border-radius: 5px; font-size: 0.7em;">
+                Resultado: Solo <strong>2 consultas</strong> en total, sin importar si hay 100 o 10.000 usuarios.
+            </div>
+        </section>
+
+        <section>
+            <h3>Estrategias: Joined vs SelectIn</h3>
+            <p>No todas las cargas ansiosas son iguales. ¿Cuál elegir?</p>
+
+            <div class="strategy-box fragment fade-right" style="border-color: var(--neon-purple);">
+                <span class="strat-title" style="color: var(--neon-purple);">1. joinedload()</span>
+                <p style="font-size: 0.6em; margin: 0;">
+                    Realiza un <code>SQL JOIN</code> en una sola consulta.<br>
+                    <strong>Ideal para:</strong> Relaciones Many-to-One (ej: Post -> User).<br>
+                    <strong>Problema:</strong> En One-to-Many, duplica las filas del padre (Producto Cartesiano), siendo ineficiente si hay muchos hijos.
+                </p>
+            </div>
+
+            <div class="strategy-box fragment fade-right" style="border-color: var(--neon-green);">
+                <span class="strat-title" style="color: var(--neon-green);">2. selectinload()</span>
+                <p style="font-size: 0.6em; margin: 0;">
+                    Emite una segunda consulta usando <code>WHERE user_id IN (...)</code>.<br>
+                    <strong>Ideal para:</strong> Relaciones One-to-Many (ej: User -> Posts).<br>
+                    <strong>Ventaja:</strong> Es más rápido para cargar colecciones grandes porque evita la redundancia de datos del JOIN.
+                </p>
+            </div>
+        </section>
+
+        <section>
+            <h3>Joins Explícitos (Filtrado)</h3>
+            <p>A veces no queremos cargar los datos (Loading), sino filtrar por ellos.</p>
+
+            <pre><code class="language-python" data-trim data-noescape>
+# Objetivo: Traer usuarios que tengan algún post con título "Hola"
+# No me interesa cargar los posts, solo filtrar usuarios.
+
+stmt = select(User).join(User.posts).where(
+    Post.title == "Hola"
+)
+
+# SQL Generado:
+# SELECT usuario.id, usuario.name 
+# FROM usuario 
+# JOIN post ON usuario.id = post.user_id 
+# WHERE post.title = 'Hola'
+            </code></pre>
+            <p class="fragment" style="font-size: 0.7em; color: var(--db-orange);">
+                Distinción clave: <code>options()</code> afecta a cómo se cargan los objetos en Python. <code>join()</code> afecta a la consulta SQL para filtrar filas.
+            </p>
+        </section>
+
+        <section>
+            <h2>Conclusión del Curso</h2>
+            <ul>
+                <li><strong>Relationship:</strong> Define el grafo.</li>
+                <li><strong>Lazy Loading:</strong> Cómodo pero peligroso (N+1).</li>
+                <li><strong>Eager Loading:</strong> Necesario en producción.
+                    <ul>
+                        <li>Usa <code>joinedload</code> para Muchos-a-Uno.</li>
+                        <li>Usa <code>selectinload</code> para Uno-a-Muchos.</li>
+                    </ul>
+                </li>
+            </ul>
+
+            <div style="margin-top: 50px;">
+                <h3 class="accent">¡Felicidades!</h3>
+                <p style="font-size: 0.8em;">Has completado la introducción avanzada a SQLAlchemy.</p>
+            </div>
+        </section>
+
+    </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/5.0.4/reveal.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/5.0.4/plugin/highlight/highlight.min.js"></script>
+
+<script>
+    Reveal.initialize({
+        controls: true,
+        progress: true,
+        center: true,
+        hash: true,
+        
+        width: 960,
+        height: 700,
+        margin: 0.1,
+        minScale: 0.2,
+        maxScale: 2.0,
+
+        transition: 'zoom', // Transición diferente para el Bonus Track
+        plugins: [ RevealHighlight ]
+    });
+</script>
+
+</body>
+</html>

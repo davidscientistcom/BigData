@@ -1,0 +1,254 @@
+<!doctype html>
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+    <title>SQLAlchemy - Parte 4: Expression Language (Revisada)</title>
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/5.0.4/reset.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/5.0.4/reveal.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/5.0.4/theme/dracula.min.css" id="theme">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+
+    <style>
+        :root {
+            --neon-green: #39ff14;
+            --neon-blue: #04d9ff;
+            --neon-pink: #ff79c6;
+            --neon-yellow: #f1fa8c;
+            --db-gray: #6272a4;
+        }
+
+        .reveal {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 30px;
+        }
+
+        .reveal h1, .reveal h2, .reveal h3, .reveal h4 {
+            text-transform: none;
+            font-family: 'Montserrat', sans-serif;
+        }
+
+        .reveal h1 { color: var(--neon-green); font-size: 2.5em; }
+        .accent { color: var(--neon-blue); font-weight: bold; }
+        .keyword { color: var(--neon-pink); }
+        
+        .reveal pre {
+            box-shadow: 0 0 15px rgba(0,0,0,0.5);
+            border-radius: 8px;
+            width: 90%;
+            margin: 20px auto;
+        }
+        .reveal pre code {
+            padding: 15px;
+            font-family: 'Fira Code', 'Consolas', monospace;
+            font-size: 0.9em;
+            line-height: 1.3;
+            max-height: 500px;
+        }
+
+        /* Visualización de Sobrecarga de Operadores */
+        .operator-box {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-top: 30px;
+            gap: 20px;
+        }
+        .code-snippet {
+            background: #282a36;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'Fira Code', monospace;
+            border: 1px solid var(--db-gray);
+        }
+        .result-arrow { font-size: 2em; color: var(--neon-pink); }
+        .result-object {
+            background: rgba(4, 217, 255, 0.1);
+            border: 2px solid var(--neon-blue);
+            padding: 15px;
+            border-radius: 8px;
+            font-family: monospace;
+            color: var(--neon-blue);
+        }
+        .result-bool {
+            background: rgba(255, 85, 85, 0.1);
+            border: 2px solid #ff5555;
+            padding: 15px;
+            border-radius: 8px;
+            text-decoration: line-through;
+            opacity: 0.6;
+        }
+
+        /* Listas para reglas */
+        .rule-list li {
+            margin-bottom: 15px;
+            border-left: 3px solid var(--neon-green);
+            padding-left: 15px;
+        }
+        .rule-title { color: var(--neon-green); font-weight: bold; display: block; margin-bottom: 5px;}
+
+    </style>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+<div class="reveal">
+    <div class="slides">
+
+        <section data-background-gradient="linear-gradient(to bottom right, #282a36, #1a1c2c)">
+            <h1>SQL Expression Language</h1>
+            <h3>Programando el AST (Abstract Syntax Tree)</h3>
+            <p><small>Parte 4 de 5 (Revisada)</small></p>
+            <div style="font-size: 3em; margin-top: 20px;">🧩 ⚙️ 🔍</div>
+        </section>
+
+        <section>
+            <h2>La base: El Árbol Sintáctico</h2>
+            <p>En SQLAlchemy, las expresiones de Python no se evalúan, se <span class="accent">compilan</span> en nodos de un árbol.</p>
+
+            <div class="operator-box fragment">
+                <div class="code-snippet">
+                    user_table.c.name == 'Juan'
+                </div>
+                <div class="result-arrow">➔</div>
+                <div class="result-object">
+                    &lt;BinaryExpression Node&gt;<br>
+                    <small style="color: var(--db-gray)">No es True/False. Es una representación de la intención.</small>
+                </div>
+            </div>
+
+            <div class="operator-box fragment" style="margin-top: 10px; opacity: 0.5; transform: scale(0.8);">
+                <div class="code-snippet">
+                    'Juan' == 'Juan'
+                </div>
+                <div class="result-arrow">➔</div>
+                <div class="result-bool">
+                    True (Python estándar)
+                </div>
+            </div>
+            <p class="fragment" style="margin-top: 20px; font-size: 0.7em;">
+                Esto se logra mediante la <strong>sobrecarga de operadores</strong> (`__eq__`, `__gt__`) en los objetos Columna.
+            </p>
+        </section>
+
+        <section>
+            <h3>La mecánica de `insert().values()`</h3>
+            <p>Separamos la definición de la estructura de la inyección de datos.</p>
+
+            <pre><code class="language-python" data-trim data-noescape>
+from sqlalchemy import insert
+
+# 1. insert() crea la estructura vacía "INSERT INTO tabla"
+stmt_base = insert(user_table)
+
+# 2. .values() inyecta el payload.
+# Mapea argumentos de nombre (kwargs) a nombres de columna.
+stmt_full = stmt_base.values(
+    name="Ana", 
+    email="ana@example.com"
+)
+            </code></pre>
+            <div class="fragment" style="font-size: 0.7em; border-left: 4px solid var(--neon-pink); padding-left: 10px;">
+                <strong>Riguroso:</strong> `.values()` no ejecuta nada. Solo modifica el objeto `Insert` añadiendo la información de qué valores van a qué columnas.
+            </div>
+        </section>
+
+        <section>
+            <h3>Contexto: Nuestra Tabla Completa</h3>
+            <p>Para entender los ejemplos siguientes, definamos la tabla con la columna que generó dudas.</p>
+
+            <pre><code class="language-python" data-trim data-noescape>
+# Definición previa en MetaData (Parte 3)
+user_table = Table(
+    "usuario", metadata_obj,
+    Column("id", Integer, primary_key=True),
+    Column("name", String),
+    # is_active es una columna booleana normal de base de datos.
+    # (No tiene relación con HTML)
+    Column("is_active", Boolean, default=True) 
+)
+            </code></pre>
+        </section>
+
+        <section>
+            <h3>Las Reglas de la Composabilidad</h3>
+            <p>Al trabajar con objetos AST, seguimos reglas gramaticales estrictas:</p>
+            <ul class="rule-list" style="font-size: 0.8em;">
+                <li class="fragment"><span class="rule-title">1. Mutabilidad Retornada</span>
+                Métodos como `.where()` no cambian el objeto original "in-place"; devuelven una <strong>nueva copia modificada</strong> del objeto.</li>
+                
+                <li class="fragment"><span class="rule-title">2. Acumulación Lógica (AND)</span>
+                Si llamas a `.where(A).where(B)`, SQLAlchemy los une automáticamente con un operador <strong>AND</strong>.</li>
+                
+                <li class="fragment"><span class="rule-title">3. Independencia del Orden</span>
+                Puedes llamar a `.order_by()` antes que a `.where()` en Python. El compilador sabe que en SQL, el `WHERE` siempre precede al `ORDER BY`.</li>
+            </ul>
+        </section>
+
+        <section>
+            <h3>Aplicando las reglas dinámicamente</h3>
+            <p>Gracias a las reglas anteriores, podemos usar lógica de Python (if/else) para construir la consulta.</p>
+
+            <pre style="font-size: 0.55em;"><code class="language-python">
+def get_users_dynamic(solo_activos: bool, ordenar_por_nombre: bool):
+    # Regla 1: Creamos el objeto base
+    query = select(user_table)
+    
+    # Uso de if de Python para decidir si modificamos el AST
+    if solo_activos:
+        # Regla 1 y 2: Devolvemos un nuevo objeto con un WHERE añadido
+        # Usamos la columna booleana definida anteriormente.
+        query = query.where(user_table.c.is_active == True)
+
+    if ordenar_por_nombre:
+        # Regla 3: No importa si esto se ejecuta antes o después del where.
+        query = query.order_by(user_table.c.name)
+        
+    # Al final, 'query' es el AST completo listo para compilar.
+    return query
+            </code></pre>
+        </section>
+
+        <section>
+            <h2>Resumen Riguroso</h2>
+            <ul>
+                <li><strong>AST:</strong> Trabajamos manipulando un Árbol de Sintaxis Abstracta, no cadenas de texto.</li>
+                <li><strong>`.values()`:</strong> Es el inyector de datos, mapeando argumentos de Python a columnas de DB.</li>
+                <li><strong>Composabilidad:</strong> Es la capacidad de construir ese árbol paso a paso, aprovechando la mutabilidad de los objetos y las reglas de acumulación de SQL.</li>
+            </ul>
+
+            <div style="margin-top: 40px; border-top: 1px solid white; padding-top: 20px;">
+                <h4 class="accent">FINAL: Parte 5: El ORM</h4>
+                <p>Mapeando todo esto a Clases y Objetos de negocio.</p>
+            </div>
+        </section>
+
+    </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/5.0.4/reveal.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/5.0.4/plugin/highlight/highlight.min.js"></script>
+
+<script>
+    Reveal.initialize({
+        controls: true,
+        progress: true,
+        center: true,
+        hash: true,
+        
+        // CONFIGURACIÓN DE ESCALADO FIJA
+        width: 960,
+        height: 700,
+        margin: 0.1,
+        minScale: 0.2,
+        maxScale: 2.0,
+
+        transition: 'slide', 
+        plugins: [ RevealHighlight ]
+    });
+</script>
+
+</body>
+</html>

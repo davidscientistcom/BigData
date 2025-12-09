@@ -1,0 +1,253 @@
+<!doctype html>
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+    <title>SQLAlchemy - Parte 3: Metadatos</title>
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/5.0.4/reset.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/5.0.4/reveal.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/5.0.4/theme/dracula.min.css" id="theme">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+
+    <style>
+        :root {
+            --neon-green: #39ff14;
+            --neon-blue: #04d9ff;
+            --neon-purple: #bd93f9;
+            --neon-pink: #ff79c6;
+            --db-yellow: #f1fa8c;
+            --db-red: #ff5555;
+        }
+
+        .reveal {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 30px;
+        }
+
+        .reveal h1, .reveal h2, .reveal h3, .reveal h4 {
+            text-transform: none;
+            font-family: 'Montserrat', sans-serif;
+        }
+
+        .reveal h1 { color: var(--neon-green); font-size: 2.5em; }
+        .accent { color: var(--neon-blue); font-weight: bold; }
+        .keyword { color: var(--neon-pink); }
+        
+        .reveal pre {
+            box-shadow: 0 0 15px rgba(0,0,0,0.5);
+            border-radius: 8px;
+            width: 90%;
+            margin: 20px auto;
+        }
+        .reveal pre code {
+            padding: 15px;
+            font-family: 'Fira Code', 'Consolas', monospace;
+            font-size: 0.9em;
+            line-height: 1.3;
+            max-height: 500px;
+        }
+
+        /* Diagrama de Tipos */
+        .type-map-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 30px;
+            margin-top: 30px;
+        }
+        .type-box {
+            padding: 15px 25px;
+            border-radius: 8px;
+            font-family: 'Fira Code', monospace;
+            font-weight: bold;
+        }
+        .type-python { border: 2px solid var(--neon-blue); color: var(--neon-blue); }
+        .type-alchemy { border: 2px solid var(--neon-green); background: rgba(57, 255, 20, 0.1); color: white; }
+        .type-sql { border: 2px solid var(--db-red); color: var(--db-red); font-size: 0.8em; }
+        
+        .arrow { font-size: 2em; color: var(--db-yellow); }
+
+        /* Estilo Blueprint para Metadatos */
+        .blueprint-bg {
+            background-image: 
+                linear-gradient(rgba(4, 217, 255, 0.1) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(4, 217, 255, 0.1) 1px, transparent 1px);
+            background-size: 20px 20px;
+            padding: 20px;
+            border: 1px solid var(--neon-blue);
+        }
+
+    </style>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+<div class="reveal">
+    <div class="slides">
+
+        <section data-background-gradient="linear-gradient(to bottom right, #282a36, #1a1c2c)">
+            <h1>Metadatos y Esquema</h1>
+            <h3>Definiendo la estructura en Python</h3>
+            <p><small>Parte 3 de 5</small></p>
+            <div style="font-size: 3em; margin-top: 20px;">🏗️ 📋 🐍</div>
+        </section>
+
+        <section>
+            <h2>El objeto <span class="accent">MetaData</span></h2>
+            <div class="blueprint-bg fragment">
+                <p>Es un <strong>Registro (Registry)</strong> centralizado.</p>
+                <p style="font-size: 0.8em;">Imagina un catálogo en memoria donde SQLAlchemy guarda todas las definiciones de tablas que tu aplicación conoce.</p>
+            </div>
+            
+            <pre class="fragment"><code class="language-python" data-trim>
+from sqlalchemy import MetaData
+
+# El contenedor de nuestro esquema
+metadata_obj = MetaData()
+            </code></pre>
+
+            <p class="fragment" style="font-size: 0.7em; margin-top: 20px;">
+                Cuando definimos tablas, las "atamos" a este objeto. Así, SQLAlchemy sabe en qué orden crearlas (resolviendo dependencias topológicas).
+            </p>
+        </section>
+
+        <section>
+            <h3>Definiendo Tablas (Core)</h3>
+            <p>Usamos los constructores <code>Table</code> y <code>Column</code>.</p>
+
+            <pre><code class="language-python" data-trim data-noescape>
+from sqlalchemy import Table, Column, Integer, String
+
+# Definición de la tabla 'usuario'
+user_table = Table(
+    "usuario",             # 1. Nombre real en la BBDD
+    metadata_obj,          # 2. El registro al que pertenece
+    
+    # 3. Lista de Columnas
+    Column("id", Integer, primary_key=True),
+    Column("nombre", String(50), nullable=False),
+    Column("email", String(100))
+)
+            </code></pre>
+            <div class="fragment" style="position: absolute; right: 0; bottom: 50px; width: 300px; background: #333; padding: 10px; border: 1px solid var(--neon-green); font-size: 0.6em;">
+                Nota: Aquí no hemos creado nada en la BD todavía. Solo son objetos Python.
+            </div>
+        </section>
+
+        <section>
+            <h3>Abstracción de Tipos</h3>
+            <p>¿Por qué usamos <code>String</code> y no <code>VARCHAR</code>?</p>
+            
+            <div class="type-map-container">
+                <div class="type-box type-python">
+                    Python<br>str
+                </div>
+                <div class="arrow">➔</div>
+                <div class="type-box type-alchemy">
+                    Alchemy<br>String
+                </div>
+                <div class="arrow">➔</div>
+                <div class="type-box type-sql">
+                    <strong>Postgres:</strong> VARCHAR<br>
+                    <strong>Oracle:</strong> VARCHAR2<br>
+                    <strong>SQLite:</strong> TEXT
+                </div>
+            </div>
+
+            <p class="fragment" style="margin-top: 40px; font-size: 0.8em;">
+                SQLAlchemy realiza un <span class="accent">Dialect Dispatch</span>. 
+                El tipo <code>String</code> es genérico. Al compilar, el dialecto decide cuál es la mejor representación SQL para ese tipo.
+            </p>
+        </section>
+
+        <section>
+            <h3>Relaciones y Constraints</h3>
+            <p>El poder de SQL es relacional. Definamos una tabla relacionada.</p>
+
+            <pre><code class="language-python" data-trim data-noescape>
+from sqlalchemy import ForeignKey
+
+address_table = Table(
+    "direccion",
+    metadata_obj,
+    
+    Column("id", Integer, primary_key=True),
+    Column("calle", String(100)),
+    
+    # Definición de Foreign Key explícita
+    # Apunta a 'usuario.id'
+    Column("user_id", Integer, ForeignKey("usuario.id"), nullable=False)
+)
+            </code></pre>
+            <p class="fragment" style="font-size: 0.7em; color: var(--neon-pink);">
+                Al usar <code>ForeignKey</code>, <code>metadata_obj</code> entiende que <code>direccion</code> depende de <code>usuario</code>.
+            </p>
+        </section>
+
+        <section>
+            <h3>La Magia: create_all()</h3>
+            <p>Ahora tomamos nuestros objetos Python y los materializamos en la base de datos.</p>
+
+            <pre><code class="language-python" data-trim data-noescape>
+# Asumiendo que tenemos el 'engine' de la Parte 2
+# engine = create_engine("sqlite:///app.db")
+
+# Emito el DDL (Data Definition Language)
+metadata_obj.create_all(engine)
+            </code></pre>
+
+            <div class="fragment" style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px;">
+                <h6 style="margin:0; color: var(--db-yellow)">Lo que ocurre bajo el capó:</h6>
+                <ol style="font-size: 0.6em; margin-top: 10px;">
+                    <li>Alchemy revisa el registro (MetaData).</li>
+                    <li>Ordena las tablas topológicamente (Usuario antes que Dirección).</li>
+                    <li>Comprueba si las tablas ya existen en la DB.</li>
+                    <li>Emite los <code>CREATE TABLE ...</code> necesarios.</li>
+                </ol>
+            </div>
+        </section>
+
+        <section>
+            <h2>Resumen</h2>
+            <ul>
+                <li><strong>MetaData:</strong> El catálogo que guarda tus definiciones.</li>
+                <li><strong>Table/Column:</strong> La representación en Python de tu estructura.</li>
+                <li><strong>Tipos Genéricos:</strong> <code>String</code>, <code>Integer</code> abstraen las diferencias entre Oracle, MySQL, etc.</li>
+                <li><strong>DDL:</strong> <code>create_all()</code> convierte objetos en tablas reales.</li>
+            </ul>
+
+            <div style="margin-top: 40px; border-top: 1px solid white; padding-top: 20px;">
+                <h4 class="accent">Próximamente Parte 4: SQL Expression Language</h4>
+                <p>Insertar y Consultar datos usando funciones de Python, no strings.</p>
+            </div>
+        </section>
+
+    </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/5.0.4/reveal.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/5.0.4/plugin/highlight/highlight.min.js"></script>
+
+<script>
+    Reveal.initialize({
+        controls: true,
+        progress: true,
+        center: true,
+        hash: true,
+        
+        // CONFIGURACIÓN DE ESCALADO FIJA
+        width: 960,
+        height: 700,
+        margin: 0.1,
+        minScale: 0.2,
+        maxScale: 2.0,
+
+        transition: 'slide', 
+        plugins: [ RevealHighlight ]
+    });
+</script>
+
+</body>
+</html>

@@ -1,0 +1,293 @@
+<!doctype html>
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+    <title>SQLAlchemy - Aclaraciones Conceptuales</title>
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/5.0.4/reset.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/5.0.4/reveal.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/5.0.4/theme/dracula.min.css" id="theme">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+
+    <style>
+        :root {
+            --neon-green: #39ff14;
+            --neon-blue: #04d9ff;
+            --neon-purple: #bd93f9;
+            --neon-pink: #ff79c6;
+            --neon-yellow: #f1fa8c;
+            --db-gray: #6272a4;
+            --bg-dark: #1a1c2c;
+        }
+
+        .reveal {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 28px; /* Un poco más pequeño para permitir más texto explicativo */
+        }
+
+        .reveal h1, .reveal h2, .reveal h3, .reveal h4 {
+            text-transform: none;
+            font-family: 'Montserrat', sans-serif;
+        }
+
+        .reveal h1 { color: var(--neon-purple); text-shadow: 0 0 10px rgba(189, 147, 249, 0.5); }
+        .accent { color: var(--neon-blue); font-weight: bold; }
+        .concept { color: var(--neon-green); font-weight: bold; }
+        .warning { color: var(--neon-pink); font-weight: bold; }
+
+        /* Cajas de Concepto Teórico */
+        .theory-box {
+            background: rgba(255, 255, 255, 0.05);
+            border-left: 5px solid var(--neon-blue);
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 0 10px 10px 0;
+            text-align: left;
+        }
+        .theory-title {
+            display: block;
+            font-size: 1.2em;
+            color: var(--neon-blue);
+            margin-bottom: 10px;
+            font-weight: bold;
+        }
+
+        /* Tabla comparativa personalizada */
+        .compare-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            font-size: 0.8em;
+        }
+        .compare-table th {
+            border-bottom: 2px solid var(--neon-purple);
+            padding: 10px;
+            color: var(--neon-purple);
+        }
+        .compare-table td {
+            border-bottom: 1px solid #444;
+            padding: 12px;
+        }
+        .compare-table tr:hover {
+            background: rgba(255,255,255,0.05);
+        }
+
+        /* Diagrama de Flujo de Datos (WHERE vs HAVING) */
+        .pipeline-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 30px;
+        }
+        .pipe-step {
+            background: #44475a;
+            padding: 15px;
+            border-radius: 8px;
+            font-size: 0.7em;
+            position: relative;
+            width: 120px;
+            text-align: center;
+        }
+        .pipe-arrow { font-size: 1.5em; color: var(--neon-green); }
+        .pipe-highlight { border: 2px solid var(--neon-pink); background: rgba(255, 121, 198, 0.1); }
+
+    </style>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+<div class="reveal">
+    <div class="slides">
+
+        <section data-background-gradient="linear-gradient(to bottom right, #1a1c2c, #2c1a2c)">
+            <h1>Aclaraciones Técnicas</h1>
+            <h3>Profundizando en la Arquitectura de SQLAlchemy</h3>
+            <p><small>Association Objects, AST y Pipeline de Ejecución</small></p>
+            <div style="font-size: 3em; margin-top: 20px;">🧠 💡 🏛️</div>
+        </section>
+
+        <section>
+            <h2>1. El Patrón "Association Object"</h2>
+            <div class="theory-box">
+                <span class="theory-title">Definición Formal</span>
+                Es la <strong>reificación</strong> de una relación Muchos-a-Muchos.
+                <br><br>
+                En teoría de objetos, "reificar" significa convertir un concepto abstracto (la relación entre A y B) en una entidad concreta y explícita (Clase C).
+            </div>
+            <p class="fragment">Se usa cuando el vínculo entre dos entidades es tan importante como las entidades mismas.</p>
+        </section>
+
+        <section>
+            <h3>El Problema Lógico</h3>
+            <p>Imagina la relación <code>Alumno <-> Curso</code>.</p>
+            
+            <div style="display: flex; justify-content: space-around; margin-top: 30px;">
+                <div class="fragment fade-right" style="width: 45%;">
+                    <h4 style="color: var(--db-gray)">Enfoque Simple (Secondary)</h4>
+                    <p style="font-size: 0.7em;">Solo nos importa <strong>quién</strong> está con <strong>quién</strong>.</p>
+                    <div style="border: 1px dashed white; padding: 10px;">
+                        Alumno ———— Curso
+                    </div>
+                    <p style="font-size: 0.6em; color: var(--neon-pink);">La "tabla de unión" es invisible para Python.</p>
+                </div>
+
+                <div class="fragment fade-left" style="width: 45%;">
+                    <h4 class="accent">Enfoque Association Object</h4>
+                    <p style="font-size: 0.7em;">El vínculo tiene <strong>DATOS</strong>.</p>
+                    <div style="border: 1px solid var(--neon-green); padding: 10px;">
+                        Alumno — <strong style="color:var(--neon-green)">[NOTA]</strong> — Curso
+                    </div>
+                    <p style="font-size: 0.6em; color: var(--neon-green);">La "Nota" tiene valor, fecha, intentos...</p>
+                </div>
+            </div>
+        </section>
+
+        <section>
+            <h3>Comparativa Técnica</h3>
+            <table class="compare-table">
+                <thead>
+                    <tr>
+                        <th>Característica</th>
+                        <th>Patrón `secondary`</th>
+                        <th>Association Object</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Naturaleza</strong></td>
+                        <td>Relación Pura</td>
+                        <td>Entidad Intermedia</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Visibilidad</strong></td>
+                        <td>Oculta (Magic)</td>
+                        <td>Clase Python Explícita</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Atributos</strong></td>
+                        <td>Solo Foreign Keys</td>
+                        <td>FKs + <strong>Payload</strong> (Datos)</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Retorno</strong></td>
+                        <td>Lista de Cursos</td>
+                        <td>Lista de objetos Nota</td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+
+        <section>
+            <h2>2. Composabilidad y AST</h2>
+            <p>¿Qué ocurre realmente cuando encadenamos métodos?</p>
+            
+            <div class="theory-box">
+                <span class="theory-title">El Patrón Builder Inmutable</span>
+                Las sentencias en SQLAlchemy (<code>select()</code>, <code>insert()</code>) no son strings. Son nodos de un <strong>Árbol de Sintaxis Abstracta (AST)</strong>.
+            </div>
+
+            <pre><code class="language-python">
+# 1. Nodo Raíz
+q1 = select(User) 
+
+# 2. q2 es una COPIA de q1 con un nodo "WHERE" adjunto
+q2 = q1.where(User.name == 'Ana') 
+
+# 3. q3 es una COPIA de q2 con un nodo "ORDER BY" adjunto
+q3 = q2.order_by(User.id)
+            </code></pre>
+            <p style="font-size: 0.6em;">Esto garantiza que `q1` siga intacta si necesitas reutilizarla para otra consulta diferente.</p>
+        </section>
+
+        <section>
+            <h3>El misterio de `.values()`</h3>
+            <p>Separación de <strong>Estructura</strong> vs <strong>Datos</strong>.</p>
+            
+            <div style="display: flex; align-items: center; gap: 20px; margin-top: 30px;">
+                <div style="flex: 1; border: 2px solid var(--db-gray); padding: 10px; border-radius: 8px;">
+                    <h5 style="margin:0;">insert(tabla)</h5>
+                    <p style="font-size: 0.6em;">Define la intención SQL: "Voy a insertar algo aquí".</p>
+                </div>
+                <div style="font-size: 2em;">+</div>
+                <div style="flex: 1; border: 2px solid var(--neon-yellow); padding: 10px; border-radius: 8px; color: var(--neon-yellow);">
+                    <h5 style="margin:0;">.values(...)</h5>
+                    <p style="font-size: 0.6em;">Define el <strong>Payload</strong>. Mapea claves de Python a columnas de la BD.</p>
+                </div>
+            </div>
+            
+            <p class="fragment" style="margin-top: 20px; font-size: 0.7em;">
+                Es vital entender que <code>.values()</code> no escribe en disco. Solo configura el estado del objeto en memoria antes de la ejecución.
+            </p>
+        </section>
+
+        <section>
+            <h2>3. El Pipeline de Ejecución</h2>
+            <p>¿Por qué fallan las consultas con `GROUP BY`?</p>
+            <p style="font-size: 0.6em;">El orden de escritura en Python NO es el orden de ejecución en el motor de la BD.</p>
+
+            <div class="pipeline-container">
+                <div class="pipe-step">
+                    1. FROM<br>JOIN
+                    <br><small>Reúne datos</small>
+                </div>
+                <div class="pipe-arrow">➔</div>
+                <div class="pipe-step pipe-highlight">
+                    2. WHERE
+                    <br><small>Filtra FILAS (Individuales)</small>
+                </div>
+                <div class="pipe-arrow">➔</div>
+                <div class="pipe-step">
+                    3. GROUP BY
+                    <br><small>Colapsa en grupos</small>
+                </div>
+                <div class="pipe-arrow">➔</div>
+                <div class="pipe-step pipe-highlight" style="border-color: var(--neon-green); background: rgba(57, 255, 20, 0.1);">
+                    4. HAVING
+                    <br><small>Filtra GRUPOS (Agregados)</small>
+                </div>
+            </div>
+
+            <p class="fragment warning" style="margin-top: 30px; font-size: 0.7em;">
+                No puedes filtrar por "Promedio > 5" en el paso 2 (WHERE), porque el promedio no se calcula hasta el paso 3. Debes usar HAVING (paso 4).
+            </p>
+        </section>
+
+        <section>
+            <h2>Claridad Mental</h2>
+            <ul>
+                <li><strong>Association Object:</strong> Cuando la relación tiene vida propia.</li>
+                <li><strong>AST:</strong> Construimos árboles, no strings.</li>
+                <li><strong>Pipeline:</strong> Respeta el orden lógico de la base de datos (Where -> Group -> Having).</li>
+            </ul>
+            
+        </section>
+
+    </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/5.0.4/reveal.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/5.0.4/plugin/highlight/highlight.min.js"></script>
+
+<script>
+    Reveal.initialize({
+        controls: true,
+        progress: true,
+        center: true,
+        hash: true,
+        
+        width: 960,
+        height: 700,
+        margin: 0.1,
+        minScale: 0.2,
+        maxScale: 2.0,
+
+        transition: 'fade', // Transición más suave para explicaciones
+        plugins: [ RevealHighlight ]
+    });
+</script>
+
+</body>
+</html>
