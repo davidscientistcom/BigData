@@ -6,62 +6,23 @@ En esta práctica aprenderás a utilizar **PromQL** (Prometheus Query Language),
 
 ## Configuración del Entorno
 
-### Docker Compose Completo
+### Archivos en esta carpeta
 
-Crea un archivo `docker-compose.yml` con la siguiente configuración que incluye Prometheus y Node Exporter para monitorizar el host:[^3][^4]
+- `docker-compose.yml` — definición del stack (se mantiene como copia de trabajo en esta práctica).
+- `prometheus.yml` — configuración que Prometheus carga al arrancar (en este repo apunta a `localhost` cuando se usa `host` network mode).
+- `check_stack.sh` — script de comprobación rápida desde el host (métricas, API targets, docker ps).
+- `PromQL_Examples.md` — ejemplos adicionales y consultas sugeridas.
+- `README.md` — diagnóstico y comandos útiles.
 
-```yaml
-version: '3.8'
+### Docker Compose (resumen)
 
-networks:
-  monitoring:
-    driver: bridge
+El repositorio contiene un `docker-compose.yml` con dos servicios: `prometheus` y `node-exporter`. En entornos de laboratorio hemos ejecutado ambos servicios con `network_mode: "host"` para que los enlaces en la UI apunten a `localhost` y sean clicables desde el navegador del host. Esto facilita el uso en redes institucionales donde el tráfico entre la red bridge y el host puede estar restringido.
 
-volumes:
-  prometheus_data:
+Si prefieres el modo recomendado para entornos aislados, elimina `network_mode: "host"` de los servicios y publica los puertos con `ports:`; en ese caso `prometheus.yml` puede usar los nombres de servicio (`prometheus:9090`, `node-exporter:9100`) como targets.
 
-services:
-  prometheus:
-    image: prom/prometheus:latest
-    container_name: prometheus
-    restart: unless-stopped
-    volumes:
-      - ./prometheus.yml:/etc/prometheus/prometheus.yml
-      - prometheus_data:/prometheus
-    command:
-      - '--config.file=/etc/prometheus/prometheus.yml'
-      - '--storage.tsdb.path=/prometheus'
-      - '--web.console.libraries=/etc/prometheus/console_libraries'
-      - '--web.console.templates=/etc/prometheus/consoles'
-      - '--web.enable-lifecycle'
-    ports:
-      - "9090:9090"
-    networks:
-      - monitoring
+### Archivo de Configuración de Prometheus (actual)
 
-  node-exporter:
-    image: prom/node-exporter:latest
-    container_name: node-exporter
-    restart: unless-stopped
-    volumes:
-      - /proc:/host/proc:ro
-      - /sys:/host/sys:ro
-      - /:/rootfs:ro
-    command:
-      - '--path.procfs=/host/proc'
-      - '--path.sysfs=/host/sys'
-      - '--path.rootfs=/rootfs'
-      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
-    ports:
-      - "9100:9100"
-    networks:
-      - monitoring
-```
-
-
-### Archivo de Configuración de Prometheus
-
-Crea un archivo `prometheus.yml` en el mismo directorio:[^5][^3]
+El `prometheus.yml` que se usa en esta práctica está configurado para entornos donde Prometheus corre en `host` network mode y por eso apunta a `localhost`:
 
 ```yaml
 global:
@@ -75,25 +36,74 @@ scrape_configs:
 
   - job_name: 'node-exporter'
     static_configs:
-      - targets: ['node-exporter:9100']
+      - targets: ['localhost:9100']
 ```
 
+Nota: para usar nombres de servicio en lugar de `localhost` (bridge network), reemplaza `localhost` por `prometheus` y `node-exporter` y asegúrate de que los servicios no usan `network_mode: "host"`.
+
+### Verificación rápida (útil para alumnos)
+
+Pasos básicos:
+- Levanta el stack: `docker compose up -d`
+- Comprueba contenedores: `docker compose ps` o `docker ps`
+- Ejecuta el comprobador rápido: `./check_stack.sh` (muestra primeras líneas de métricas, código HTTP y estado de targets en la API de Prometheus)
+
+Comandos manuales de verificación (si quieres entender qué hace `check_stack.sh`):
+
+- Obtener las primeras líneas de métricas de Prometheus:
+  - `curl -sS http://localhost:9090/metrics | sed -n '1,12p'`
+- Obtener las primeras líneas de Node Exporter:
+  - `curl -sS http://localhost:9100/metrics | sed -n '1,12p'`
+- Ver el estado de scraping desde la API de Prometheus:
+  - `curl -sS http://localhost:9090/api/v1/targets | jq '.data.activeTargets[] | {scrapePool: .scrapePool, health: .health, scrapedUrl: .scrapeUrl}'`
+
+Nota: algunas imágenes base no incluyen utilidades como `curl` o `nslookup`. Para pruebas dentro de la red bridge usa un contenedor efímero con `curlimages/curl` y la opción `--network`:
+
+```bash
+docker run --rm --network <compose_network_name> curlimages/curl:8.4.0 -sS -I http://node-exporter:9100/metrics
+```
+
+Este comando te permite probar resolución y conectividad desde dentro de la red de Compose.
+
+### Explicación de los comandos de verificación
+
+Los comandos que usamos para comprobar el estado y diagnosticar problemas son sencillos pero potentes. Aquí se explica cada uno:
+
+- `curl -sS http://localhost:9090/metrics | sed -n '1,12p'`
+  - `-sS`: silencio + mostrar errores. `sed -n '1,12p'` muestra solo las primeras líneas.
+
+- `curl -I http://localhost:9090/metrics`
+  - Solicita solo las cabeceras (HEAD). Atención: algunos endpoints devuelven `405` si no soportan HEAD; siempre puedes usar GET si quieres el cuerpo.
+
+- `curl -sS -o /dev/null -w '%{http_code}\n' http://localhost:9090/metrics`
+  - Descarta el cuerpo y devuelve solo el código HTTP. Ídeal para scripts que comprueban disponibilidad.
+
+- `curl -sS http://localhost:9090/api/v1/targets | jq '.data.activeTargets[] | {scrapePool: .scrapePool, health: .health, scrapedUrl: .scrapeUrl}'`
+  - Utiliza la API de Prometheus y `jq` para extraer solo lo relevante: qué `scrapeUrl` usa y si el objetivo está `up`.
+
+- `docker run --rm --network nosubir_monitoring curlimages/curl:8.4.0 -sS -I http://node-exporter:9100/metrics`
+  - Levanta un contenedor temporal en la red `nosubir_monitoring` para probar resolución y acceso desde dentro de la red. `--rm` borra el contenedor al terminar.
+
+Recomiendo practicar estos comandos para aprender a distinguir problemas de DNS (resolución de nombres), problemas de conectividad (puertos cerrados/firewall) y errores de aplicación (500, 404, etc.).
+
+Si quieres, dejo el `prometheus.yml` original con IPs comentado como ejemplo para estudio, pero en entornos reales evita IPs fijas.
+```
 
 ### Desplegar el Stack
 
 Ejecuta el siguiente comando para iniciar los servicios:
 
 ```bash
-docker-compose up -d
+docker compose up -d
 ```
 
-Verifica que los contenedores están funcionando:[^3]
+Verifica que los contenedores están funcionando:
 
 ```bash
-docker-compose ps
+docker compose ps
 ```
 
-Deberías ver ambos servicios `prometheus` y `node-exporter` en estado `Up`.
+Deberías ver ambos servicios `prometheus` y `node-exporter` en estado `Up` y conectados a la red `monitoring`.
 
 ## Acceso a Prometheus
 
