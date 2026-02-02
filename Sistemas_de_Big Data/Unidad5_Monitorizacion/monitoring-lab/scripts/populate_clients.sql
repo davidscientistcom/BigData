@@ -1,0 +1,1 @@
+-- ESTE ARCHIVO SE HA MOVIDO A ../grafana/scripts/populate_clients.sql

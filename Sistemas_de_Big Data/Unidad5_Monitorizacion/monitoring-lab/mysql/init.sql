@@ -1,0 +1,2 @@
+-- ESTE ARCHIVO SE HA MOVIDO A ../grafana/mysql/init.sql
+-- Para la práctica de MySQL con Grafana copia el contenido desde ese fichero.

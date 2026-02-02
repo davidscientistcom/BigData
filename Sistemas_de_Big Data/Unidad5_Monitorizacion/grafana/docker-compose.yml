@@ -1,0 +1,112 @@
+version: '3.8'
+
+services:
+  # Prometheus: recolector y almacenamiento de métricas (stack independiente para esta práctica)
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: grafana_prometheus
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.enable-lifecycle'
+    ports:
+      - "9090:9090"
+    networks:
+      - grafana_monitoring
+    restart: unless-stopped
+
+  # Grafana: visualización
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana_ui
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_SERVER_ROOT_URL=http://localhost:3000
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./provisioning:/etc/grafana/provisioning:ro
+    ports:
+      - "3000:3000"
+    networks:
+      - grafana_monitoring
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+
+  # MySQL: base de datos de ejemplo para monitorizar
+  mysql:
+    image: mysql:8.0
+    container_name: grafana_mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpass
+      MYSQL_DATABASE: mydb
+      MYSQL_USER: user
+      MYSQL_PASSWORD: userpass
+    volumes:
+      - ./mysql/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+      - mysql_data:/var/lib/mysql
+    ports:
+      - "3306:3306"
+    networks:
+      - grafana_monitoring
+    restart: unless-stopped
+
+  # MySQL exporter: expone métricas de MySQL a Prometheus
+  mysqld_exporter:
+    image: prom/mysqld-exporter:v0.14.0
+    container_name: grafana_mysqld_exporter
+    depends_on:
+      - mysql
+    environment:
+      - DATA_SOURCE_NAME=exporter:exporter_pass@(mysql:3306)/
+    ports:
+      - "9104:9104"
+    networks:
+      - grafana_monitoring
+    restart: unless-stopped
+
+  # Node Exporter: métricas del sistema host (opcional)
+  node_exporter:
+    image: prom/node-exporter:latest
+    container_name: grafana_node_exporter
+    command:
+      - '--path.rootfs=/host'
+    pid: host
+    volumes:
+      - '/:/host:ro,rslave'
+    ports:
+      - "9100:9100"
+    networks:
+      - grafana_monitoring
+    restart: unless-stopped
+
+  # cAdvisor: métricas de contenedores Docker (opcional)
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:latest
+    container_name: grafana_cadvisor
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+      - /dev/disk/:/dev/disk:ro
+    ports:
+      - "8080:8080"
+    networks:
+      - grafana_monitoring
+    privileged: true
+    restart: unless-stopped
+
+networks:
+  grafana_monitoring:
+    driver: bridge
+
+volumes:
+  prometheus_data:
+  grafana_data:
+  mysql_data:
