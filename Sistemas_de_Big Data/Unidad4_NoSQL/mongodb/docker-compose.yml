@@ -1,0 +1,23 @@
+version: '3.8'
+
+services:
+  mongodb:
+    image: mongo:8.0
+    container_name: mongodb_profesional
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin_root
+      MONGO_INITDB_ROOT_PASSWORD: password_seguro_123
+      MONGO_INITDB_DATABASE: ecommerce_db
+    volumes:
+      - ./mongo_data:/data/db
+      - ./init-scripts:/docker-entrypoint-initdb.d:ro  # Añadido :ro por seguridad (read-only)
+    networks:
+      - backend_network
+    command: ["mongod", "--auth"]
+
+networks:
+  backend_network:
+    driver: bridge
