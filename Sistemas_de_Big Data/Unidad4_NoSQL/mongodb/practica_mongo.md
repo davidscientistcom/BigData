@@ -3,6 +3,39 @@
 
 # **0. Configuración del entorno**
 
+- Instalamos el docker 
+
+```bash
+
+version: '3.8'
+
+services:
+  mongodb:
+    image: mongo:8.0
+    container_name: mongodb_curso
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    environment:
+      # Credenciales del usuario administrador
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: password123
+      # Base de datos inicial (opcional)
+      MONGO_INITDB_DATABASE: tienda_db
+    volumes:
+      # Persistencia de datos
+      - ./mongo_data:/data/db
+      # Scripts de inicialización (opcional)
+      - ./init-scripts:/docker-entrypoint-initdb.d
+    command: ["mongod", "--auth"]
+
+networks:
+  default:
+    name: mongo_network
+
+```  
+
+
 ## **Instalación de librerías**
 
 ```bash
@@ -41,14 +74,6 @@ except Exception as e:
     print(f"✗ Error de conexión: {e}")
 ```
 
-### **Conexión a MongoDB Atlas (nube)**
-
-```python
-# URI de conexión a Atlas
-uri = "mongodb+srv://usuario:password@cluster.mongodb.net/"
-client = MongoClient(uri)
-db = client['universidad']
-```
 
 ### **Buenas prácticas de conexión**
 
@@ -85,6 +110,59 @@ db_conn = DatabaseConnection()
 db = db_conn.connect('universidad')
 ```
 
+- Como podemos observar la conexión no tiene ni pass ni usuario... Pero en el docker compose sí que lo tenemos... probad a ver que pasa si hacemos una inserción.
+
+- Una forma de arreglarlo sería añadir en la conexión que tenga la autentificación 
+
+```python
+from pymongo import MongoClient
+from pymongo.errors import ConnectionFailure, OperationFailure
+
+
+class DatabaseConnection:
+    def __init__(self):
+        # Credenciales del docker-compose
+        username = 'admin'
+        password = 'password123'
+        host = 'localhost'
+        port = '27017'
+        
+        # URI completa con autenticación
+        self.uri = f'mongodb://{username}:{password}@{host}:{port}/'
+        self.client = None
+        self.db = None
+    
+    def connect(self, db_name='universidad'):
+        try:
+            self.client = MongoClient(
+                self.uri,
+                serverSelectionTimeoutMS=5000,
+                authSource='admin'  # Importante: autenticarse contra la DB 'admin'
+            )
+            
+            # Verificar conexión
+            self.client.admin.command('ping')
+            self.db = self.client[db_name]
+            print(f"✓ Conectado a la base de datos '{db_name}'")
+            return self.db
+            
+        except ConnectionFailure as e:
+            print(f"✗ No se pudo conectar a MongoDB: {e}")
+            return None
+        except OperationFailure as e:
+            print(f"✗ Error de autenticación: {e}")
+            return None
+    
+    def close(self):
+        if self.client:
+            self.client.close()
+            print("✓ Conexión cerrada")
+
+
+# Uso
+db_conn = DatabaseConnection()
+db = db_conn.connect('universidad')
+```
 
 
 # **1. Introducción: SQL vs MongoDB**
