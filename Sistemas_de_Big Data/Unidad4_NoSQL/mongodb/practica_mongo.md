@@ -120,19 +120,19 @@ from pymongo.errors import ConnectionFailure, OperationFailure
 
 
 class DatabaseConnection:
-    def __init__(self):
+    def __init__(self,username, password, host='localhost', port='27017'):
         # Credenciales del docker-compose
-        username = 'admin'
-        password = 'password123'
-        host = 'localhost'
-        port = '27017'
+        username = username
+        password = password
+        host = host
+        port = port
         
         # URI completa con autenticación
         self.uri = f'mongodb://{username}:{password}@{host}:{port}/'
         self.client = None
         self.db = None
     
-    def connect(self, db_name='universidad'):
+    def connect(self, db_name):
         try:
             self.client = MongoClient(
                 self.uri,
@@ -147,20 +147,18 @@ class DatabaseConnection:
             return self.db
             
         except ConnectionFailure as e:
-            print(f"✗ No se pudo conectar a MongoDB: {e}")
+            print(f"No se pudo conectar a MongoDB: {e}")
             return None
         except OperationFailure as e:
-            print(f"✗ Error de autenticación: {e}")
+            print(f"Error de autenticación: {e}")
             return None
     
     def close(self):
         if self.client:
             self.client.close()
-            print("✓ Conexión cerrada")
-
-
+            print("Conexión cerrada")
 # Uso
-db_conn = DatabaseConnection()
+db_conn = DatabaseConnection('admin','password123')
 db = db_conn.connect('universidad')
 ```
 
