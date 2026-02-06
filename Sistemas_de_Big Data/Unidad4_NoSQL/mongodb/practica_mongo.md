@@ -381,6 +381,17 @@ estudiantes.insert_one({
 })
 ```
 
+> Puede ocurrir que de un problema... en Mongo, los ID dependen del sistema!, por eso hay que poner
+``` python
+self.client = MongoClient(
+                self.uri,
+                serverSelectionTimeoutMS=5000,
+                authSource='admin',  # Importante: autenticarse contra la DB 'admin',
+                uuidRepresentation='standard'  # Para UUIDs <---------
+            )
+```
+
+
 ## **2.4 Validación y manejo de errores**
 
 ```python
