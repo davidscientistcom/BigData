@@ -395,7 +395,7 @@ self.client = MongoClient(
 ## **2.4 Validación y manejo de errores**
 
 ```python
-from pymongo.errors import DuplicateKeyError, WriteError
+from pymongo.errors import DuplicateKeyError, BulkWriteError
 
 # Ejemplo 1: Error por _id duplicado
 try:
@@ -415,7 +415,7 @@ documentos = [
 try:
     # ordered=False permite continuar después de un error
     resultado = estudiantes.insert_many(documentos, ordered=False)
-except DuplicateKeyError as e:
+except BulkWriteError as e:
     print(f"Algunos documentos no se insertaron: {e}")
     print(f"Insertados exitosamente: {e.details['nInserted']}")
 
