@@ -1,11 +1,4 @@
-¡Perfecto! Ahora sí te entiendo. Quieres un documento de **"desvigamiento"** (me encanta el término jajaja), es decir, un capítulo teórico que explique los conceptos desde cero de forma conceptual, casi como una "clase magistral" escrita, antes de meterse en los comandos y la práctica.
-
-Sería algo así:
-
-***
-
 # **MONGODB: FUNDAMENTOS Y CONCEPTOS (Prerequisitos)**
-## *"Desvigamiento" para entender MongoDB desde cero*
 
 ***
 
@@ -623,23 +616,3 @@ Si a las 17:00:00.005 otra parte de la aplicación lee desde SECONDARY 1, **no v
 - **w:3**: Confirma cuando 3 nodos específicos han replicado
 
 **Trade-off:** Más consistencia = más latencia. Elige según tus necesidades.
-
-***
-
-## **CONCLUSIÓN DEL DESVIGAMIENTO**
-
-Ahora que entiendes los conceptos fundamentales:
-
-- **Documentos BSON** como unidad de datos flexible
-- **Modelado embebido vs. referencias** según patrones de acceso
-- **Replica Sets** para alta disponibilidad
-- **Sharding** para escalado horizontal masivo
-- **Índices** como clave del rendimiento
-- **Transacciones** cuando necesitas consistencia estricta
-- **Trade-offs de consistencia** vs. rendimiento
-
-...estás preparado para el documento de administración práctica que hemos estado desarrollando, donde pondremos en práctica todos estos conceptos con comandos reales, configuraciones, scripts y escenarios de producción.
-
-***
-
-¿Te parece bien esta estructura de "desvigamiento"? ¿Desarrollo alguna sección más o pasamos a terminar el Capítulo 8 de Buenas Prácticas?
