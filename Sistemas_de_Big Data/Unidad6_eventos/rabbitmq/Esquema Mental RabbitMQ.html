@@ -1,0 +1,1155 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Esquema Mental RabbitMQ</title>
+    <style>
+        :root {
+            --color-bg: #0f172a;
+            --color-surface: #1e293b;
+            --color-text: #f1f5f9;
+            --color-text-secondary: #cbd5e1;
+            --color-accent: #38bdf8;
+            --color-producer: #22c55e;
+            --color-exchange: #f59e0b;
+            --color-queue: #8b5cf6;
+            --color-consumer: #ec4899;
+            --color-warning: #ef4444;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--color-bg);
+            color: var(--color-text);
+            padding: 20px;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            text-align: center;
+            color: var(--color-accent);
+            margin-bottom: 30px;
+            font-size: 2.5rem;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .tab-button {
+            padding: 12px 24px;
+            background: var(--color-surface);
+            border: 2px solid transparent;
+            color: var(--color-text-secondary);
+            cursor: pointer;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: all 0.3s;
+        }
+
+        .tab-button:hover {
+            background: #334155;
+            border-color: var(--color-accent);
+        }
+
+        .tab-button.active {
+            background: var(--color-accent);
+            color: var(--color-bg);
+            font-weight: 600;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+            animation: fadeIn 0.3s;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .flow-diagram {
+            background: var(--color-surface);
+            border-radius: 12px;
+            padding: 30px;
+            margin-bottom: 30px;
+        }
+
+        .flow-container {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        .flow-item {
+            flex: 1;
+            min-width: 150px;
+            background: rgba(56, 189, 248, 0.1);
+            border: 2px solid var(--color-accent);
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            position: relative;
+        }
+
+        .flow-item h3 {
+            color: var(--color-accent);
+            margin-bottom: 10px;
+        }
+
+        .flow-arrow {
+            font-size: 2rem;
+            color: var(--color-accent);
+            flex-shrink: 0;
+        }
+
+        .card-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .card {
+            background: var(--color-surface);
+            border-radius: 12px;
+            padding: 24px;
+            border-left: 4px solid var(--color-accent);
+            transition: transform 0.2s;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+        }
+
+        .card h3 {
+            color: var(--color-accent);
+            margin-bottom: 15px;
+            font-size: 1.3rem;
+        }
+
+        .card ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        .card li {
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(56, 189, 248, 0.2);
+        }
+
+        .card li:last-child {
+            border-bottom: none;
+        }
+
+        .exchange-types {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .exchange-card {
+            background: var(--color-surface);
+            border-radius: 12px;
+            padding: 24px;
+            border-top: 4px solid var(--color-exchange);
+        }
+
+        .exchange-card h3 {
+            color: var(--color-exchange);
+            margin-bottom: 15px;
+        }
+
+        .comparison-table {
+            background: var(--color-surface);
+            border-radius: 12px;
+            padding: 20px;
+            overflow-x: auto;
+            margin-bottom: 30px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid rgba(56, 189, 248, 0.2);
+        }
+
+        th {
+            color: var(--color-accent);
+            font-weight: 600;
+        }
+
+        .warning-box {
+            background: rgba(239, 68, 68, 0.1);
+            border-left: 4px solid var(--color-warning);
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .warning-box h3 {
+            color: var(--color-warning);
+            margin-bottom: 10px;
+        }
+
+        .code-example {
+            background: #0a0f1e;
+            border-radius: 8px;
+            padding: 16px;
+            overflow-x: auto;
+            margin: 15px 0;
+            border: 1px solid var(--color-accent);
+        }
+
+        .code-example code {
+            color: #e2e8f0;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+        }
+
+        .highlight {
+            color: var(--color-accent);
+            font-weight: 600;
+        }
+
+        .actor-flow {
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 30px;
+            padding: 30px;
+            background: var(--color-surface);
+            border-radius: 12px;
+            margin-bottom: 30px;
+        }
+
+        .actor {
+            text-align: center;
+            padding: 20px;
+            border-radius: 12px;
+            min-width: 150px;
+        }
+
+        .actor.producer {
+            background: rgba(34, 197, 94, 0.2);
+            border: 2px solid var(--color-producer);
+        }
+
+        .actor.exchange {
+            background: rgba(245, 158, 11, 0.2);
+            border: 2px solid var(--color-exchange);
+        }
+
+        .actor.queue {
+            background: rgba(139, 92, 246, 0.2);
+            border: 2px solid var(--color-queue);
+        }
+
+        .actor.consumer {
+            background: rgba(236, 72, 153, 0.2);
+            border: 2px solid var(--color-consumer);
+        }
+
+        .actor-icon {
+            font-size: 3rem;
+            margin-bottom: 10px;
+        }
+
+        .actor h4 {
+            font-size: 1.2rem;
+            margin-bottom: 8px;
+        }
+
+        .checklist {
+            background: var(--color-surface);
+            border-radius: 12px;
+            padding: 24px;
+        }
+
+        .checklist ul {
+            list-style: none;
+        }
+
+        .checklist li {
+            padding: 12px;
+            margin: 8px 0;
+            background: rgba(56, 189, 248, 0.1);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .checklist li::before {
+            content: "✓";
+            color: var(--color-producer);
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+
+        @media (max-width: 768px) {
+            .flow-container {
+                flex-direction: column;
+            }
+            
+            .flow-arrow {
+                transform: rotate(90deg);
+            }
+            
+            h1 {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🐰 RabbitMQ - Esquema Mental Completo</h1>
+
+        <div class="tabs">
+            <button class="tab-button active" data-tab="conceptos">📚 Conceptos Básicos</button>
+            <button class="tab-button" data-tab="flujo">🔄 Flujo de Mensajes</button>
+            <button class="tab-button" data-tab="exchanges">🔀 Tipos de Exchange</button>
+            <button class="tab-button" data-tab="durabilidad">💾 Durabilidad & ACK</button>
+            <button class="tab-button" data-tab="problemas">⚠️ Problemas Comunes</button>
+            <button class="tab-button" data-tab="produccion">✅ Checklist Producción</button>
+        </div>
+
+        <!-- TAB 1: CONCEPTOS BÁSICOS -->
+        <div id="conceptos" class="tab-content active">
+            <div class="flow-diagram">
+                <h2 style="text-align: center; color: var(--color-accent); margin-bottom: 20px;">¿Qué problema resuelve RabbitMQ?</h2>
+                <p style="text-align: center; font-size: 1.1rem; margin-bottom: 20px;">
+                    <span class="highlight">Desacoplamiento</span>: Separar el trabajo pesado de la respuesta HTTP inmediata
+                </p>
+                <div class="code-example">
+                    <code>Usuario sube foto → Web mete mensaje en cola → Usuario recibe respuesta inmediata<br>
+                    → Mientras tanto: Worker procesa foto en paralelo (redimensionar, filtros, guardar)</code>
+                </div>
+            </div>
+
+            <div class="actor-flow">
+                <div class="actor producer">
+                    <div class="actor-icon">📤</div>
+                    <h4>Producer</h4>
+                    <p>Crea y envía mensajes</p>
+                </div>
+                <div style="font-size: 2rem; color: var(--color-accent);">→</div>
+                <div class="actor exchange">
+                    <div class="actor-icon">🔀</div>
+                    <h4>Exchange</h4>
+                    <p>Clasifica y enruta</p>
+                </div>
+                <div style="font-size: 2rem; color: var(--color-accent);">→</div>
+                <div class="actor queue">
+                    <div class="actor-icon">📦</div>
+                    <h4>Queue</h4>
+                    <p>Almacena mensajes (FIFO)</p>
+                </div>
+                <div style="font-size: 2rem; color: var(--color-accent);">→</div>
+                <div class="actor consumer">
+                    <div class="actor-icon">📥</div>
+                    <h4>Consumer</h4>
+                    <p>Procesa mensajes</p>
+                </div>
+            </div>
+
+            <div class="card-grid">
+                <div class="card">
+                    <h3>🏢 Message Broker</h3>
+                    <p>Intermediario de mensajes (como una oficina de correos)</p>
+                    <ul>
+                        <li>Protocolo: <span class="highlight">AMQP 0-9-1</span></li>
+                        <li>Desacopla producer y consumer</li>
+                        <li>El remitente no conoce al destinatario</li>
+                    </ul>
+                </div>
+
+                <div class="card">
+                    <h3>📦 Queue (Cola)</h3>
+                    <p>Buffer de mensajes con orden FIFO</p>
+                    <ul>
+                        <li>Múltiples producers → 1 cola</li>
+                        <li>1 cola → Múltiples consumers</li>
+                        <li>Mensajes persisten hasta consumirse</li>
+                        <li>Limitada por RAM/disco del servidor</li>
+                    </ul>
+                </div>
+
+                <div class="card">
+                    <h3>🔀 Exchange</h3>
+                    <p>Clasificador postal de mensajes</p>
+                    <ul>
+                        <li><span class="highlight">IMPORTANTE:</span> Los mensajes NUNCA van directo a colas</li>
+                        <li>Siempre pasan por un Exchange</li>
+                        <li>Decide a qué cola(s) enviar</li>
+                        <li>Producer no necesita saber las colas</li>
+                    </ul>
+                </div>
+
+                <div class="card">
+                    <h3>🔗 Binding & Routing Key</h3>
+                    <p>Enlace entre Exchange y Queue</p>
+                    <ul>
+                        <li><span class="highlight">Binding:</span> Conexión Exchange ↔ Queue</li>
+                        <li><span class="highlight">Routing Key:</span> Etiqueta en el mensaje</li>
+                        <li>Exchange usa routing key para decidir destino</li>
+                        <li>Sin binding, mensajes no llegan</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 2: FLUJO DE MENSAJES -->
+        <div id="flujo" class="tab-content">
+            <div class="flow-diagram">
+                <h2 style="text-align: center; color: var(--color-accent); margin-bottom: 30px;">Flujo Completo de un Mensaje</h2>
+                
+                <div style="background: #0a0f1e; border-radius: 12px; padding: 30px; margin-bottom: 30px;">
+                    <div style="display: flex; flex-direction: column; gap: 20px;">
+                        <div style="display: flex; align-items: center; gap: 15px;">
+                            <div style="background: var(--color-producer); color: white; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold;">1</div>
+                            <div>
+                                <strong style="color: var(--color-producer);">Producer crea mensaje</strong>
+                                <p>Publica en <span class="highlight">Exchange</span> con una <span class="highlight">Routing Key</span></p>
+                            </div>
+                        </div>
+
+                        <div style="display: flex; align-items: center; gap: 15px;">
+                            <div style="background: var(--color-exchange); color: white; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold;">2</div>
+                            <div>
+                                <strong style="color: var(--color-exchange);">Exchange recibe mensaje</strong>
+                                <p>Evalúa sus <span class="highlight">Bindings</span> configurados</p>
+                            </div>
+                        </div>
+
+                        <div style="display: flex; align-items: center; gap: 15px;">
+                            <div style="background: var(--color-orange); color: white; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold;">3</div>
+                            <div>
+                                <strong style="color: var(--color-orange);">Enrutamiento según tipo</strong>
+                                <p>Según el tipo de exchange, enruta a 1 o más <span class="highlight">Queues</span></p>
+                            </div>
+                        </div>
+
+                        <div style="display: flex; align-items: center; gap: 15px;">
+                            <div style="background: var(--color-queue); color: white; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold;">4</div>
+                            <div>
+                                <strong style="color: var(--color-queue);">Mensaje en cola</strong>
+                                <p>Permanece hasta que un Consumer lo procese</p>
+                            </div>
+                        </div>
+
+                        <div style="display: flex; align-items: center; gap: 15px;">
+                            <div style="background: var(--color-consumer); color: white; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold;">5</div>
+                            <div>
+                                <strong style="color: var(--color-consumer);">Consumer procesa</strong>
+                                <p>Recoge mensaje, lo procesa y envía <span class="highlight">ACK</span></p>
+                            </div>
+                        </div>
+
+                        <div style="display: flex; align-items: center; gap: 15px;">
+                            <div style="background: var(--color-accent); color: white; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold;">6</div>
+                            <div>
+                                <strong style="color: var(--color-accent);">RabbitMQ elimina mensaje</strong>
+                                <p>Al recibir ACK, borra el mensaje de la cola</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card-grid">
+                <div class="card">
+                    <h3>🎯 Tipos de Colas</h3>
+                    <ul>
+                        <li><span class="highlight">Durable:</span> Sobrevive a reinicio de RabbitMQ</li>
+                        <li><span class="highlight">Transient:</span> Desaparece al reiniciar</li>
+                        <li><span class="highlight">Auto-delete:</span> Se borra cuando último consumer se desconecta</li>
+                        <li><span class="highlight">Exclusive:</span> Solo para una conexión</li>
+                    </ul>
+                </div>
+
+                <div class="card">
+                    <h3>⚙️ Parámetros de Conexión</h3>
+                    <ul>
+                        <li><strong>Host:</strong> localhost / IP del broker</li>
+                        <li><strong>Puerto:</strong> 5672 (AMQP)</li>
+                        <li><strong>VHost:</strong> Namespace virtual (default: /)</li>
+                        <li><strong>Credenciales:</strong> usuario/contraseña</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 3: TIPOS DE EXCHANGE -->
+        <div id="exchanges" class="tab-content">
+            <h2 style="text-align: center; color: var(--color-accent); margin-bottom: 30px;">Los 4 Tipos de Exchange</h2>
+
+            <div class="exchange-types">
+                <div class="exchange-card">
+                    <h3>1️⃣ Default Exchange ("")</h3>
+                    <p><strong>Routing:</strong> routing_key = nombre exacto de la cola</p>
+                    <p><strong>Wildcard:</strong> No</p>
+                    <p><strong>Destino:</strong> 1 cola</p>
+                    <div class="code-example">
+                        <code>channel.basic_publish(<br>
+                        &nbsp;&nbsp;exchange='',<br>
+                        &nbsp;&nbsp;routing_key='hello',<br>
+                        &nbsp;&nbsp;body='Hola'<br>
+                        )</code>
+                    </div>
+                    <p><strong>Uso:</strong> Pruebas simples, ejemplos básicos</p>
+                </div>
+
+                <div class="exchange-card">
+                    <h3>2️⃣ Direct Exchange</h3>
+                    <p><strong>Routing:</strong> Coincidencia exacta de routing_key</p>
+                    <p><strong>Wildcard:</strong> No</p>
+                    <p><strong>Destino:</strong> 1 o más colas (misma key)</p>
+                    <div class="code-example">
+                        <code>binding_key="error" → cola_errores<br>
+                        binding_key="warning" → cola_warnings<br>
+                        routing_key="error" → solo a cola_errores</code>
+                    </div>
+                    <p><strong>Uso:</strong> Logs por nivel, clasificación fija</p>
+                </div>
+
+                <div class="exchange-card">
+                    <h3>3️⃣ Fanout Exchange</h3>
+                    <p><strong>Routing:</strong> Ignora routing_key (broadcast)</p>
+                    <p><strong>Wildcard:</strong> —</p>
+                    <p><strong>Destino:</strong> TODAS las colas vinculadas</p>
+                    <div class="code-example">
+                        <code>pedido_realizado → cola_email<br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;→ cola_sms<br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;→ cola_historial</code>
+                    </div>
+                    <p><strong>Uso:</strong> Notificaciones múltiples, sincronización</p>
+                </div>
+
+                <div class="exchange-card">
+                    <h3>4️⃣ Topic Exchange</h3>
+                    <p><strong>Routing:</strong> Patrones con wildcards</p>
+                    <p><strong>Wildcard:</strong> * (1 palabra), # (0 o más)</p>
+                    <p><strong>Destino:</strong> 1 o más por coincidencia</p>
+                    <div class="code-example">
+                        <code>"españa.#" → todo de España<br>
+                        "*.*.temperatura" → todas temperaturas<br>
+                        "españa.madrid.temperatura" → ambas</code>
+                    </div>
+                    <p><strong>Uso:</strong> Telemetría, Big Data multi-dimensión</p>
+                </div>
+
+                <div class="exchange-card" style="grid-column: span 2;">
+                    <h3>5️⃣ Headers Exchange</h3>
+                    <p><strong>Routing:</strong> Basado en headers del mensaje (no routing_key)</p>
+                    <p><strong>Parámetro:</strong> x-match: "all" (AND) o "any" (OR)</p>
+                    <div class="code-example">
+                        <code>headers={'format': 'pdf', 'type': 'report'}<br>
+                        binding: {x-match='all', format='pdf', type='report'}<br>
+                        → Solo si AMBOS coinciden</code>
+                    </div>
+                    <p><strong>Uso:</strong> Routing multidimensional complejo</p>
+                </div>
+            </div>
+
+            <div class="comparison-table">
+                <h3 style="color: var(--color-accent); margin-bottom: 15px;">Comparación Rápida</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Tipo</th>
+                            <th>Criterio</th>
+                            <th>Wildcards</th>
+                            <th>Nº Colas</th>
+                            <th>Caso Típico</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Default</td>
+                            <td>routing_key = nombre cola</td>
+                            <td>No</td>
+                            <td>1</td>
+                            <td>Pruebas simples</td>
+                        </tr>
+                        <tr>
+                            <td>Direct</td>
+                            <td>Coincidencia exacta</td>
+                            <td>No</td>
+                            <td>1 o más</td>
+                            <td>Logs por nivel</td>
+                        </tr>
+                        <tr>
+                            <td>Fanout</td>
+                            <td>Ninguno (broadcast)</td>
+                            <td>—</td>
+                            <td>Todas</td>
+                            <td>Notificaciones múltiples</td>
+                        </tr>
+                        <tr>
+                            <td>Topic</td>
+                            <td>Patrones con * y #</td>
+                            <td>Sí</td>
+                            <td>1 o más</td>
+                            <td>Telemetría, pipelines</td>
+                        </tr>
+                        <tr>
+                            <td>Headers</td>
+                            <td>Cabeceras (AND/OR)</td>
+                            <td>No</td>
+                            <td>1 o más</td>
+                            <td>Metadatos complejos</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- TAB 4: DURABILIDAD & ACK -->
+        <div id="durabilidad" class="tab-content">
+            <h2 style="text-align: center; color: var(--color-accent); margin-bottom: 30px;">Durabilidad, Persistencia y Confirmaciones</h2>
+
+            <div class="warning-box">
+                <h3>⚠️ RabbitMQ NO garantiza entrega por defecto</h3>
+                <p>Debes activar explícitamente los mecanismos de seguridad para evitar pérdida de mensajes.</p>
+            </div>
+
+            <div class="card-grid">
+                <div class="card">
+                    <h3>🛡️ Las 3 Capas de Protección</h3>
+                    <ul>
+                        <li><span class="highlight">① Cola Durable</span><br>
+                        <code style="font-size: 0.85rem;">durable=True</code><br>
+                        Cola sobrevive a reinicio</li>
+                        
+                        <li><span class="highlight">② Mensaje Persistente</span><br>
+                        <code style="font-size: 0.85rem;">delivery_mode=2</code><br>
+                        Mensaje se escribe a disco</li>
+                        
+                        <li><span class="highlight">③ Exchange Durable</span><br>
+                        <code style="font-size: 0.85rem;">durable=True</code><br>
+                        Exchange sobrevive a reinicio</li>
+                    </ul>
+                    <p style="margin-top: 15px; color: var(--color-warning);">⚠️ Necesitas LAS TRES para protección completa</p>
+                </div>
+
+                <div class="card">
+                    <h3>📝 Auto-ACK vs Manual ACK</h3>
+                    <p><strong style="color: var(--color-warning);">Auto-ACK:</strong> ❌ No usar en producción</p>
+                    <ul>
+                        <li>Mensaje se borra al enviarse</li>
+                        <li>Si consumer crashea: pérdida de mensaje</li>
+                        <li>Riesgo de OOM (sin límite)</li>
+                    </ul>
+                    <p style="margin-top: 15px;"><strong style="color: var(--color-producer);">Manual ACK:</strong> ✅ Usar siempre</p>
+                    <ul>
+                        <li>Mensaje NO se borra hasta confirmar</li>
+                        <li>Si consumer crashea: reencola automático</li>
+                        <li>Control total del procesamiento</li>
+                    </ul>
+                </div>
+
+                <div class="card">
+                    <h3>🎯 Comandos de Confirmación</h3>
+                    <ul>
+                        <li><span class="highlight">basic_ack()</span><br>
+                        Confirma procesamiento exitoso</li>
+                        
+                        <li><span class="highlight">basic_nack(requeue=True)</span><br>
+                        Rechaza y reencola (otro consumer intentará)</li>
+                        
+                        <li><span class="highlight">basic_nack(requeue=False)</span><br>
+                        Rechaza y descarta (o va a DLQ)</li>
+                        
+                        <li><span class="highlight">basic_reject()</span><br>
+                        Rechaza UN solo mensaje</li>
+                    </ul>
+                </div>
+
+                <div class="card">
+                    <h3>⚡ Prefetch (QoS)</h3>
+                    <p>Número máximo de mensajes sin ACK simultáneos</p>
+                    <div class="code-example">
+                        <code>channel.basic_qos(<br>&nbsp;&nbsp;prefetch_count=10<br>)</code>
+                    </div>
+                    <ul>
+                        <li><strong>1:</strong> Máxima distribución equitativa</li>
+                        <li><strong>10-50:</strong> Balance seguridad/rendimiento</li>
+                        <li><strong>100-300:</strong> Máximo throughput</li>
+                        <li><strong>0:</strong> Sin límite (peligroso, riesgo OOM)</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="flow-diagram">
+                <h3 style="color: var(--color-accent); margin-bottom: 20px;">Publisher Confirms</h3>
+                <p>Confirmación del broker al producer de que el mensaje fue recibido</p>
+                <div class="code-example">
+                    <code>channel.confirm_delivery()  # Activar modo confirm<br><br>
+try:<br>
+&nbsp;&nbsp;channel.basic_publish(<br>
+&nbsp;&nbsp;&nbsp;&nbsp;exchange='',<br>
+&nbsp;&nbsp;&nbsp;&nbsp;routing_key='cola',<br>
+&nbsp;&nbsp;&nbsp;&nbsp;body='mensaje',<br>
+&nbsp;&nbsp;&nbsp;&nbsp;mandatory=True<br>
+&nbsp;&nbsp;)<br>
+&nbsp;&nbsp;print("✅ Confirmado por RabbitMQ")<br>
+except pika.exceptions.UnroutableError:<br>
+&nbsp;&nbsp;print("❌ Sin cola vinculada")</code>
+                </div>
+            </div>
+
+            <div class="comparison-table">
+                <h3 style="color: var(--color-accent); margin-bottom: 15px;">Matriz de Garantías de Entrega</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Configuración</th>
+                            <th>Crash Consumer</th>
+                            <th>Crash RabbitMQ</th>
+                            <th>Pérdida Red</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>auto_ack=True</td>
+                            <td style="color: var(--color-warning);">✅ SÍ pierde</td>
+                            <td style="color: var(--color-warning);">✅ SÍ pierde</td>
+                            <td style="color: var(--color-warning);">✅ SÍ pierde</td>
+                        </tr>
+                        <tr>
+                            <td>Manual ACK</td>
+                            <td style="color: var(--color-producer);">❌ NO pierde</td>
+                            <td style="color: var(--color-warning);">✅ SÍ pierde</td>
+                            <td style="color: var(--color-warning);">✅ SÍ pierde</td>
+                        </tr>
+                        <tr>
+                            <td>+ Durable Queue</td>
+                            <td style="color: var(--color-producer);">❌ NO pierde</td>
+                            <td style="color: var(--color-warning);">✅ SÍ pierde</td>
+                            <td style="color: var(--color-warning);">✅ SÍ pierde</td>
+                        </tr>
+                        <tr>
+                            <td>+ Persistent Messages</td>
+                            <td style="color: var(--color-producer);">❌ NO pierde</td>
+                            <td style="color: var(--color-orange);">⚠️ Ventana pequeña</td>
+                            <td style="color: var(--color-warning);">✅ SÍ pierde</td>
+                        </tr>
+                        <tr style="background: rgba(34, 197, 94, 0.1);">
+                            <td><strong>+ Publisher Confirms</strong></td>
+                            <td style="color: var(--color-producer);"><strong>❌ NO pierde</strong></td>
+                            <td style="color: var(--color-producer);"><strong>❌ NO pierde</strong></td>
+                            <td style="color: var(--color-producer);"><strong>❌ NO pierde</strong></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- TAB 5: PROBLEMAS COMUNES -->
+        <div id="problemas" class="tab-content">
+            <h2 style="text-align: center; color: var(--color-accent); margin-bottom: 30px;">Problemas Comunes y Soluciones</h2>
+
+            <div class="warning-box">
+                <h3>🔄 Bucle Infinito de Requeue</h3>
+                <p><strong>Problema:</strong> Mensaje siempre causa error → reencola infinitamente → consume CPU</p>
+                <p><strong>Solución:</strong> Implementar contador de reintentos</p>
+                <div class="code-example">
+                    <code>if method.redelivered:<br>
+&nbsp;&nbsp;# Ya falló antes, enviar a DLQ<br>
+&nbsp;&nbsp;ch.basic_nack(<br>
+&nbsp;&nbsp;&nbsp;&nbsp;delivery_tag=method.delivery_tag,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;requeue=False<br>
+&nbsp;&nbsp;)<br>
+else:<br>
+&nbsp;&nbsp;# Primera vez, reencolar<br>
+&nbsp;&nbsp;ch.basic_nack(<br>
+&nbsp;&nbsp;&nbsp;&nbsp;delivery_tag=method.delivery_tag,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;requeue=True<br>
+&nbsp;&nbsp;)</code>
+                </div>
+            </div>
+
+            <div class="card-grid">
+                <div class="card">
+                    <h3>❌ "Unknown delivery tag"</h3>
+                    <p><strong>Causas:</strong></p>
+                    <ul>
+                        <li>ACK del mismo mensaje dos veces</li>
+                        <li>ACK en canal diferente al receptor</li>
+                        <li>ACK de mensaje ya reencolado</li>
+                    </ul>
+                    <p><strong>Solución:</strong> ACK solo una vez, en el mismo canal</p>
+                </div>
+
+                <div class="card">
+                    <h3>💥 Consumer OOM (Out of Memory)</h3>
+                    <p><strong>Causas:</strong></p>
+                    <ul>
+                        <li>auto_ack=True sin límite</li>
+                        <li>prefetch_count=0</li>
+                        <li>RabbitMQ envía miles sin esperar ACK</li>
+                    </ul>
+                    <p><strong>Solución:</strong></p>
+                    <div class="code-example">
+                        <code>channel.basic_qos(<br>&nbsp;&nbsp;prefetch_count=100<br>)</code>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3>🔁 Mensajes Duplicados</h3>
+                    <p><strong>Causa:</strong> Consumer procesa pero crashea antes de ACK → reencola → otro procesa</p>
+                    <p><strong>Solución:</strong> Implementar idempotencia</p>
+                    <div class="code-example">
+                        <code>procesados = set()<br><br>
+if msg_id in procesados:<br>
+&nbsp;&nbsp;ch.basic_ack(...)<br>
+&nbsp;&nbsp;return  # Ya procesado<br><br>
+hacer_algo(body)<br>
+procesados.add(msg_id)<br>
+ch.basic_ack(...)</code>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3>📉 Pérdida Silenciosa de Mensajes</h3>
+                    <p><strong>Causa:</strong> Exchange sin colas vinculadas → RabbitMQ descarta sin avisar</p>
+                    <p><strong>Solución:</strong> Usar mandatory=True</p>
+                    <div class="code-example">
+                        <code>channel.basic_publish(<br>
+&nbsp;&nbsp;exchange='mi_exchange',<br>
+&nbsp;&nbsp;routing_key='clave',<br>
+&nbsp;&nbsp;body='msg',<br>
+&nbsp;&nbsp;mandatory=True  # ✓<br>
+)</code>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flow-diagram">
+                <h3 style="color: var(--color-accent); margin-bottom: 20px;">Dead Letter Queue (DLQ)</h3>
+                <p>Cola especial para mensajes no entregables</p>
+                <ul style="list-style: none; padding: 0;">
+                    <li>✓ Mensaje rechazado con requeue=False</li>
+                    <li>✓ Mensaje expiró por TTL</li>
+                    <li>✓ Cola alcanzó límite de tamaño</li>
+                    <li>✓ Consumer rechazó múltiples veces</li>
+                </ul>
+                <div class="code-example">
+                    <code>channel.queue_declare(<br>
+&nbsp;&nbsp;queue='cola_principal',<br>
+&nbsp;&nbsp;durable=True,<br>
+&nbsp;&nbsp;arguments={<br>
+&nbsp;&nbsp;&nbsp;&nbsp;'x-dead-letter-exchange': 'dlx_exchange',<br>
+&nbsp;&nbsp;&nbsp;&nbsp;'x-dead-letter-routing-key': 'failed',<br>
+&nbsp;&nbsp;&nbsp;&nbsp;'x-message-ttl': 60000  # 60s<br>
+&nbsp;&nbsp;}<br>
+)</code>
+                </div>
+            </div>
+
+            <div class="warning-box">
+                <h3>⚠️ Orden de Mensajes NO Garantizado</h3>
+                <p>RabbitMQ NO garantiza orden estricto en estos casos:</p>
+                <ul>
+                    <li>Múltiples consumers en misma cola</li>
+                    <li>Requeue (mensaje no vuelve a posición original)</li>
+                    <li>Publisher confirms asíncronos</li>
+                </ul>
+                <p><strong>Solución para garantizar orden:</strong></p>
+                <ul>
+                    <li>prefetch_count=1 + UN solo consumer</li>
+                    <li>Single Active Consumer (característica avanzada)</li>
+                    <li>Quorum Queues en lugar de colas clásicas</li>
+                </ul>
+            </div>
+
+            <div class="comparison-table">
+                <h3 style="color: var(--color-accent); margin-bottom: 15px;">Escenarios de Pérdida de Mensajes</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Escenario</th>
+                            <th>¿Se Pierde?</th>
+                            <th>Solución</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Producer envía y RabbitMQ crashea</td>
+                            <td style="color: var(--color-warning);">✅ SÍ</td>
+                            <td>Publisher Confirms</td>
+                        </tr>
+                        <tr>
+                            <td>Consumer crashea sin ACK</td>
+                            <td style="color: var(--color-warning);">✅ SÍ (auto_ack)</td>
+                            <td>Manual ACK</td>
+                        </tr>
+                        <tr>
+                            <td>RabbitMQ reinicia (cola no durable)</td>
+                            <td style="color: var(--color-warning);">✅ SÍ</td>
+                            <td>durable=True</td>
+                        </tr>
+                        <tr>
+                            <td>RabbitMQ reinicia (mensaje no persistente)</td>
+                            <td style="color: var(--color-warning);">✅ SÍ</td>
+                            <td>delivery_mode=2</td>
+                        </tr>
+                        <tr>
+                            <td>Exchange sin bindings</td>
+                            <td style="color: var(--color-warning);">✅ SÍ</td>
+                            <td>Dead Letter Exchange</td>
+                        </tr>
+                        <tr>
+                            <td>Mensaje expira por TTL</td>
+                            <td style="color: var(--color-warning);">✅ SÍ</td>
+                            <td>Ajustar TTL o más consumers</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- TAB 6: CHECKLIST PRODUCCIÓN -->
+        <div id="produccion" class="tab-content">
+            <h2 style="text-align: center; color: var(--color-accent); margin-bottom: 30px;">Checklist de Producción</h2>
+
+            <div class="checklist">
+                <h3 style="color: var(--color-accent); margin-bottom: 20px;">✅ Antes de llevar a producción</h3>
+                <ul>
+                    <li><strong>Colas durables:</strong> durable=True en todas las colas críticas</li>
+                    <li><strong>Mensajes persistentes:</strong> delivery_mode=2 en mensajes importantes</li>
+                    <li><strong>Manual ACK:</strong> auto_ack=False en TODOS los consumers</li>
+                    <li><strong>Prefetch configurado:</strong> Valores 1-300 según caso de uso</li>
+                    <li><strong>Publisher Confirms:</strong> channel.confirm_delivery() en producers críticos</li>
+                    <li><strong>Dead Letter Queue:</strong> Configurado en colas principales</li>
+                    <li><strong>Manejo de reintentos:</strong> Contador de redeliveries o headers x-retry-count</li>
+                    <li><strong>Idempotencia:</strong> Consumers preparados para mensajes duplicados</li>
+                    <li><strong>Monitoreo:</strong> Alertas sobre tamaño de colas, tasa de errores, DLQ</li>
+                    <li><strong>Logging:</strong> Registrar delivery_tag, redelivered, message_id</li>
+                    <li><strong>Timeouts:</strong> Configurar heartbeat en conexiones (default 60s)</li>
+                    <li><strong>High Availability:</strong> Quorum queues o clustering en producción</li>
+                </ul>
+            </div>
+
+            <div class="card-grid">
+                <div class="card">
+                    <h3>🔧 Instalación Docker</h3>
+                    <div class="code-example">
+                        <code>docker run -d --name rabbitmq \<br>
+&nbsp;&nbsp;-p 5672:5672 \<br>
+&nbsp;&nbsp;-p 15672:15672 \<br>
+&nbsp;&nbsp;rabbitmq:3-management</code>
+                    </div>
+                    <ul>
+                        <li><strong>5672:</strong> Puerto AMQP (conexiones)</li>
+                        <li><strong>15672:</strong> Panel web admin</li>
+                        <li><strong>Acceso:</strong> localhost:15672</li>
+                        <li><strong>Credenciales:</strong> guest / guest</li>
+                    </ul>
+                </div>
+
+                <div class="card">
+                    <h3>📦 Python Setup</h3>
+                    <div class="code-example">
+                        <code>pip install pika</code>
+                    </div>
+                    <p><strong>Conexión básica:</strong></p>
+                    <div class="code-example">
+                        <code>import pika<br><br>
+connection = pika.BlockingConnection(<br>
+&nbsp;&nbsp;pika.ConnectionParameters(<br>
+&nbsp;&nbsp;&nbsp;&nbsp;'localhost'<br>
+&nbsp;&nbsp;)<br>
+)<br>
+channel = connection.channel()</code>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3>📊 Prefetch Recomendado</h3>
+                    <table style="width: 100%; font-size: 0.9rem;">
+                        <tr>
+                            <th>Escenario</th>
+                            <th>Prefetch</th>
+                        </tr>
+                        <tr>
+                            <td>Muchos consumers, proceso corto</td>
+                            <td style="color: var(--color-accent);">100-300</td>
+                        </tr>
+                        <tr>
+                            <td>Muchos consumers, proceso largo</td>
+                            <td style="color: var(--color-accent);">1</td>
+                        </tr>
+                        <tr>
+                            <td>Un consumer, proceso rápido</td>
+                            <td style="color: var(--color-accent);">100-500</td>
+                        </tr>
+                        <tr>
+                            <td>Máxima seguridad</td>
+                            <td style="color: var(--color-accent);">1</td>
+                        </tr>
+                    </table>
+                </div>
+
+                <div class="card">
+                    <h3>⚡ Rendimiento vs Seguridad</h3>
+                    <p><strong>Mensajes críticos:</strong></p>
+                    <ul>
+                        <li>✓ Persistentes (delivery_mode=2)</li>
+                        <li>✓ Colas durables</li>
+                        <li>✓ Publisher Confirms</li>
+                        <li>✓ Manual ACK</li>
+                    </ul>
+                    <p style="margin-top: 15px;"><strong>Mensajes no críticos:</strong></p>
+                    <ul>
+                        <li>✓ Transient (delivery_mode=1)</li>
+                        <li>✓ Colas transient</li>
+                        <li>✓ Sin Publisher Confirms</li>
+                        <li>? Auto-ACK (solo si pérdida aceptable)</li>
+                    </ul>
+                    <p style="margin-top: 15px; color: var(--color-orange);">
+                        ⚠️ Escribir a disco es 100-1000x más lento que RAM
+                    </p>
+                </div>
+            </div>
+
+            <div class="flow-diagram">
+                <h3 style="color: var(--color-accent); margin-bottom: 20px;">Configuración de Máxima Seguridad</h3>
+                <div class="code-example">
+                    <code><strong style="color: var(--color-producer);"># PRODUCER</strong><br>
+channel.confirm_delivery()  # Publisher Confirms<br>
+channel.exchange_declare(<br>
+&nbsp;&nbsp;exchange='mi_exchange',<br>
+&nbsp;&nbsp;exchange_type='direct',<br>
+&nbsp;&nbsp;durable=True  # ① Exchange durable<br>
+)<br>
+channel.queue_declare(<br>
+&nbsp;&nbsp;queue='mi_cola',<br>
+&nbsp;&nbsp;durable=True  # ② Cola durable<br>
+)<br><br>
+try:<br>
+&nbsp;&nbsp;channel.basic_publish(<br>
+&nbsp;&nbsp;&nbsp;&nbsp;exchange='mi_exchange',<br>
+&nbsp;&nbsp;&nbsp;&nbsp;routing_key='clave',<br>
+&nbsp;&nbsp;&nbsp;&nbsp;body='mensaje',<br>
+&nbsp;&nbsp;&nbsp;&nbsp;properties=pika.BasicProperties(<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;delivery_mode=2  # ③ Mensaje persistente<br>
+&nbsp;&nbsp;&nbsp;&nbsp;),<br>
+&nbsp;&nbsp;&nbsp;&nbsp;mandatory=True  # Falla si sin binding<br>
+&nbsp;&nbsp;)<br>
+except pika.exceptions.UnroutableError:<br>
+&nbsp;&nbsp;print("❌ Sin cola vinculada")<br><br>
+
+<strong style="color: var(--color-consumer);"># CONSUMER</strong><br>
+channel.basic_qos(prefetch_count=10)  # Limitar carga<br><br>
+
+def procesar(ch, method, properties, body):<br>
+&nbsp;&nbsp;try:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;hacer_algo(body)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;ch.basic_ack(<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;delivery_tag=method.delivery_tag<br>
+&nbsp;&nbsp;&nbsp;&nbsp;)  # ④ Manual ACK<br>
+&nbsp;&nbsp;except Exception:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;ch.basic_nack(<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;delivery_tag=method.delivery_tag,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;requeue=False  # A DLQ si falla<br>
+&nbsp;&nbsp;&nbsp;&nbsp;)<br><br>
+
+channel.basic_consume(<br>
+&nbsp;&nbsp;queue='mi_cola',<br>
+&nbsp;&nbsp;on_message_callback=procesar,<br>
+&nbsp;&nbsp;auto_ack=False  # Manual ACK obligatorio<br>
+)</code>
+                </div>
+            </div>
+
+            <div class="warning-box">
+                <h3>🚨 Errores Fatales que Evitar</h3>
+                <ul style="list-style: none; padding: 0;">
+                    <li>❌ Usar auto_ack=True en producción</li>
+                    <li>❌ No configurar prefetch (riesgo OOM)</li>
+                    <li>❌ Mensajes críticos sin delivery_mode=2</li>
+                    <li>❌ No implementar Dead Letter Queue</li>
+                    <li>❌ Ignorar redelivered flag (bucles infinitos)</li>
+                    <li>❌ No usar Publisher Confirms para pagos/pedidos</li>
+                    <li>❌ No implementar idempotencia en consumers</li>
+                    <li>❌ Exchange sin mandatory=True (pérdida silenciosa)</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Tab Navigation
+        const tabButtons = document.querySelectorAll('.tab-button');
+        const tabContents = document.querySelectorAll('.tab-content');
+
+        tabButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                const targetTab = button.dataset.tab;
+
+                // Remove active class from all buttons and contents
+                tabButtons.forEach(btn => btn.classList.remove('active'));
+                tabContents.forEach(content => content.classList.remove('active'));
+
+                // Add active class to clicked button and corresponding content
+                button.classList.add('active');
+                document.getElementById(targetTab).classList.add('active');
+
+                // Scroll to top smoothly
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            });
+        });
+
+        // Optional: Add keyboard navigation
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+                const activeButton = document.querySelector('.tab-button.active');
+                const buttons = Array.from(tabButtons);
+                const currentIndex = buttons.indexOf(activeButton);
+                
+                let nextIndex;
+                if (e.key === 'ArrowRight') {
+                    nextIndex = (currentIndex + 1) % buttons.length;
+                } else {
+                    nextIndex = (currentIndex - 1 + buttons.length) % buttons.length;
+                }
+                
+                buttons[nextIndex].click();
+            }
+        });
+    </script>
+</body>
+</html>
+
