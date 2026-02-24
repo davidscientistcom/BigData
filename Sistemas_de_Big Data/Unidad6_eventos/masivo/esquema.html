@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Diagrama Mental: k6 vs Locust para Inserciones Masivas</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        body { font-family: Arial; background: #f0f8ff; margin: 20px; }
+        svg { border: 1px solid #ccc; background: white; }
+        .node { stroke: #fff; stroke-width: 2px; cursor: move; }
+        .k6-node { fill: #4CAF50; }  /* Verde para k6 */
+        .locust-node { fill: #2196F3; } /* Azul para Locust */
+        .concept-node { fill: #FF9800; opacity: 0.8; } /* Naranja para conceptos */
+        text { font-size: 12px; pointer-events: none; }
+        .link { stroke: #999; stroke-opacity: 0.6; stroke-width: 2px; }
+        .tooltip { position: absolute; background: rgba(0,0,0,0.8); color: white; padding: 8px; border-radius: 4px; font-size: 12px; pointer-events: none; }
+    </style>
+</head>
+<body>
+    <h2>Diagrama Mental Interactivo: Conceptos y Soluciones en Pruebas de Carga</h2>
+    <p>Arrastra nodos para reposicionar. Hover para tooltips con ejemplos.</p>
+    <svg width="1200" height="600" id="mindmap"></svg>
+
+    <script>
+        const svg = d3.select("#mindmap");
+        const width = +svg.attr("width"), height = +svg.attr("height");
+        const simulation = d3.forceSimulation()
+            .force("link", d3.forceLink().id(d => d.id).distance(120))
+            .force("charge", d3.forceManyBody().strength(-300))
+            .force("center", d3.forceCenter(width / 2, height / 2));
+
+        // Datos: Nodos (conceptos, k6, locust) y links
+        const graph = {
+            nodes: [
+                { id: "root", name: "Pruebas de Inserciones Masivas\n(Big Data)", group: "concept", tooltip: "Simular carga alta en APIs que insertan miles de docs en Mongo/PostgreSQL/Kafka." },
+                { id: "vus", name: "VUs (Usuarios Virtuales)", group: "concept", tooltip: "Simula N usuarios concurrentes. k6: eficiente en memoria; Locust: gevent." },
+                { id: "stages", name: "Stages/Ramp-up", group: "concept", tooltip: "Ramp-up/down para tráfico real. Evita saturar de golpe." },
+                { id: "thresholds", name: "Thresholds", group: "concept", tooltip: "Criterios auto: p95<1s, errores<1%. Útil en CI/CD." },
+                { id: "k6", name: "k6 (JS)", group: "k6", tooltip: "Resuelve: Escalabilidad HTTP, integración Grafana/Prometheus. Ej: RPS 500+ en bulk-insert." },
+                { id: "locust", name: "Locust (Python)", group: "locust", tooltip: "Resuelve: UI real-time, lógica compleja (auth), distribuidos. Ej: 50 users spawn@10/s." },
+                { id: "http", name: "HTTP/POST Bulk", group: "concept", tooltip: "Payload JSON con 1000 docs. Check status 201." },
+                { id: "metrics", name: "Métricas (RPS, p95, Errores)", group: "concept", tooltip: "Correlaciona con Prometheus: CPU/RAM/DB bottlenecks." }
+            ],
+            links: [
+                { source: "root", target: "vus" }, { source: "root", target: "stages" },
+                { source: "root", target: "thresholds" }, { source: "root", target: "http" },
+                { source: "vus", target: "k6" }, { source: "vus", target: "locust" },
+                { source: "stages", target: "k6" }, { source: "stages", target: "locust" },
+                { source: "thresholds", target: "k6" }, { source: "http", target: "k6" },
+                { source: "http", target: "locust" }, { source: "metrics", target: "k6" },
+                { source: "metrics", target: "locust" }, { source: "root", target: "metrics" }
+            ]
+        };
+
+        const link = svg.append("g").attr("class", "links").selectAll("line");
+        const node = svg.append("g").attr("class", "nodes").selectAll("g");
+        const tooltip = d3.select("body").append("div").attr("class", "tooltip");
+
+        simulation.nodes(graph.nodes).on("tick", ticked);
+        simulation.force("link").links(graph.links);
+
+        node.data(graph.nodes).enter().append("g")
+            .attr("class", "node")
+            .call(d3.drag()
+                .on("start", dragstarted)
+                .on("drag", dragged)
+                .on("end", dragended))
+            .append("circle")
+            .attr("r", 25)
+            .attr("class", d => `${d.group}-node`)
+            .on("mouseover", (event, d) => {
+                tooltip.style("opacity", 1).html(d.tooltip).style("left", (event.pageX + 10) + "px").style("top", (event.pageY - 10) + "px");
+            })
+            .on("mouseout", () => tooltip.style("opacity", 0));
+
+        node.append("text").text(d => d.name).attr("dy", 5).attr("text-anchor", "middle");
+
+        link.data(graph.links).enter().append("line").attr("class", "link");
+
+        function ticked() {
+            link.attr("x1", d => d.source.x).attr("y1", d => d.source.y)
+                .attr("x2", d => d.target.x).attr("y2", d => d.target.y);
+            node.attr("transform", d => `translate(${d.x},${d.y})`);
+        }
+
+        function dragstarted(event, d) { if (!event.active) simulation.alphaTarget(0.3).restart(); d.fx = d.x; d.fy = d.y; }
+        function dragged(event, d) { d.fx = event.x; d.fy = event.y; }
+        function dragended(event, d) { if (!event.active) simulation.alphaTarget(0); d.fx = null; d.fy = null; }
+    </script>
+</body>
+</html>

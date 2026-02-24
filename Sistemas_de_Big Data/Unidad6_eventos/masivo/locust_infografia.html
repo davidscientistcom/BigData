@@ -1,0 +1,891 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Locust - Esquema Mental Completo</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    background: #0d1117;
+    color: #e6edf3;
+    padding: 20px;
+  }
+  h1 {
+    text-align: center;
+    font-size: 1.8em;
+    margin-bottom: 6px;
+    background: linear-gradient(90deg, #58a6ff, #3fb950, #f78166);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .subtitle {
+    text-align: center;
+    color: #8b949e;
+    font-size: 0.85em;
+    margin-bottom: 24px;
+  }
+
+  .tabs {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px;
+    margin-bottom: 24px;
+  }
+  .tab-btn {
+    padding: 7px 18px;
+    border-radius: 18px;
+    border: 1px solid #30363d;
+    background: #1b1f24;
+    color: #8b949e;
+    font-size: 0.8em;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.18s;
+  }
+  .tab-btn:hover {
+    border-color: #58a6ff;
+    color: #58a6ff;
+  }
+  .tab-btn.active {
+    background: #58a6ff;
+    border-color: #58a6ff;
+    color: #0d1117;
+  }
+  .tab-btn.green.active { background: #3fb950; border-color: #3fb950; }
+  .tab-btn.purple.active { background: #bc8cff; border-color: #bc8cff; }
+
+  .tab-section { display: none; }
+  .tab-section.active { display: block; }
+
+  .section-header {
+    text-align: center;
+    margin-bottom: 18px;
+  }
+  .section-header h2 {
+    font-size: 1.2em;
+    margin-bottom: 4px;
+  }
+  .section-header p {
+    font-size: 0.83em;
+    color: #8b949e;
+  }
+
+  .grid {
+    max-width: 1400px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+    gap: 14px;
+  }
+  .grid-wide { grid-column: 1 / -1; }
+
+  .card {
+    background: #161b22;
+    border-radius: 10px;
+    border: 1px solid #30363d;
+    padding: 16px;
+    font-size: 0.83em;
+  }
+  .card:hover { border-color: #58a6ff55; }
+
+  .card-title {
+    font-weight: 700;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .badge {
+    font-size: 0.68em;
+    padding: 1px 7px;
+    border-radius: 10px;
+    border: 1px solid #30363d;
+  }
+  .badge-core { background: #1f3a5f; color: #58a6ff; }
+  .badge-adv { background: #1a3a2a; color: #3fb950; }
+  .badge-conf { background: #3a2a1a; color: #f0883e; }
+  .badge-dist { background: #2a1a3a; color: #bc8cff; }
+
+  p { color: #8b949e; line-height: 1.6; margin-bottom: 6px; }
+
+  pre {
+    background: #0d1117;
+    border-radius: 8px;
+    border: 1px solid #21262d;
+    padding: 10px;
+    font-family: "JetBrains Mono", "Fira Code", monospace;
+    font-size: 0.75em;
+    overflow-x: auto;
+    line-height: 1.6;
+    margin: 6px 0;
+  }
+  code { font-family: inherit; }
+
+  .comment { color: #8b949e; }
+  .kw { color: #ff7b72; }
+  .str { color: #a5d6ff; }
+  .num { color: #79c0ff; }
+  .name { color: #d2a8ff; }
+  .green { color: #3fb950; }
+  .orange { color: #f0883e; }
+  .purple { color: #bc8cff; }
+
+  ul { padding-left: 18px; margin: 4px 0 6px; }
+  ul li { margin-bottom: 3px; color: #8b949e; }
+  ul li::marker { color: #58a6ff; }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.78em;
+    margin-top: 6px;
+  }
+  th {
+    background: #1b1f24;
+    color: #8b949e;
+    text-align: left;
+    padding: 6px 8px;
+    font-weight: 600;
+  }
+  td {
+    padding: 5px 8px;
+    border-bottom: 1px solid #21262d;
+    vertical-align: top;
+  }
+  tr:hover td { background: #21262d55; }
+
+  .highlight {
+    margin-top: 6px;
+    background: #1f3a5f33;
+    border-radius: 6px;
+    border: 1px solid #58a6ff55;
+    padding: 8px 10px;
+    font-size: 0.78em;
+    color: #a5d6ff;
+  }
+  .highlight.green {
+    background: #1a3a2a33;
+    border-color: #3fb95055;
+    color: #7ee787;
+  }
+  .highlight.orange {
+    background: #3a2a1a33;
+    border-color: #f0883e55;
+    color: #ffb86b;
+  }
+  .flow {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin: 6px 0;
+    font-size: 0.78em;
+  }
+  .flow-box {
+    background: #21262d;
+    border-radius: 5px;
+    padding: 3px 8px;
+    border: 1px solid #30363d;
+  }
+  .flow-arrow {
+    color: #58a6ff;
+    align-self: center;
+  }
+
+  details summary {
+    cursor: pointer;
+    color: #58a6ff;
+    font-size: 0.8em;
+    margin-bottom: 3px;
+  }
+  details summary:hover { color: #79c0ff; }
+</style>
+</head>
+<body>
+
+<h1>Locust - Esquema Mental Completo</h1>
+<p class="subtitle">Guía visual de conceptos, opciones y escenarios con ejemplos prácticos</p>
+
+<div class="tabs">
+  <button class="tab-btn active" data-tab="t1">Visión general</button>
+  <button class="tab-btn" data-tab="t2">Locustfile y usuarios</button>
+  <button class="tab-btn" data-tab="t3">Comportamiento avanzado</button>
+  <button class="tab-btn" data-tab="t4">Ejecución y configuración</button>
+  <button class="tab-btn green" data-tab="t5">Modo distribuido y formas de carga</button>
+  <button class="tab-btn purple" data-tab="t6">Escenarios completos</button>
+</div>
+
+<!-- TAB 1: VISIÓN GENERAL -->
+<div id="t1" class="tab-section active">
+  <div class="section-header">
+    <h2>Qué es Locust y cómo pensar en él</h2>
+    <p>Modelo mental: usuarios, tareas, esperas y métricas</p>
+  </div>
+  <div class="grid">
+
+    <div class="card grid-wide">
+      <div class="card-title">
+        <span class="badge badge-core">Concepto central</span>
+        Modelo mental de Locust
+      </div>
+      <p>Locust simula usuarios (User/HttpUser) que ejecutan tareas Python decoradas con <code>@task</code>, esperando entre tareas según <code>wait_time</code>, y recoge métricas de cada petición o acción ejecutada.</p>
+      <p>Cada usuario corre en una “microcorutina” (greenlet) que ejecuta secuencialmente el código de tus tareas, igual que un programa Python normal, pero a gran escala.[web:67]</p>
+      <div class="flow">
+        <div class="flow-box">Locustfile (Python)</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-box">Usuarios virtuales</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-box">Tareas (@task)</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-box">Sistema bajo prueba</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-box">Métricas y estadísticas</div>
+      </div>
+      <div class="highlight">
+        La unidad básica es un usuario que ejecuta un bucle: tarea(s) → espera (<code>wait_time</code>) → tarea(s) → ...; tu trabajo es definir esas tareas y el patrón de carga.[web:67]
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">
+        <span class="badge badge-core">Tipos de usuario</span>
+        User vs HttpUser
+      </div>
+      <p>Locust tiene dos clases base principales: <code>User</code> y <code>HttpUser</code>. <code>HttpUser</code> incluye un cliente HTTP (<code>self.client</code>) con soporte para <code>get</code>, <code>post</code>, etc., y manejo automático de métricas por petición.[web:67]</p>
+      <pre><span class="kw">from</span> locust <span class="kw">import</span> User, HttpUser, task, between
+
+<span class="kw">class</span> <span class="name">MiUsuarioHttp</span>(HttpUser):
+    wait_time = between(<span class="num">1</span>, <span class="num">3</span>)
+
+    @task
+    <span class="kw">def</span> <span class="name">consulta</span>(self):
+        self.client.get(<span class="str">"/items"</span>)
+
+<span class="kw">class</span> <span class="name">MiUsuarioGenerico</span>(User):
+    wait_time = between(<span class="num">1</span>, <span class="num">3</span>)
+
+    @task
+    <span class="kw">def</span> <span class="name">algo</span>(self):
+        <span class="comment"># Podrías usar cualquier librería Python aquí</span>
+        print(<span class="str">"trabajando..."</span>)</pre>
+      <p>Se usa <code>HttpUser</code> para APIs HTTP y <code>User</code> cuando el trabajo no es HTTP (por ejemplo, llamadas directas a base de datos, colas, etc.).[web:67]</p>
+    </div>
+
+    <div class="card">
+      <div class="card-title">
+        <span class="badge badge-core">Ciclo de vida</span>
+        on_start y on_stop
+      </div>
+      <p>Cada usuario puede inicializar recursos en <code>on_start</code> (por ejemplo, login) y liberarlos en <code>on_stop</code> (logout). Estos métodos se ejecutan una vez por usuario, no por iteración de tarea.[web:67]</p>
+      <pre><span class="kw">from</span> locust <span class="kw">import</span> HttpUser, task, between
+
+<span class="kw">class</span> <span class="name">UsuarioAutenticado</span>(HttpUser):
+    wait_time = between(<span class="num">1</span>, <span class="num">2</span>)
+    host = <span class="str">"http://localhost:8000"</span>
+
+    <span class="kw">def</span> <span class="name">on_start</span>(self):
+        res = self.client.post(<span class="str">"/login"</span>,
+            json={<span class="str">"username"</span>: <span class="str">"foo"</span>, <span class="str">"password"</span>: <span class="str">"bar"</span>})
+        self.token = res.json()[<span class="str">"access_token"</span>]
+        self.headers = {<span class="str">"Authorization"</span>: f<span class="str">"Bearer {self.token}"</span>}
+
+    <span class="kw">def</span> <span class="name">on_stop</span>(self):
+        self.client.post(<span class="str">"/logout"</span>, headers=self.headers)
+
+    @task
+    <span class="kw">def</span> <span class="name">listar</span>(self):
+        self.client.get(<span class="str">"/items"</span>, headers=self.headers)</pre>
+      <p>Extensión típica: mover la lógica común (login, obtención de token) a funciones auxiliares e inyectar configuraciones vía variables de entorno.[web:67]</p>
+    </div>
+
+  </div>
+</div>
+
+<!-- TAB 2: LOCUSTFILE Y USUARIOS -->
+<div id="t2" class="tab-section">
+  <div class="section-header">
+    <h2>Locustfile y definición de usuarios</h2>
+    <p>Estructura, tareas, pesos, etiquetas y tiempos de espera</p>
+  </div>
+  <div class="grid">
+
+    <div class="card grid-wide">
+      <div class="card-title">
+        <span class="badge badge-core">Estructura</span>
+        Locustfile básico
+      </div>
+      <pre><span class="comment"># locustfile.py</span>
+<span class="kw">from</span> locust <span class="kw">import</span> HttpUser, task, between
+
+<span class="kw">class</span> <span class="name">QuickstartUser</span>(HttpUser):
+    wait_time = between(<span class="num">1</span>, <span class="num">5</span>)  <span class="comment"># tiempo de espera entre tareas</span>
+
+    @task
+    <span class="kw">def</span> <span class="name">hello_world</span>(self):
+        self.client.get(<span class="str">"/hello"</span>)
+        self.client.get(<span class="str">"/world"</span>)
+
+    @task(<span class="num">3</span>)  <span class="comment"># peso 3</span>
+    <span class="kw">def</span> <span class="name">view_items</span>(self):
+        <span class="kw">for</span> item_id <span class="kw">in</span> range(<span class="num">10</span>):
+            self.client.get(f<span class="str">"/item?id={item_id}"</span>, name=<span class="str">"/item"</span>)</pre>
+      <p>Un locustfile es un módulo Python normal: puedes extraer tareas a otros ficheros, importar módulos propios, etc. Locust busca clases que hereden de <code>User</code>/<code>HttpUser</code> como punto de entrada.[web:67]</p>
+    </div>
+
+    <div class="card">
+      <div class="card-title">
+        <span class="badge badge-core">Pesos</span>
+        @task con prioridad
+      </div>
+      <p>Puedes asignar un peso entero a cada tarea para controlar con qué frecuencia se ejecuta relativa a las demás.[web:67]</p>
+      <pre><span class="kw">from</span> locust <span class="kw">import</span> HttpUser, task, constant
+
+<span class="kw">class</span> <span class="name">UsuarioTienda</span>(HttpUser):
+    wait_time = constant(<span class="num">1</span>)
+
+    @task(<span class="num">5</span>)
+    <span class="kw">def</span> <span class="name">listar_productos</span>(self):
+        self.client.get(<span class="str">"/productos"</span>)
+
+    @task(<span class="num">1</span>)
+    <span class="kw">def</span> <span class="name">crear_pedido</span>(self):
+        self.client.post(<span class="str">"/pedidos"</span>, json={<span class="str">"sku"</span>: <span class="str">"X"</span>, <span class="str">"qty"</span>: <span class="num">1</span>})</pre>
+      <p>Con estos pesos, aproximadamente 5 de cada 6 iteraciones serán de lectura y 1 de escritura, con un tiempo de espera constante de 1 segundo entre iteraciones.[web:67]</p>
+    </div>
+
+    <div class="card">
+      <div class="card-title">
+        <span class="badge badge-core">Etiquetas</span>
+        tag y filtrado de tareas
+      </div>
+      <p>Las etiquetas permiten agrupar tareas y lanzar solo un subconjunto usando la CLI (<code>--tags</code>, <code>--exclude-tags</code>). Esto es útil para mantener un único locustfile con muchos escenarios.[web:67]</p>
+      <pre><span class="kw">from</span> locust <span class="kw">import</span> HttpUser, task, tag, constant
+
+<span class="kw">class</span> <span class="name">UsuarioEtiquetas</span>(HttpUser):
+    wait_time = constant(<span class="num">1</span>)
+
+    @tag(<span class="str">"lectura"</span>)
+    @task
+    <span class="kw">def</span> <span class="name">listar</span>(self):
+        self.client.get(<span class="str">"/items"</span>)
+
+    @tag(<span class="str">"escritura"</span>)
+    @task
+    <span class="kw">def</span> <span class="name">insertar</span>(self):
+        self.client.post(<span class="str">"/items"</span>, json={<span class="str">"value"</span>: <span class="str">"x"</span>})
+
+    @tag(<span class="str">"critico"</span>, <span class="str">"escritura"</span>)
+    @task
+    <span class="kw">def</span> <span class="name">pago</span>(self):
+        self.client.post(<span class="str">"/pago"</span>)</pre>
+      <pre><span class="comment"># Ejecutar solo tareas etiquetadas como "escritura"</span>
+locust -f locustfile.py --tags escritura
+
+<span class="comment"># Ejecutar todo excepto las de "critico"</span>
+locust -f locustfile.py --exclude-tags critico</pre>
+      <p>Esto permite diseñar una sola batería de tests y activar subconjuntos según el tipo de prueba (smoke, regresión, pico, etc.).[web:67]</p>
+    </div>
+
+    <div class="card">
+      <div class="card-title">
+        <span class="badge badge-core">wait_time</span>
+        between, constant, pacing, throughput
+      </div>
+      <p>El tiempo de espera controla la cadencia de ejecución por usuario. Locust ofrece funciones utilitarias para los patrones más comunes.[web:67][web:61]</p>
+      <pre><span class="kw">from</span> locust <span class="kw">import</span> HttpUser, task, between, constant, constant_pacing, constant_throughput
+<span class="kw">import</span> random
+
+<span class="kw">class</span> <span class="name">UsuarioA</span>(HttpUser):
+    wait_time = between(<span class="num">1</span>, <span class="num">3</span>)     <span class="comment"># intervalo uniforme aleatorio</span>
+
+<span class="kw">class</span> <span class="name">UsuarioB</span>(HttpUser):
+    wait_time = constant(<span class="num">2</span>)           <span class="comment"># siempre 2 segundos</span>
+
+<span class="kw">class</span> <span class="name">UsuarioC</span>(HttpUser):
+    wait_time = constant_pacing(<span class="num">5</span>)    <span class="comment"># cada iteración dura al menos 5 s</span>
+
+<span class="kw">class</span> <span class="name">UsuarioD</span>(HttpUser):
+    wait_time = constant_throughput(<span class="num">2</span>)<span class="comment"># intenta 2 tareas por segundo por usuario</span>
+
+<span class="kw">class</span> <span class="name">UsuarioCustom</span>(HttpUser):
+    <span class="kw">def</span> <span class="name">wait_time</span>(self):
+        <span class="kw">return</span> random.expovariate(<span class="num">1.0</span>) * <span class="num">0.5</span></pre>
+      <p>Usar <code>constant_pacing</code> y <code>constant_throughput</code> es una forma sencilla de aproximarse a un determinado RPS con un número fijo de usuarios.[web:61]</p>
+    </div>
+
+  </div>
+</div>
+
+<!-- TAB 3: COMPORTAMIENTO AVANZADO -->
+<div id="t3" class="tab-section">
+  <div class="section-header">
+    <h2>Comportamiento avanzado</h2>
+    <p>Secuencias, manejo de errores, cliente HTTP y tareas reutilizables</p>
+  </div>
+  <div class="grid">
+
+    <div class="card grid-wide">
+      <div class="card-title">
+        <span class="badge badge-adv">Secuencias</span>
+        SequentialTaskSet para flujos de negocio
+      </div>
+      <p>Para modelar un flujo que debe seguir pasos en orden (por ejemplo, crear carrito → añadir items → pagar), se usa <code>SequentialTaskSet</code>, que ejecuta sus tareas en el orden definido.[web:67]</p>
+      <pre><span class="kw">from</span> locust <span class="kw">import</span> HttpUser, SequentialTaskSet, task, between
+
+<span class="kw">class</span> <span class="name">FlujoCompra</span>(SequentialTaskSet):
+
+    @task
+    <span class="kw">def</span> <span class="name">crear_carrito</span>(self):
+        res = self.client.post(<span class="str">"/cart"</span>)
+        self.cart_id = res.json()[<span class="str">"id"</span>]
+
+    @task
+    <span class="kw">def</span> <span class="name">añadir_items</span>(self):
+        self.client.post(f<span class="str">"/cart/{self.cart_id}/items"</span>,
+                         json={<span class="str">"sku"</span>: <span class="str">"X"</span>, <span class="str">"qty"</span>: <span class="num">2</span>})
+
+    @task
+    <span class="kw">def</span> <span class="name">pagar</span>(self):
+        self.client.post(f<span class="str">"/cart/{self.cart_id}/checkout"</span>)
+
+    @task
+    <span class="kw">def</span> <span class="name">verificar</span>(self):
+        res = self.client.get(f<span class="str">"/cart/{self.cart_id}"</span>)
+        <span class="kw">if</span> res.json().get(<span class="str">"status"</span>) == <span class="str">"paid"</span>:
+            self.interrupt(reschedule=<span class="kw">True</span>)
+
+<span class="kw">class</span> <span class="name">UsuarioEcommerce</span>(HttpUser):
+    wait_time = between(<span class="num">1</span>, <span class="num">2</span>)
+    tasks = [FlujoCompra]</pre>
+      <p>Se puede combinar con otros <code>TaskSet</code> para tener mezcla de flujos secuenciales y tareas sueltas, usando pesos en el atributo <code>tasks</code>.[web:46][web:67]</p>
+    </div>
+
+    <div class="card">
+      <div class="card-title">
+        <span class="badge badge-adv">Errores</span>
+        catch_response para control fino
+      </div>
+      <p>Con <code>catch_response=True</code>, puedes decidir manualmente si una petición de Locust debe marcarse como éxito o fracaso, incluso si el código HTTP es 200.[web:67]</p>
+      <pre><span class="kw">from</span> locust <span class="kw">import</span> HttpUser, task, between
+
+<span class="kw">class</span> <span class="name">UsuarioValidando</span>(HttpUser):
+    wait_time = between(<span class="num">1</span>, <span class="num">2</span>)
+
+    @task
+    <span class="kw">def</span> <span class="name">peticion_controlada</span>(self):
+        <span class="kw">with</span> self.client.get(<span class="str">"/status"</span>, catch_response=<span class="kw">True</span>) <span class="kw">as</span> res:
+            <span class="kw">if</span> res.status_code != <span class="num">200</span>:
+                res.failure(f<span class="str">"HTTP {res.status_code}"</span>)
+            <span class="kw">elif</span> res.text != <span class="str">"ok"</span>:
+                res.failure(<span class="str">"Contenido incorrecto"</span>)
+            <span class="kw">else</span>:
+                res.success()</pre>
+      <p>Esto es útil para validar respuestas funcionales (por ejemplo, campos JSON) y no solo códigos HTTP.[web:67]</p>
+    </div>
+
+    <div class="card">
+      <div class="card-title">
+        <span class="badge badge-adv">Cliente HTTP</span>
+        Parámetros típicos de self.client
+      </div>
+      <p><code>self.client</code> acepta los mismos parámetros que <code>requests</code> (método, url, datos, json, headers), y Locust añade opciones como <code>name</code> y <code>catch_response</code>.[web:67]</p>
+      <pre><span class="comment"># GET con parámetros de consulta y nombre agrupado</span>
+self.client.get(
+    <span class="str">"/items"</span>,
+    params={<span class="str">"page"</span>: <span class="num">1</span>, <span class="str">"size"</span>: <span class="num">50</span>},
+    name=<span class="str">"GET /items"</span>,
+)
+
+<span class="comment"># POST con formulario</span>
+self.client.post(
+    <span class="str">"/login"</span>,
+    data={<span class="str">"username"</span>: <span class="str">"u"</span>, <span class="str">"password"</span>: <span class="str">"p"</span>},
+)
+
+<span class="comment"># POST con JSON y cabeceras</span>
+self.client.post(
+    <span class="str">"/bulk-insert"</span>,
+    json={<span class="str">"docs"</span>: docs},
+    headers={<span class="str">"X-Test"</span>: <span class="str">"true"</span>},
+)
+
+<span class="comment"># Contexto con catch_response y timeout explícito</span>
+<span class="kw">with</span> self.client.get(
+    <span class="str">"/lento"</span>,
+    timeout=<span class="num">10</span>,
+    catch_response=<span class="kw">True</span>,
+    name=<span class="str">"GET /lento"</span>,
+) <span class="kw">as</span> res:
+    ...</pre>
+      <p>Se pueden pasar argumentos adicionales del cliente HTTP estándar, como <code>timeout</code>, <code>cookies</code> o autenticación.[web:67]</p>
+    </div>
+
+    <div class="card">
+      <div class="card-title">
+        <span class="badge badge-adv">Reutilización</span>
+        Múltiples clases de usuario en un mismo fichero
+      </div>
+      <p>Un locustfile puede contener varias clases de usuario, representando diferentes tipos de clientes (lectores, escritores, administradores, etc.).[web:67]</p>
+      <pre><span class="kw">class</span> <span class="name">SoloLectura</span>(HttpUser):
+    wait_time = between(<span class="num">1</span>, <span class="num">2</span>)
+    host = <span class="str">"http://localhost:8000"</span>
+
+    @task
+    <span class="kw">def</span> <span class="name">listar</span>(self):
+        self.client.get(<span class="str">"/items"</span>)
+
+<span class="kw">class</span> <span class="name">SoloEscritura</span>(HttpUser):
+    wait_time = between(<span class="num">2</span>, <span class="num">4</span>)
+    host = <span class="str">"http://localhost:8000"</span>
+
+    @task
+    <span class="kw">def</span> <span class="name">insertar</span>(self):
+        self.client.post(<span class="str">"/items"</span>, json={<span class="str">"value"</span>: <span class="str">"x"</span>})</pre>
+      <p>Locust lanzará usuarios de todas las clases definidas, salvo que uses opciones de selección en la línea de comandos para limitarlo a algunas.[web:67]</p>
+    </div>
+
+  </div>
+</div>
+
+<!-- TAB 4: EJECUCIÓN Y CONFIGURACIÓN -->
+<div id="t4" class="tab-section">
+  <div class="section-header">
+    <h2>Ejecución, CLI y configuración</h2>
+    <p>Interfaz web, modo headless, opciones de línea de comandos y ficheros de configuración</p>
+  </div>
+  <div class="grid">
+
+    <div class="card grid-wide">
+      <div class="card-title">
+        <span class="badge badge-conf">CLI</span>
+        Comandos básicos de ejecución
+      </div>
+      <pre><span class="comment"># Modo interactivo con UI web</span>
+locust -f locustfile.py
+
+<span class="comment"># Modo headless (sin UI) para automatización o CI</span>
+locust -f locustfile.py \
+  --headless \
+  --users 100 \
+  --spawn-rate 10 \
+  --run-time 5m \
+  --host http://localhost:8000
+
+<span class="comment"># Ver todas las opciones</span>
+locust --help</pre>
+      <p>Las opciones más importantes controlan el número de usuarios (<code>--users</code>), la tasa de creación (<code>--spawn-rate</code>), el tiempo de ejecución (<code>--run-time</code>) y el host a atacar.[web:88]</p>
+    </div>
+
+    <div class="card">
+      <div class="card-title">
+        <span class="badge badge-conf">Salida</span>
+        CSV y HTML
+      </div>
+      <p>Locust puede generar automáticamente CSV con estadísticas detalladas por petición y un informe HTML con gráficos resumidos.[web:51]</p>
+      <pre>locust -f locustfile.py \
+  --headless \
+  -u 200 -r 20 -t 10m \
+  --csv=resultado \
+  --html=resultado.html \
+  --host http://localhost:8000</pre>
+      <p>Esto genera ficheros <code>resultado_stats.csv</code>, <code>resultado_failures.csv</code>, históricos y un HTML autocontenido que se puede entregar como informe de prueba.[web:51][web:65]</p>
+    </div>
+
+    <div class="card">
+      <div class="card-title">
+        <span class="badge badge-conf">Configuración</span>
+        Ficheros y variables de entorno
+      </div>
+      <p>Casi todas las opciones de CLI se pueden definir en un fichero de configuración (<code>locust.conf</code>) o en variables de entorno con prefijo <code>LOCUST_</code>.[web:88][web:91]</p>
+      <pre><span class="comment"># locust.conf</span>
+locustfile = locustfile.py
+host = http://localhost:8000
+users = 100
+spawn-rate = 10
+run-time = 5m
+headless = true
+csv = resultados</pre>
+      <pre><span class="comment"># Usar un fichero de configuración concreto</span>
+locust --config locust.conf
+
+<span class="comment"># Variables de entorno equivalentes a flags</span>
+export LOCUST_USERS=<span class="num">200</span>
+export LOCUST_SPAWN_RATE=<span class="num">20</span>
+export LOCUST_HOST=<span class="str">"http://api:8000"</span>
+locust -f locustfile.py</pre>
+      <p>La documentación detalla el mapeo entre flags y variables, y Locust busca por defecto <code>./locust.conf</code> y <code>~/.locust.conf</code> si existen.[web:88][web:91]</p>
+    </div>
+
+    <div class="card">
+      <div class="card-title">
+        <span class="badge badge-conf">Opciones clave</span>
+        Tabla de argumentos frecuentes
+      </div>
+      <table>
+        <tr><th>Opción</th><th>Significado</th><th>Ejemplo</th></tr>
+        <tr>
+          <td><code>-f, --locustfile</code></td>
+          <td>Fichero(s) con las definiciones de usuario</td>
+          <td><code>locust -f tests/lf.py</code></td>
+        </tr>
+        <tr>
+          <td><code>-u, --users</code></td>
+          <td>Número total de usuarios simultáneos</td>
+          <td><code>-u 200</code></td>
+        </tr>
+        <tr>
+          <td><code>-r, --spawn-rate</code></td>
+          <td>Usuarios por segundo que se añaden</td>
+          <td><code>-r 10</code></td>
+        </tr>
+        <tr>
+          <td><code>-t, --run-time</code></td>
+          <td>Duración (ej. 5m, 30s, 1h)</td>
+          <td><code>-t 10m</code></td>
+        </tr>
+        <tr>
+          <td><code>--headless</code></td>
+          <td>Ejecutar sin UI web</td>
+          <td><code>--headless</code></td>
+        </tr>
+        <tr>
+          <td><code>--host</code></td>
+          <td>Host base a atacar</td>
+          <td><code>--host http://api</code></td>
+        </tr>
+        <tr>
+          <td><code>--tags / --exclude-tags</code></td>
+          <td>Incluir o excluir tareas por etiqueta</td>
+          <td><code>--tags critico</code></td>
+        </tr>
+      </table>
+      <p>Además hay opciones para logging, tiempos de espera por defecto, límites de tamaño de estadísticas y otras características avanzadas.[web:88]</p>
+    </div>
+
+  </div>
+</div>
+
+<!-- TAB 5: DISTRIBUIDO Y LOAD SHAPES -->
+<div id="t5" class="tab-section">
+  <div class="section-header">
+    <h2>Modo distribuido y formas de carga</h2>
+    <p>Escalar a múltiples procesos y modelar ramp-ups complejos</p>
+  </div>
+  <div class="grid">
+
+    <div class="card grid-wide">
+      <div class="card-title">
+        <span class="badge badge-dist">Distribuido</span>
+        Master y workers
+      </div>
+      <p>Para generar más carga de la que soporta un solo proceso, Locust permite ejecutar un proceso master y varios workers: el master coordina usuarios y recopila estadísticas, los workers ejecutan realmente las tareas.[web:62][web:90]</p>
+      <pre><span class="comment"># En la máquina master</span>
+locust -f locustfile.py --master --host http://api:8000
+
+<span class="comment"># En cada worker</span>
+locust -f locustfile.py --worker --master-host 192.168.1.10</pre>
+      <p>El master expone la UI web y no ejecuta usuarios; cada worker añade capacidad de generación de carga. En despliegues con contenedores, es habitual escalarlos con Docker Compose o Kubernetes.[web:62][web:87]</p>
+    </div>
+
+    <div class="card">
+      <div class="card-title">
+        <span class="badge badge-dist">LoadShape</span>
+        Formas de carga personalizadas
+      </div>
+      <p>Si necesitas un perfil de carga más complejo que el que ofrecen <code>--users</code> y <code>--spawn-rate</code>, puedes definir una clase <code>LoadTestShape</code> para controlar usuarios y tasa en función del tiempo.[web:67]</p>
+      <pre><span class="kw">from</span> locust <span class="kw">import</span> LoadTestShape
+
+<span class="kw">class</span> <span class="name">RampUpDownShape</span>(LoadTestShape):
+    stages = [
+        {<span class="str">"duration"</span>: <span class="num">60</span>,  <span class="str">"users"</span>: <span class="num">50</span>,  <span class="str">"spawn_rate"</span>: <span class="num">5</span>},
+        {<span class="str">"duration"</span>: <span class="num">180</span>, <span class="str">"users"</span>: <span class="num">200</span>, <span class="str">"spawn_rate"</span>: <span class="num">10</span>},
+        {<span class="str">"duration"</span>: <span class="num">300</span>, <span class="str">"users"</span>: <span class="num">400</span>, <span class="str">"spawn_rate"</span>: <span class="num">20</span>},
+        {<span class="str">"duration"</span>: <span class="num">420</span>, <span class="str">"users"</span>: <span class="num">0</span>,   <span class="str">"spawn_rate"</span>: <span class="num">20</span>},
+    ]
+
+    <span class="kw">def</span> <span class="name">tick</span>(self):
+        run_time = self.get_run_time()
+        offset = <span class="num">0</span>
+        <span class="kw">for</span> stage <span class="kw">in</span> self.stages:
+            <span class="kw">if</span> offset &lt;= run_time &lt; offset + stage[<span class="str">"duration"</span>]:
+                <span class="kw">return</span> stage[<span class="str">"users"</span>], stage[<span class="str">"spawn_rate"</span>]
+            offset += stage[<span class="str">"duration"</span>]
+        <span class="kw">return None</span></pre>
+      <p>Esto permite modelar, por ejemplo, picos de tráfico en horas concretas, pruebas de estrés escalonadas y otros patrones realistas.[web:67]</p>
+    </div>
+
+    <div class="card">
+      <div class="card-title">
+        <span class="badge badge-dist">Eventos</span>
+        Hooks de ciclo de vida
+      </div>
+      <p>El sistema de eventos permite enganchar lógica al inicio, fin, cada petición, etc. Es la forma recomendada de implementar lógica global (por ejemplo, abortar si la tasa de fallos supera un umbral).[web:48][web:51]</p>
+      <pre><span class="kw">from</span> locust <span class="kw">import</span> events
+<span class="kw">import</span> logging, gevent
+
+MAX_FAIL_RATIO = <span class="num">0.1</span>
+
+@events.init.add_listener
+<span class="kw">def</span> <span class="name">setup_watchdog</span>(environment, **_):
+    <span class="kw">def</span> <span class="name">check</span>():
+        <span class="kw">while True</span>:
+            gevent.sleep(<span class="num">5</span>)
+            runner = environment.runner
+            <span class="kw">if</span> not runner:
+                <span class="kw">continue</span>
+            stats = runner.stats.total
+            <span class="kw">if</span> stats.num_requests &lt; <span class="num">100</span>:
+                <span class="kw">continue</span>
+            <span class="kw">if</span> stats.fail_ratio &gt; MAX_FAIL_RATIO:
+                logging.error(f<span class="str">"Abortando: fail_ratio={stats.fail_ratio:.2%}"</span>)
+                runner.quit()
+    gevent.spawn(check)</pre>
+      <p>También hay eventos para registrar peticiones, excepciones, fin de ejecución, etc., que se documentan en la sección de API y extensión de Locust.[web:48][web:51]</p>
+    </div>
+
+  </div>
+</div>
+
+<!-- TAB 6: ESCENARIOS COMPLETOS -->
+<div id="t6" class="tab-section">
+  <div class="section-header">
+    <h2>Escenarios completos de ejemplo</h2>
+    <p>De API sencilla a FastAPI + MySQL con comparativa de estrategias</p>
+  </div>
+  <div class="grid">
+
+    <div class="card grid-wide">
+      <div class="card-title">
+        <span class="badge badge-core">Escenario 1</span>
+        API simple con endpoints rápido y lento
+      </div>
+      <p>Este escenario ilustra cómo ver en la UI la diferencia de latencia y throughput entre dos endpoints con tiempos de respuesta distintos.</p>
+      <pre><span class="comment"># FastAPI (resumen)</span>
+@app.get(<span class="str">"/fast"</span>)
+<span class="kw">def</span> <span class="name">fast</span>():
+    <span class="kw">return</span> {<span class="str">"status"</span>: <span class="str">"ok"</span>}
+
+@app.get(<span class="str">"/slow"</span>)
+<span class="kw">def</span> <span class="name">slow</span>():
+    sleep(<span class="num">0.5</span>)
+    <span class="kw">return</span> {<span class="str">"status"</span>: <span class="str">"ok"</span>}</pre>
+      <pre><span class="comment"># locustfile.py</span>
+<span class="kw">from</span> locust <span class="kw">import</span> HttpUser, task, between
+
+<span class="kw">class</span> <span class="name">UsuarioAPI</span>(HttpUser):
+    wait_time = between(<span class="num">0.5</span>, <span class="num">1.5</span>)
+    host = <span class="str">"http://localhost:8000"</span>
+
+    @task(<span class="num">3</span>)
+    <span class="kw">def</span> <span class="name">fast</span>(self):
+        self.client.get(<span class="str">"/fast"</span>, name=<span class="str">"GET /fast"</span>)
+
+    @task(<span class="num">1</span>)
+    <span class="kw">def</span> <span class="name">slow</span>(self):
+        self.client.get(<span class="str">"/slow"</span>, name=<span class="str">"GET /slow"</span>)</pre>
+      <p>Al aumentar usuarios, deberías ver cómo el p95 de <code>/slow</code> crece mucho más rápido que el de <code>/fast</code>, incluso con pesos distintos.</p>
+    </div>
+
+    <div class="card grid-wide">
+      <div class="card-title">
+        <span class="badge badge-core">Escenario 2</span>
+        FastAPI + MySQL: ORM vs SQL crudo
+      </div>
+      <p>Este escenario usa Locust para comparar un endpoint que inserta en MySQL usando un ORM (SQLAlchemy) frente a otro que hace <code>INSERT</code> crudo, midiendo p95 y throughput de cada uno.[web:68][web:70]</p>
+      <pre><span class="comment"># FastAPI (resumen, dos estrategias)</span>
+@app.post(<span class="str">"/insert-orm"</span>)
+<span class="kw">def</span> <span class="name">insert_orm</span>(n: <span class="name">int</span> = <span class="num">500</span>, db: Session = Depends(get_db)):
+    events = [Event(sensor=f<span class="str">"s_{i%10}"</span>, value=float(i)) <span class="kw">for</span> i <span class="kw">in</span> range(n)]
+    db.add_all(events)
+    db.commit()
+    <span class="kw">return</span> {<span class="str">"inserted"</span>: n, <span class="str">"mode"</span>: <span class="str">"orm"</span>}
+
+@app.post(<span class="str">"/insert-raw"</span>)
+<span class="kw">def</span> <span class="name">insert_raw</span>(n: <span class="name">int</span> = <span class="num">500</span>):
+    conn = pymysql.connect(..., autocommit=<span class="kw">True</span>)
+    <span class="kw">try</span>:
+        <span class="kw">with</span> conn.cursor() <span class="kw">as</span> cur:
+            data = [(f<span class="str">"s_{i%10}"</span>, float(i)) <span class="kw">for</span> i <span class="kw">in</span> range(n)]
+            cur.executemany(<span class="str">"INSERT INTO events (sensor,value) VALUES (%s,%s)"</span>, data)
+        <span class="kw">return</span> {<span class="str">"inserted"</span>: n, <span class="str">"mode"</span>: <span class="str">"raw"</span>}
+    <span class="kw">finally</span>:
+        conn.close()</pre>
+      <pre><span class="comment"># locustfile.py</span>
+<span class="kw">from</span> locust <span class="kw">import</span> HttpUser, task, between
+
+N = <span class="num">500</span>
+
+<span class="kw">class</span> <span class="name">UsuarioMySQL</span>(HttpUser):
+    wait_time = between(<span class="num">0.5</span>, <span class="num">1.5</span>)
+    host = <span class="str">"http://localhost:8000"</span>
+
+    @task(<span class="num">1</span>)
+    <span class="kw">def</span> <span class="name">insert_orm</span>(self):
+        self.client.post(f<span class="str">"/insert-orm?n={N}"</span>, name=<span class="str">"POST /insert-orm"</span>)
+
+    @task(<span class="num">1</span>)
+    <span class="kw">def</span> <span class="name">insert_raw</span>(self):
+        self.client.post(f<span class="str">"/insert-raw?n={N}"</span>, name=<span class="str">"POST /insert-raw"</span>)</pre>
+      <p>Variando usuarios y tamaño de lote <code>N</code>, puedes estudiar cómo afecta el overhead del ORM frente a la eficiencia de <code>executemany</code> en MySQL.[web:68][web:71]</p>
+    </div>
+
+    <div class="card grid-wide">
+      <div class="card-title">
+        <span class="badge badge-adv">Escenario 3</span>
+        Headless, CSV y watchdog de errores
+      </div>
+      <p>En este escenario se combinan modo headless, exportación de CSV e implementación de un watchdog que detiene el test si la tasa de fallos pasa de cierto umbral.</p>
+      <pre><span class="comment"># Extracto del locustfile</span>
+<span class="kw">from</span> locust <span class="kw">import</span> HttpUser, task, between, events
+<span class="kw">import</span> gevent, logging
+
+MAX_FAIL_RATIO = <span class="num">0.05</span>
+
+@events.init.add_listener
+<span class="kw">def</span> <span class="name">setup_watchdog</span>(environment, **kw):
+    <span class="kw">def</span> <span class="name">check</span>():
+        <span class="kw">while True</span>:
+            gevent.sleep(<span class="num">10</span>)
+            runner = environment.runner
+            <span class="kw">if</span> not runner:
+                <span class="kw">continue</span>
+            stats = runner.stats.total
+            <span class="kw">if</span> stats.num_requests &lt; <span class="num">200</span>:
+                <span class="kw">continue</span>
+            <span class="kw">if</span> stats.fail_ratio &gt; MAX_FAIL_RATIO:
+                logging.error(f<span class="str">"Abortando: fail_ratio={stats.fail_ratio:.2%}"</span>)
+                runner.quit()
+    gevent.spawn(check)</pre>
+      <pre><span class="comment"># Ejecución headless con salida</span>
+locust -f locustfile.py \
+  --headless \
+  -u 300 -r 30 -t 15m \
+  --csv=bigdata \
+  --html=bigdata.html \
+  --host http://localhost:8000</pre>
+      <p>Este patrón se aproxima a los thresholds de otras herramientas: si la calidad del servicio se degrada (errores altos), la prueba se marca como fallida y se detiene.[web:48][web:51]</p>
+    </div>
+
+  </div>
+</div>
+
+<script>
+document.querySelectorAll(".tab-btn").forEach(function (btn) {
+  btn.addEventListener("click", function () {
+    var tabId = this.getAttribute("data-tab");
+    document.querySelectorAll(".tab-section").forEach(function (s) {
+      s.classList.remove("active");
+    });
+    document.querySelectorAll(".tab-btn").forEach(function (b) {
+      b.classList.remove("active");
+    });
+    document.getElementById(tabId).classList.add("active");
+    this.classList.add("active");
+  });
+});
+</script>
+
+</body>
+</html>
