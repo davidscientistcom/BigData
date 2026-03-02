@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Propiedades y Métricas — Apuntes de Grafos</title>
+    <meta name="description"
+        content="Propiedades y métricas de grafos: conectividad, centralidad, clustering, densidad y componentes.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+
+    <nav class="navbar" id="navbar">
+        <div class="nav-inner">
+            <div class="nav-brand">
+                <span class="brand-icon">🕸️</span>
+                <span class="brand-text">Grafos Bootcamp</span>
+            </div>
+            <ul class="nav-links">
+                <li><a href="index.html">Inicio</a></li>
+                <li><a href="conceptos.html">Conceptos</a></li>
+                <li><a href="tipos.html">Tipos</a></li>
+                <li><a href="propiedades.html" class="active">Propiedades</a></li>
+                <li><a href="algoritmos.html">Algoritmos</a></li>
+                <li><a href="problemas.html">Problemas Reales</a></li>
+                <li><a href="neo4j.html">Neo4j</a></li>
+            </ul>
+            <button class="nav-mobile-btn" id="navToggle">☰</button>
+        </div>
+    </nav>
+
+    <div class="breadcrumb">
+        <div class="breadcrumb-inner">
+            <a href="index.html">Inicio</a>
+            <span class="breadcrumb-sep">›</span>
+            <span>Propiedades y Métricas</span>
+        </div>
+    </div>
+
+    <div class="page-hero">
+        <span class="page-hero-icon">📊</span>
+        <h1>Propiedades y <span class="gradient-text">Métricas</span></h1>
+        <p>Cómo medir e interpretar un grafo: densidad, centralidad, clustering y conectividad. Métricas que Neo4j Graph
+            Data Science calcula por ti.</p>
+    </div>
+
+    <div class="content">
+
+        <h2>1. Densidad</h2>
+        <p>
+            La <strong>densidad</strong> de un grafo mide qué fracción del total posible de aristas existen realmente.
+            Va de 0 (grafo completamente vacío) a 1 (grafo completo: todos conectados con todos).
+        </p>
+
+        <div class="formula-box">
+            Densidad = (Aristas reales) / (Aristas posibles) = |E| / [ |V| × (|V| - 1) / 2 ]
+        </div>
+
+        <div class="two-col">
+            <div class="mini-card">
+                <h5>🌐 Grafo Disperso (sparse)</h5>
+                <p>Pocas aristas respecto al total posible. Densidad cercana a 0. Ej: Internet (millones de webs, pero
+                    cada una enlaza a muy pocas).</p>
+            </div>
+            <div class="mini-card">
+                <h5>🔗 Grafo Denso (dense)</h5>
+                <p>Muchas aristas, casi todos los nodos conectados entre sí. Densidad cercana a 1. Ej: grupo pequeño de
+                    trabajo donde todos se conocen.</p>
+            </div>
+        </div>
+
+        <div class="info-box info">
+            <span class="info-box-icon">📐</span>
+            <div class="info-box-text">
+                <strong>Ejemplo:</strong> Si tienes 5 personas en un grupo, el máximo posible de amistades es 10
+                (C(5,2)).
+                Si hay 7 amistades, la densidad es 7/10 = <strong>0.7</strong>. Es un grupo bastante bien conectado.
+            </div>
+        </div>
+
+        <!-- 2. CENTRALIDAD -->
+        <h2>2. Centralidad</h2>
+        <p>
+            La <strong>centralidad</strong> mide la importancia de un nodo dentro del grafo.
+            Hay varias formas de medir "quién es más importante", y cada una sirve para algo distinto.
+        </p>
+
+        <h3>2.1 Centralidad de Grado (Degree Centrality)</h3>
+        <p>El nodo más central es el que tiene más aristas. Simple pero poderoso.</p>
+        <ul>
+            <li><strong>Red social:</strong> quien tiene más amigos</li>
+            <li><strong>Web:</strong> la página con más enlaces entrantes</li>
+            <li><strong>Infraestructura:</strong> el servidor con más conexiones</li>
+        </ul>
+
+        <h3>2.2 Centralidad de Intermediación (Betweenness Centrality)</h3>
+        <p>
+            Un nodo es importante si aparece en <strong>muchos caminos más cortos</strong> entre otros pares de nodos.
+            Son los "intermediarios" o "puentes" de la red.
+        </p>
+
+        <div class="graph-demo">
+            <span class="graph-demo-label">Nodo con alta Betweenness — El "puente" de la red</span>
+            <svg viewBox="0 0 600 200" style="height:200px">
+                <!-- Left cluster -->
+                <line x1="80" y1="70" x2="90" y2="130" stroke="rgba(99,102,241,0.4)" stroke-width="1.5" />
+                <line x1="80" y1="70" x2="150" y2="100" stroke="rgba(99,102,241,0.4)" stroke-width="1.5" />
+                <line x1="90" y1="130" x2="150" y2="100" stroke="rgba(99,102,241,0.4)" stroke-width="1.5" />
+                <!-- Bridge edge -->
+                <line x1="175" y1="100" x2="325" y2="100" stroke="rgba(245,158,11,0.8)" stroke-width="2.5"
+                    stroke-dasharray="6,3" />
+                <!-- Right cluster -->
+                <line x1="350" y1="100" x2="430" y2="60" stroke="rgba(16,185,129,0.4)" stroke-width="1.5" />
+                <line x1="350" y1="100" x2="430" y2="140" stroke="rgba(16,185,129,0.4)" stroke-width="1.5" />
+                <line x1="430" y1="60" x2="510" y2="100" stroke="rgba(16,185,129,0.4)" stroke-width="1.5" />
+                <line x1="430" y1="140" x2="510" y2="100" stroke="rgba(16,185,129,0.4)" stroke-width="1.5" />
+                <line x1="430" y1="60" x2="430" y2="140" stroke="rgba(16,185,129,0.4)" stroke-width="1.5" />
+
+                <!-- Left cluster nodes -->
+                <circle cx="80" cy="70" r="22" fill="rgba(99,102,241,0.25)" stroke="#6366f1" stroke-width="2" />
+                <text x="80" y="75" text-anchor="middle" fill="#818cf8" font-size="11" font-weight="700"
+                    font-family="Inter">A</text>
+                <circle cx="90" cy="130" r="22" fill="rgba(99,102,241,0.25)" stroke="#6366f1" stroke-width="2" />
+                <text x="90" y="135" text-anchor="middle" fill="#818cf8" font-size="11" font-weight="700"
+                    font-family="Inter">B</text>
+
+                <!-- Bridge node -->
+                <circle cx="250" cy="100" r="32" fill="rgba(245,158,11,0.3)" stroke="#f59e0b" stroke-width="3" />
+                <text x="250" y="95" text-anchor="middle" fill="#fbbf24" font-size="11" font-weight="800"
+                    font-family="Inter">PUENTE</text>
+                <text x="250" y="110" text-anchor="middle" fill="#fbbf24" font-size="9" font-family="Inter">betweenness
+                    ⬆</text>
+
+                <circle cx="150" cy="100" r="22" fill="rgba(99,102,241,0.25)" stroke="#6366f1" stroke-width="2" />
+                <text x="150" y="105" text-anchor="middle" fill="#818cf8" font-size="11" font-weight="700"
+                    font-family="Inter">C</text>
+
+                <!-- Right cluster nodes -->
+                <circle cx="430" cy="60" r="22" fill="rgba(16,185,129,0.25)" stroke="#10b981" stroke-width="2" />
+                <text x="430" y="65" text-anchor="middle" fill="#4ade80" font-size="11" font-weight="700"
+                    font-family="Inter">D</text>
+                <circle cx="430" cy="140" r="22" fill="rgba(16,185,129,0.25)" stroke="#10b981" stroke-width="2" />
+                <text x="430" y="145" text-anchor="middle" fill="#4ade80" font-size="11" font-weight="700"
+                    font-family="Inter">E</text>
+                <circle cx="510" cy="100" r="22" fill="rgba(16,185,129,0.25)" stroke="#10b981" stroke-width="2" />
+                <text x="510" y="105" text-anchor="middle" fill="#4ade80" font-size="11" font-weight="700"
+                    font-family="Inter">F</text>
+            </svg>
+        </div>
+
+        <div class="info-box warning">
+            <span class="info-box-icon">⚡</span>
+            <div class="info-box-text">
+                <strong>¿Por qué importa?</strong> Si eliminas el nodo "PUENTE" de la red, los dos grupos quedan
+                incomunicados.
+                En una red de distribución, es el proveedor clave sin el cual todo el sistema falla.
+                En una red social, es el "influencer conector" entre comunidades distintas.
+            </div>
+        </div>
+
+        <h3>2.3 PageRank</h3>
+        <p>
+            El algoritmo que inventó Google. Un nodo es importante no solo porque tenga muchos enlaces entrantes,
+            sino porque <strong>quién le enlaza también sea importante</strong>. Un voto de una web importante vale más
+            que diez votos de webs irrelevantes.
+        </p>
+
+        <div class="code-block">
+            <div class="code-header">
+                <span class="code-lang">cypher — PageRank con Neo4j GDS</span>
+                <button class="copy-btn" onclick="copyCode(this)">📋 Copiar</button>
+            </div>
+            <pre><code><span class="cmt">// Calcular PageRank con la biblioteca GDS de Neo4j</span>
+<span class="kw">CALL</span> gds.pageRank.stream(<span class="str">'mi-grafo'</span>)
+<span class="kw">YIELD</span> nodeId, score
+<span class="kw">RETURN</span> gds.<span class="fn">util.asNode</span>(nodeId).nombre <span class="kw">AS</span> nodo, score
+<span class="kw">ORDER BY</span> score <span class="kw">DESC</span>
+<span class="kw">LIMIT</span> <span class="num">10</span>
+
+<span class="cmt">// Los nodos con mayor score son los más "influyentes"</span></code></pre>
+        </div>
+
+        <!-- 3. CLUSTERING -->
+        <h2>3. Coeficiente de Clustering</h2>
+        <p>
+            El <strong>coeficiente de clustering</strong> de un nodo mide en qué grado sus vecinos están conectados
+            entre sí.
+            Dicho de otra forma: <em>¿cuántos de tus amigos son también amigos entre ellos?</em>
+        </p>
+
+        <div class="formula-box">
+            Clustering(v) = (triángulos que pasan por v) / (triángulos posibles desde v)
+        </div>
+
+        <div class="graph-demo">
+            <span class="graph-demo-label">Nodo A: sus vecinos B, C, D están todos conectados entre sí → Clustering =
+                1.0</span>
+            <svg viewBox="0 0 500 190" style="height:190px">
+                <!-- Triángulo entre B, C, D -->
+                <line x1="270" y1="55" x2="400" y2="100" stroke="rgba(16,185,129,0.6)" stroke-width="2" />
+                <line x1="270" y1="145" x2="400" y2="100" stroke="rgba(16,185,129,0.6)" stroke-width="2" />
+                <line x1="270" y1="55" x2="270" y2="145" stroke="rgba(16,185,129,0.6)" stroke-width="2" />
+                <!-- A conectado a B, C, D -->
+                <line x1="140" y1="100" x2="270" y2="55" stroke="rgba(99,102,241,0.6)" stroke-width="2" />
+                <line x1="140" y1="100" x2="270" y2="145" stroke="rgba(99,102,241,0.6)" stroke-width="2" />
+                <line x1="140" y1="100" x2="400" y2="100" stroke="rgba(99,102,241,0.6)" stroke-width="2" />
+
+                <!-- Node A -->
+                <circle cx="140" cy="100" r="32" fill="rgba(99,102,241,0.3)" stroke="#6366f1" stroke-width="2.5" />
+                <text x="140" y="95" text-anchor="middle" fill="#818cf8" font-size="14" font-weight="800"
+                    font-family="Inter">A</text>
+                <text x="140" y="112" text-anchor="middle" fill="#22d3ee" font-size="10" font-weight="600"
+                    font-family="Inter">C=1.0 ⭐</text>
+
+                <!-- Neighbors -->
+                <circle cx="270" cy="55" r="26" fill="rgba(16,185,129,0.2)" stroke="#10b981" stroke-width="2" />
+                <text x="270" y="60" text-anchor="middle" fill="#4ade80" font-size="13" font-weight="700"
+                    font-family="Inter">B</text>
+
+                <circle cx="270" cy="145" r="26" fill="rgba(16,185,129,0.2)" stroke="#10b981" stroke-width="2" />
+                <text x="270" y="150" text-anchor="middle" fill="#4ade80" font-size="13" font-weight="700"
+                    font-family="Inter">C</text>
+
+                <circle cx="400" cy="100" r="26" fill="rgba(16,185,129,0.2)" stroke="#10b981" stroke-width="2" />
+                <text x="400" y="105" text-anchor="middle" fill="#4ade80" font-size="13" font-weight="700"
+                    font-family="Inter">D</text>
+
+                <!-- Triángulo label -->
+                <text x="347" y="100" text-anchor="middle" fill="#4ade80" font-size="9" font-family="Inter">▲
+                    triángulo</text>
+            </svg>
+        </div>
+
+        <p>
+            El coeficiente de clustering <strong>global</strong> del grafo es la media de los coeficientes individuales.
+            Un valor alto indica una red con muchos <strong>grupos cohesivos</strong> (como círculos de amigos en una
+            red social).
+        </p>
+
+        <!-- 4. COMPONENTES CONECTADAS -->
+        <h2>4. Componentes Conectadas</h2>
+        <p>
+            Las <strong>componentes conectadas</strong> son los subgrafos dentro de los que todos los nodos están
+            conectados entre sí,
+            pero no tienen conexión con el resto del grafo.
+        </p>
+
+        <div class="graph-demo">
+            <span class="graph-demo-label">Grafo con 3 componentes conectadas</span>
+            <svg viewBox="0 0 620 200" style="height:200px">
+                <!-- Componente 1 (azul) -->
+                <line x1="80" y1="80" x2="160" y2="50" stroke="rgba(99,102,241,0.5)" stroke-width="2" />
+                <line x1="80" y1="80" x2="100" y2="150" stroke="rgba(99,102,241,0.5)" stroke-width="2" />
+                <line x1="160" y1="50" x2="200" y2="130" stroke="rgba(99,102,241,0.5)" stroke-width="2" />
+                <line x1="100" y1="150" x2="200" y2="130" stroke="rgba(99,102,241,0.5)" stroke-width="2" />
+                <circle cx="80" cy="80" r="22" fill="rgba(99,102,241,0.3)" stroke="#6366f1" stroke-width="2" />
+                <text x="80" y="85" text-anchor="middle" fill="#818cf8" font-size="12" font-weight="700"
+                    font-family="Inter">A</text>
+                <circle cx="160" cy="50" r="22" fill="rgba(99,102,241,0.3)" stroke="#6366f1" stroke-width="2" />
+                <text x="160" y="55" text-anchor="middle" fill="#818cf8" font-size="12" font-weight="700"
+                    font-family="Inter">B</text>
+                <circle cx="100" cy="150" r="22" fill="rgba(99,102,241,0.3)" stroke="#6366f1" stroke-width="2" />
+                <text x="100" y="155" text-anchor="middle" fill="#818cf8" font-size="12" font-weight="700"
+                    font-family="Inter">C</text>
+                <circle cx="200" cy="130" r="22" fill="rgba(99,102,241,0.3)" stroke="#6366f1" stroke-width="2" />
+                <text x="200" y="135" text-anchor="middle" fill="#818cf8" font-size="12" font-weight="700"
+                    font-family="Inter">D</text>
+                <text x="140" y="188" text-anchor="middle" fill="#818cf8" font-size="10" font-weight="600"
+                    font-family="Inter">Componente 1</text>
+
+                <!-- Componente 2 (verde) -->
+                <line x1="330" y1="70" x2="420" y2="70" stroke="rgba(16,185,129,0.5)" stroke-width="2" />
+                <line x1="330" y1="70" x2="370" y2="150" stroke="rgba(16,185,129,0.5)" stroke-width="2" />
+                <line x1="420" y1="70" x2="370" y2="150" stroke="rgba(16,185,129,0.5)" stroke-width="2" />
+                <circle cx="330" cy="70" r="22" fill="rgba(16,185,129,0.3)" stroke="#10b981" stroke-width="2" />
+                <text x="330" y="75" text-anchor="middle" fill="#4ade80" font-size="12" font-weight="700"
+                    font-family="Inter">E</text>
+                <circle cx="420" cy="70" r="22" fill="rgba(16,185,129,0.3)" stroke="#10b981" stroke-width="2" />
+                <text x="420" y="75" text-anchor="middle" fill="#4ade80" font-size="12" font-weight="700"
+                    font-family="Inter">F</text>
+                <circle cx="370" cy="150" r="22" fill="rgba(16,185,129,0.3)" stroke="#10b981" stroke-width="2" />
+                <text x="370" y="155" text-anchor="middle" fill="#4ade80" font-size="12" font-weight="700"
+                    font-family="Inter">G</text>
+                <text x="375" y="188" text-anchor="middle" fill="#4ade80" font-size="10" font-weight="600"
+                    font-family="Inter">Componente 2</text>
+
+                <!-- Componente 3 (naranja - nodo aislado) -->
+                <circle cx="545" cy="100" r="28" fill="rgba(245,158,11,0.3)" stroke="#f59e0b" stroke-width="2" />
+                <text x="545" y="95" text-anchor="middle" fill="#fbbf24" font-size="12" font-weight="700"
+                    font-family="Inter">H</text>
+                <text x="545" y="109" text-anchor="middle" fill="#64748b" font-size="8"
+                    font-family="Inter">aislado</text>
+                <text x="545" y="143" text-anchor="middle" fill="#f59e0b" font-size="10" font-weight="600"
+                    font-family="Inter">Componente 3</text>
+            </svg>
+        </div>
+
+        <div class="code-block">
+            <div class="code-header">
+                <span class="code-lang">cypher — Encontrar componentes conectadas</span>
+                <button class="copy-btn" onclick="copyCode(this)">📋 Copiar</button>
+            </div>
+            <pre><code><span class="cmt">// Detectar componentes débilmente conectadas con GDS</span>
+<span class="kw">CALL</span> gds.wcc.stream(<span class="str">'mi-grafo'</span>)
+<span class="kw">YIELD</span> nodeId, componentId
+<span class="kw">RETURN</span> componentId, <span class="fn">count</span>(*) <span class="kw">AS</span> tamaño
+<span class="kw">ORDER BY</span> tamaño <span class="kw">DESC</span>
+
+<span class="cmt">// wcc = Weakly Connected Components</span>
+<span class="cmt">// Un componentId distinto = nodos que NO se pueden alcanzar entre sí</span></code></pre>
+        </div>
+
+        <!-- 5. DIÁMETRO -->
+        <h2>5. Diámetro del Grafo</h2>
+        <p>
+            El <strong>diámetro</strong> es el camino más largo entre cualquier par de nodos
+            (tomando siempre el camino más corto entre cada par).
+            Nos dice qué tan "extendida" está la red.
+        </p>
+
+        <div class="two-col">
+            <div class="mini-card">
+                <h5>📏 Diámetro pequeño</h5>
+                <p>La información se propaga rápido. En redes sociales, el diámetro de Facebook es solo ~6 (los 6 grados
+                    de separación).</p>
+            </div>
+            <div class="mini-card">
+                <h5>📐 Diámetro grande</h5>
+                <p>La red es "lineal". Como una cadena de texto A→B→C→...→Z donde tienes que pasar por todos.</p>
+            </div>
+        </div>
+
+        <!-- RESUMEN DE MÉTRICAS -->
+        <h2>Resumen de Métricas</h2>
+
+        <div class="table-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Métrica</th>
+                        <th>Qué mide</th>
+                        <th>Escala</th>
+                        <th>Ejemplo de uso</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Densidad</strong></td>
+                        <td>Fracción de aristas existentes</td>
+                        <td>0 a 1</td>
+                        <td>¿Está bien conectada la red de distribución?</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Degree centrality</strong></td>
+                        <td>Nodos con más conexiones</td>
+                        <td>Por nodo</td>
+                        <td>¿Quién tiene más seguidores? ¿Qué hub es crítico?</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Betweenness</strong></td>
+                        <td>Nodos "puente" en la red</td>
+                        <td>Por nodo</td>
+                        <td>¿Qué servidor derribaría la red si falla?</td>
+                    </tr>
+                    <tr>
+                        <td><strong>PageRank</strong></td>
+                        <td>Importancia relativa por vecindad</td>
+                        <td>Por nodo</td>
+                        <td>¿Qué producto recomienda más gente influyente?</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Clustering</strong></td>
+                        <td>Cuán cohesionado es el entorno del nodo</td>
+                        <td>0 a 1</td>
+                        <td>¿Cuántos círculos de amigos cerrados hay?</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Componentes</strong></td>
+                        <td>Grupos aislados en el grafo</td>
+                        <td>Entero</td>
+                        <td>¿Hay clientes completamente desconectados de otros?</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Diámetro</strong></td>
+                        <td>Máxima distancia entre nodos</td>
+                        <td>Entero</td>
+                        <td>¿En cuántos pasos llega la información a todos?</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="info-box neo">
+            <span class="info-box-icon">🔷</span>
+            <div class="info-box-text">
+                <strong>Neo4j Graph Data Science (GDS):</strong> La librería GDS de Neo4j calcula automáticamente
+                todas estas métricas con un solo comando Cypher. No tienes que implementar los algoritmos tú mismo.
+                Cubre PageRank, betweenness centrality, community detection, shortest paths y mucho más.
+            </div>
+        </div>
+
+        <div style="display:flex; gap:1rem; flex-wrap:wrap; margin-top:2rem">
+            <a href="tipos.html" class="btn btn-outline">← Tipos de Grafos</a>
+            <a href="neo4j.html" class="btn btn-neo">→ Neo4j en la Práctica</a>
+        </div>
+
+    </div>
+
+    <footer class="footer">
+        <div class="footer-inner">
+            <div class="footer-brand">
+                <div class="brand-logo">🕸️ Grafos Bootcamp</div>
+                <p>Apuntes de teoría de grafos para proyectos Big Data con Neo4j.</p>
+            </div>
+            <div class="footer-links">
+                <h5>Secciones</h5>
+                <ul>
+                    <li><a href="index.html">Inicio</a></li>
+                    <li><a href="conceptos.html">Conceptos</a></li>
+                    <li><a href="tipos.html">Tipos de Grafos</a></li>
+                    <li><a href="propiedades.html">Propiedades</a></li>
+                    <li><a href="algoritmos.html">Algoritmos</a></li>
+                    <li><a href="problemas.html">Problemas Reales</a></li>
+                    <li><a href="neo4j.html">Neo4j</a></li>
+                </ul>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p>Grafos Bootcamp — Apuntes para proyecto Big Data con Neo4j</p>
+        </div>
+    </footer>
+
+    <script>
+        const navbar = document.getElementById('navbar');
+        window.addEventListener('scroll', () => {
+            navbar.classList.toggle('scrolled', window.scrollY > 50);
+        });
+        document.getElementById('navToggle').addEventListener('click', () => {
+            document.querySelector('.nav-links').classList.toggle('open');
+        });
+        function copyCode(btn) {
+            const pre = btn.closest('.code-block').querySelector('pre');
+            navigator.clipboard.writeText(pre.innerText).then(() => {
+                btn.textContent = '✅ Copiado';
+                btn.classList.add('copied');
+                setTimeout(() => { btn.textContent = '📋 Copiar'; btn.classList.remove('copied'); }, 2000);
+            });
+        }
+    </script>
+</body>
+
+</html>

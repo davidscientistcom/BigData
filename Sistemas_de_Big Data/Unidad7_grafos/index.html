@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Apuntes de Grafos — Big Data con Neo4j</title>
+  <meta name="description"
+    content="Apuntes de teoría de grafos desde cero para proyectos de Big Data con Neo4j. Aprende los conceptos básicos de grafos con ejemplos prácticos.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap"
+    rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+
+  <!-- NAVBAR -->
+  <nav class="navbar" id="navbar">
+    <div class="nav-inner">
+      <div class="nav-brand">
+        <span class="brand-icon">🕸️</span>
+        <span class="brand-text">Grafos Bootcamp</span>
+      </div>
+      <ul class="nav-links">
+        <li><a href="index.html" class="active">Inicio</a></li>
+        <li><a href="conceptos.html">Conceptos</a></li>
+        <li><a href="tipos.html">Tipos</a></li>
+        <li><a href="propiedades.html">Propiedades</a></li>
+        <li><a href="algoritmos.html">Algoritmos</a></li>
+        <li><a href="problemas.html">Problemas Reales</a></li>
+        <li><a href="neo4j.html">Neo4j</a></li>
+      </ul>
+      <button class="nav-mobile-btn" id="navToggle">☰</button>
+    </div>
+  </nav>
+
+  <!-- HERO -->
+  <header class="hero">
+    <div class="hero-bg-grid"></div>
+    <div class="hero-content">
+      <div class="hero-badge">
+        <span class="badge-dot"></span>
+        Big Data · Neo4j · Graph Theory
+      </div>
+      <h1 class="hero-title">
+        Teoría de<br><span class="gradient-text">Grafos</span>
+      </h1>
+      <p class="hero-subtitle">Lo que necesitas saber para trabajar con Neo4j</p>
+      <p class="hero-desc">
+        Apuntes prácticos y visuales sobre grafos: qué son, cómo funcionan, qué tipos existen y
+        cómo se aplican en bases de datos de grafos como <strong style="color:#00b4d8">Neo4j</strong>.
+        Sin matemáticas de universidad, con muchos ejemplos del mundo real.
+      </p>
+      <div class="hero-actions">
+        <a href="conceptos.html" class="btn btn-primary">🚀 Empezar desde cero</a>
+        <a href="neo4j.html" class="btn btn-neo">🔷 Ir a Neo4j</a>
+        <a href="tipos.html" class="btn btn-outline">📚 Ver tipos de grafos</a>
+      </div>
+      <div class="hero-stats">
+        <div class="stat"><span class="stat-num">4</span> Secciones</div>
+        <div class="stat-sep"></div>
+        <div class="stat"><span class="stat-num">15+</span> Conceptos</div>
+        <div class="stat-sep"></div>
+        <div class="stat"><span class="stat-num">20+</span> Ejemplos reales</div>
+        <div class="stat-sep"></div>
+        <div class="stat"><span class="stat-num">Neo4j</span> Aplicación</div>
+      </div>
+    </div>
+    <!-- Hero Visual: Animated Graph -->
+    <div class="hero-visual">
+      <div class="graph-container">
+        <svg viewBox="0 0 320 320" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <filter id="glow">
+              <feGaussianBlur stdDeviation="3" result="coloredBlur" />
+              <feMerge>
+                <feMergeNode in="coloredBlur" />
+                <feMergeNode in="SourceGraphic" />
+              </feMerge>
+            </filter>
+            <filter id="glow2">
+              <feGaussianBlur stdDeviation="5" result="coloredBlur" />
+              <feMerge>
+                <feMergeNode in="coloredBlur" />
+                <feMergeNode in="SourceGraphic" />
+              </feMerge>
+            </filter>
+          </defs>
+          <!-- Edges -->
+          <g stroke="rgba(99,102,241,0.35)" stroke-width="1.5" fill="none">
+            <line x1="160" y1="60" x2="80" y2="140" class="edge-anim" style="animation: edgePulse 3s infinite 0s" />
+            <line x1="160" y1="60" x2="240" y2="140" class="edge-anim" style="animation: edgePulse 3s infinite 0.4s" />
+            <line x1="80" y1="140" x2="60" y2="250" class="edge-anim" style="animation: edgePulse 3s infinite 0.8s" />
+            <line x1="80" y1="140" x2="200" y2="220" class="edge-anim" style="animation: edgePulse 3s infinite 1.2s" />
+            <line x1="240" y1="140" x2="200" y2="220" class="edge-anim" style="animation: edgePulse 3s infinite 1.6s" />
+            <line x1="240" y1="140" x2="280" y2="240" class="edge-anim" style="animation: edgePulse 3s infinite 2s" />
+            <line x1="200" y1="220" x2="130" y2="290" class="edge-anim" style="animation: edgePulse 3s infinite 2.4s" />
+            <line x1="60" y1="250" x2="130" y2="290" class="edge-anim" style="animation: edgePulse 3s infinite 0.6s" />
+          </g>
+          <!-- Nodes -->
+          <g filter="url(#glow)">
+            <!-- Central node A -->
+            <circle cx="160" cy="60" r="18" fill="rgba(99,102,241,0.8)" stroke="#818cf8" stroke-width="2" />
+            <text x="160" y="65" text-anchor="middle" fill="white" font-size="12" font-weight="700"
+              font-family="Inter">A</text>
+            <!-- Node B -->
+            <circle cx="80" cy="140" r="15" fill="rgba(16,185,129,0.8)" stroke="#4ade80" stroke-width="2" />
+            <text x="80" y="145" text-anchor="middle" fill="white" font-size="11" font-weight="700"
+              font-family="Inter">B</text>
+            <!-- Node C -->
+            <circle cx="240" cy="140" r="15" fill="rgba(16,185,129,0.8)" stroke="#4ade80" stroke-width="2" />
+            <text x="240" y="145" text-anchor="middle" fill="white" font-size="11" font-weight="700"
+              font-family="Inter">C</text>
+            <!-- Node D -->
+            <circle cx="60" cy="250" r="13" fill="rgba(6,182,212,0.8)" stroke="#22d3ee" stroke-width="2" />
+            <text x="60" y="255" text-anchor="middle" fill="white" font-size="10" font-weight="700"
+              font-family="Inter">D</text>
+            <!-- Node E -->
+            <circle cx="200" cy="220" r="16" fill="rgba(245,158,11,0.8)" stroke="#fbbf24" stroke-width="2" />
+            <text x="200" y="225" text-anchor="middle" fill="white" font-size="11" font-weight="700"
+              font-family="Inter">E</text>
+            <!-- Node F -->
+            <circle cx="280" cy="240" r="12" fill="rgba(6,182,212,0.8)" stroke="#22d3ee" stroke-width="2" />
+            <text x="280" y="245" text-anchor="middle" fill="white" font-size="10" font-weight="700"
+              font-family="Inter">F</text>
+            <!-- Node G -->
+            <circle cx="130" cy="290" r="13" fill="rgba(99,102,241,0.6)" stroke="#818cf8" stroke-width="2" />
+            <text x="130" y="295" text-anchor="middle" fill="white" font-size="10" font-weight="700"
+              font-family="Inter">G</text>
+          </g>
+          <!-- Pulse animations on key nodes -->
+          <circle cx="160" cy="60" r="18" fill="none" stroke="#6366f1" stroke-width="1" opacity="0">
+            <animate attributeName="r" values="18;35;18" dur="3s" repeatCount="indefinite" />
+            <animate attributeName="opacity" values="0.6;0;0.6" dur="3s" repeatCount="indefinite" />
+          </circle>
+          <circle cx="200" cy="220" r="16" fill="none" stroke="#f59e0b" stroke-width="1" opacity="0">
+            <animate attributeName="r" values="16;30;16" dur="2.5s" repeatCount="indefinite" begin="1s" />
+            <animate attributeName="opacity" values="0.5;0;0.5" dur="2.5s" repeatCount="indefinite" begin="1s" />
+          </circle>
+        </svg>
+      </div>
+    </div>
+  </header>
+
+  <!-- ¿QUÉ ES UN GRAFO? -->
+  <section class="section" id="que-es">
+    <div class="container">
+      <div class="section-header">
+        <h2>¿Qué es un Grafo?</h2>
+        <p>Una forma de representar relaciones entre cosas. Más simple de lo que parece.</p>
+      </div>
+      <div class="cards-grid">
+        <div class="card reveal">
+          <span class="card-icon">📌</span>
+          <h3>Nodos (Vértices)</h3>
+          <p>Son las <strong>entidades</strong> de tu grafo: personas, ciudades, productos, páginas web... cualquier
+            "cosa" que quieras representar.</p>
+          <p>En Neo4j los llamamos <code>nodes</code>.</p>
+        </div>
+        <div class="card reveal">
+          <span class="card-icon">↔️</span>
+          <h3>Aristas (Relaciones)</h3>
+          <p>Son las <strong>conexiones</strong> entre nodos. Representan que dos cosas están relacionadas de alguna
+            forma.</p>
+          <p>En Neo4j las llamamos <code>relationships</code>.</p>
+        </div>
+        <div class="card reveal">
+          <span class="card-icon">🏷️</span>
+          <h3>Propiedades</h3>
+          <p>Tanto nodos como aristas pueden tener <strong>atributos</strong> con información adicional: nombre, edad,
+            peso de la relación, fecha...</p>
+          <p>Son pares <code>clave: valor</code>.</p>
+        </div>
+      </div>
+
+      <div class="info-box info" style="margin-top:2rem">
+        <span class="info-box-icon">💡</span>
+        <div class="info-box-text">
+          <strong>Analogía del día a día:</strong> Imagina WhatsApp. Tú y tus contactos son los <strong>nodos</strong>.
+          El hecho de que seáis amigos o tengáis una conversación es la <strong>arista</strong>. El nombre del grupo,
+          cuántos mensajes os habéis mandado, son las <strong>propiedades</strong>.
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- EJEMPLO VISUAL -->
+  <section class="section section-dark" id="ejemplo">
+    <div class="container">
+      <div class="section-header light">
+        <h2>Un Ejemplo Concreto</h2>
+        <p>Red social simplificada con 5 personas</p>
+      </div>
+
+      <div style="max-width:800px; margin: 0 auto;">
+        <div class="graph-demo">
+          <span class="graph-demo-label">Red Social — Quién sigue a quién</span>
+          <svg viewBox="0 0 700 300" xmlns="http://www.w3.org/2000/svg" style="height:300px">
+            <!-- Edges -->
+            <defs>
+              <marker id="arrow" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+                <path d="M0,0 L0,6 L8,3 z" fill="rgba(99,102,241,0.7)" />
+              </marker>
+            </defs>
+            <!-- Undirected edges (friends) -->
+            <line x1="175" y1="150" x2="310" y2="90" stroke="rgba(16,185,129,0.5)" stroke-width="2"
+              stroke-dasharray="5,3" />
+            <line x1="175" y1="150" x2="310" y2="210" stroke="rgba(16,185,129,0.5)" stroke-width="2"
+              stroke-dasharray="5,3" />
+            <line x1="310" y1="90" x2="480" y2="90" stroke="rgba(16,185,129,0.5)" stroke-width="2"
+              stroke-dasharray="5,3" />
+            <line x1="310" y1="210" x2="480" y2="210" stroke="rgba(16,185,129,0.5)" stroke-width="2"
+              stroke-dasharray="5,3" />
+            <line x1="480" y1="90" x2="580" y2="150" stroke="rgba(16,185,129,0.5)" stroke-width="2"
+              stroke-dasharray="5,3" />
+            <line x1="480" y1="210" x2="580" y2="150" stroke="rgba(16,185,129,0.5)" stroke-width="2"
+              stroke-dasharray="5,3" />
+            <!-- Nodes -->
+            <circle cx="175" cy="150" r="35" fill="rgba(99,102,241,0.2)" stroke="#6366f1" stroke-width="2" />
+            <text x="175" y="145" text-anchor="middle" fill="#818cf8" font-size="13" font-weight="700"
+              font-family="Inter">Ana</text>
+            <text x="175" y="162" text-anchor="middle" fill="#64748b" font-size="10" font-family="Inter">👤
+              Persona</text>
+
+            <circle cx="310" cy="90" r="35" fill="rgba(16,185,129,0.2)" stroke="#10b981" stroke-width="2" />
+            <text x="310" y="85" text-anchor="middle" fill="#4ade80" font-size="13" font-weight="700"
+              font-family="Inter">Luis</text>
+            <text x="310" y="102" text-anchor="middle" fill="#64748b" font-size="10" font-family="Inter">👤
+              Persona</text>
+
+            <circle cx="310" cy="210" r="35" fill="rgba(16,185,129,0.2)" stroke="#10b981" stroke-width="2" />
+            <text x="310" y="205" text-anchor="middle" fill="#4ade80" font-size="13" font-weight="700"
+              font-family="Inter">Sara</text>
+            <text x="310" y="222" text-anchor="middle" fill="#64748b" font-size="10" font-family="Inter">👤
+              Persona</text>
+
+            <circle cx="480" cy="90" r="35" fill="rgba(6,182,212,0.2)" stroke="#06b6d4" stroke-width="2" />
+            <text x="480" y="85" text-anchor="middle" fill="#22d3ee" font-size="13" font-weight="700"
+              font-family="Inter">Marta</text>
+            <text x="480" y="102" text-anchor="middle" fill="#64748b" font-size="10" font-family="Inter">👤
+              Persona</text>
+
+            <circle cx="480" cy="210" r="35" fill="rgba(6,182,212,0.2)" stroke="#06b6d4" stroke-width="2" />
+            <text x="480" y="205" text-anchor="middle" fill="#22d3ee" font-size="13" font-weight="700"
+              font-family="Inter">Pedro</text>
+            <text x="480" y="222" text-anchor="middle" fill="#64748b" font-size="10" font-family="Inter">👤
+              Persona</text>
+
+            <circle cx="580" cy="150" r="35" fill="rgba(245,158,11,0.2)" stroke="#f59e0b" stroke-width="2" />
+            <text x="580" y="145" text-anchor="middle" fill="#fbbf24" font-size="13" font-weight="700"
+              font-family="Inter">Javi</text>
+            <text x="580" y="162" text-anchor="middle" fill="#64748b" font-size="10" font-family="Inter">👤
+              Persona</text>
+
+            <!-- Edge labels -->
+            <text x="238" y="108" text-anchor="middle" fill="#4ade80" font-size="9" font-family="Inter"
+              opacity="0.8">AMIGO</text>
+            <text x="238" y="210" text-anchor="middle" fill="#4ade80" font-size="9" font-family="Inter"
+              opacity="0.8">AMIGO</text>
+            <text x="395" y="78" text-anchor="middle" fill="#4ade80" font-size="9" font-family="Inter"
+              opacity="0.8">AMIGO</text>
+            <text x="395" y="222" text-anchor="middle" fill="#4ade80" font-size="9" font-family="Inter"
+              opacity="0.8">AMIGO</text>
+            <text x="534" y="108" text-anchor="middle" fill="#4ade80" font-size="9" font-family="Inter"
+              opacity="0.8">AMIGO</text>
+            <text x="534" y="192" text-anchor="middle" fill="#4ade80" font-size="9" font-family="Inter"
+              opacity="0.8">AMIGO</text>
+          </svg>
+        </div>
+
+        <div class="two-col">
+          <div class="mini-card">
+            <h5>📌 Nodos en este grafo</h5>
+            <ul>
+              <li>Ana, Luis, Sara, Marta, Pedro, Javi</li>
+              <li>Todos tienen el <strong>tipo</strong>: Persona</li>
+              <li>Cada uno podría tener propiedades: edad, ciudad...</li>
+            </ul>
+          </div>
+          <div class="mini-card">
+            <h5>↔️ Aristas en este grafo</h5>
+            <ul>
+              <li>6 relaciones de tipo <strong>AMIGO</strong></li>
+              <li>En este caso son bidireccionales (sin flecha)</li>
+              <li>Podrían tener propiedades: desde cuándo son amigos</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- NAVEGACIÓN POR SECCIONES -->
+  <section class="section" id="navegacion">
+    <div class="container">
+      <div class="section-header">
+        <h2>Navega por los Apuntes</h2>
+        <p>Todo lo que necesitas saber, organizado por temas</p>
+      </div>
+      <div class="nav-cards">
+        <a href="conceptos.html" class="nav-card">
+          <div class="nav-card-top" style="background: linear-gradient(135deg, #6366f1, #8b5cf6)">
+            <span class="nav-card-icon">🧮</span>
+          </div>
+          <div class="nav-card-body">
+            <h3>Conceptos Fundamentales</h3>
+            <p>Nodos, aristas, grado, caminos, ciclos y todo lo que necesitas entender antes de ponerte con Neo4j.</p>
+            <span class="nav-tag">Nodos</span>
+            <span class="nav-tag">Aristas</span>
+            <span class="nav-tag">Caminos</span>
+          </div>
+        </a>
+        <a href="tipos.html" class="nav-card">
+          <div class="nav-card-top" style="background: linear-gradient(135deg, #10b981, #059669)">
+            <span class="nav-card-icon">🔀</span>
+          </div>
+          <div class="nav-card-body">
+            <h3>Tipos de Grafos</h3>
+            <p>Dirigidos, no dirigidos, ponderados, bipartitos, árboles... cada tipo tiene sus propias características y
+              usos.</p>
+            <span class="nav-tag">Dirigidos</span>
+            <span class="nav-tag">Ponderados</span>
+            <span class="nav-tag">Árboles</span>
+          </div>
+        </a>
+        <a href="propiedades.html" class="nav-card">
+          <div class="nav-card-top" style="background: linear-gradient(135deg, #f59e0b, #d97706)">
+            <span class="nav-card-icon">📊</span>
+          </div>
+          <div class="nav-card-body">
+            <h3>Propiedades y Métricas</h3>
+            <p>Conectividad, centralidad, clustering, componentes... cómo medir e interpretar la estructura de un grafo.
+            </p>
+            <span class="nav-tag">Grado</span>
+            <span class="nav-tag">Centralidad</span>
+            <span class="nav-tag">Clustering</span>
+          </div>
+        </a>
+        <a href="neo4j.html" class="nav-card">
+          <div class="nav-card-top" style="background: linear-gradient(135deg, #00b4d8, #0077b6)">
+            <span class="nav-card-icon">🔷</span>
+          </div>
+          <div class="nav-card-body">
+            <h3>Neo4j en la Práctica</h3>
+            <p>Cómo se aplica todo lo anterior en Neo4j: modelo de datos, lenguaje Cypher, consultas y casos de uso en
+              Big Data.</p>
+            <span class="nav-tag">Cypher</span>
+            <span class="nav-tag">Neo4j</span>
+            <span class="nav-tag">Big Data</span>
+          </div>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ¿POR QUÉ GRAFOS EN BIG DATA? -->
+  <section class="section section-alt" id="bigdata">
+    <div class="container">
+      <div class="section-header">
+        <h2>¿Por qué Grafos en Big Data?</h2>
+        <p>Las bases de datos relacionales clásicas no son las mejores para todo</p>
+      </div>
+      <div class="cards-grid">
+        <div class="card reveal">
+          <span class="card-icon">🌐</span>
+          <h3>Redes Sociales</h3>
+          <p>Facebook, Twitter, LinkedIn son <strong>grafos gigantes</strong>. Encontrar amigos en común, recomendar
+            contactos, detectar comunidades... todo eso es teoría de grafos.</p>
+        </div>
+        <div class="card reveal">
+          <span class="card-icon">🛍️</span>
+          <h3>Sistemas de Recomendación</h3>
+          <p>Amazon y Netflix usan grafos para relacionar <strong>usuarios con productos</strong>. "Los que vieron X
+            también vieron Y" es un patrón de grafo.</p>
+        </div>
+        <div class="card reveal">
+          <span class="card-icon">🗺️</span>
+          <h3>Rutas y Logística</h3>
+          <p>Google Maps calcula la <strong>ruta más corta</strong> entre dos puntos. Las ciudades son nodos, las
+            carreteras son aristas, la distancia o tiempo son los pesos.</p>
+        </div>
+        <div class="card reveal">
+          <span class="card-icon">🔍</span>
+          <h3>Detección de Fraude</h3>
+          <p>Los bancos usan grafos para detectar <strong>patrones de fraude</strong>: si varias cuentas comparten el
+            mismo teléfono o dirección, puede ser sospechoso.</p>
+        </div>
+        <div class="card reveal">
+          <span class="card-icon">🧬</span>
+          <h3>Bioinformática</h3>
+          <p>Las proteínas y sus interacciones forman grafos. Neo4j se usa para <strong>modelar redes
+              biológicas</strong> y entender enfermedades.</p>
+        </div>
+        <div class="card reveal">
+          <span class="card-icon">🔗</span>
+          <h3>Knowledge Graphs</h3>
+          <p>Google, Wikipedia y muchas empresas tienen <strong>grafos de conocimiento</strong> donde representan
+            entidades del mundo real y sus relaciones.</p>
+        </div>
+      </div>
+
+      <div class="info-box warning" style="margin-top:2.5rem">
+        <span class="info-box-icon">⚡</span>
+        <div class="info-box-text">
+          <strong>¿Por qué no simplemente usar SQL?</strong> Las bases de datos relacionales son excelentes para datos
+          tabulares,
+          pero cuando tienes muchas relaciones entre entidades (JOIN de JOINs de JOINs...) se vuelven muy lentas.
+          Los grafos están <strong>diseñados específicamente</strong> para navegar relaciones de forma eficiente.
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="footer">
+    <div class="footer-inner">
+      <div class="footer-brand">
+        <div class="brand-logo">🕸️ Grafos Bootcamp</div>
+        <p>Apuntes de teoría de grafos para proyectos Big Data con Neo4j. Teoría práctica con ejemplos reales.</p>
+      </div>
+      <div class="footer-links">
+        <h5>Secciones</h5>
+        <ul>
+          <li><a href="index.html">Inicio</a></li>
+          <li><a href="conceptos.html">Conceptos</a></li>
+          <li><a href="tipos.html">Tipos de Grafos</a></li>
+          <li><a href="propiedades.html">Propiedades</a></li>
+          <li><a href="neo4j.html">Neo4j</a></li>
+        </ul>
+      </div>
+      <div class="footer-links">
+        <h5>Recursos</h5>
+        <ul>
+          <li><a href="https://neo4j.com/docs/" target="_blank">📘 Neo4j Docs</a></li>
+          <li><a href="https://neo4j.com/developer/cypher/" target="_blank">🔷 Cypher Reference</a></li>
+          <li><a href="https://graphacademy.neo4j.com/" target="_blank">🎓 Neo4j GraphAcademy</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <p>Grafos Bootcamp — Apuntes para proyecto Big Data con Neo4j</p>
+    </div>
+  </footer>
+
+  <script>
+    // Navbar scroll effect
+    const navbar = document.getElementById('navbar');
+    window.addEventListener('scroll', () => {
+      navbar.classList.toggle('scrolled', window.scrollY > 50);
+    });
+
+    // Mobile nav toggle
+    document.getElementById('navToggle').addEventListener('click', () => {
+      document.querySelector('.nav-links').classList.toggle('open');
+    });
+
+    // Reveal on scroll
+    const reveals = document.querySelectorAll('.reveal');
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(e => {
+        if (e.isIntersecting) {
+          e.target.classList.add('animate-in');
+          observer.unobserve(e.target);
+        }
+      });
+    }, { threshold: 0.1 });
+    reveals.forEach(el => observer.observe(el));
+  </script>
+</body>
+
+</html>

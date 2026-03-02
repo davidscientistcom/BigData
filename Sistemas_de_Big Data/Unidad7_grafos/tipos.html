@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tipos de Grafos — Apuntes de Grafos</title>
+    <meta name="description"
+        content="Tipos de grafos: dirigidos, no dirigidos, ponderados, bipartitos, árboles y más. Con ejemplos para Neo4j.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+
+    <nav class="navbar" id="navbar">
+        <div class="nav-inner">
+            <div class="nav-brand">
+                <span class="brand-icon">🕸️</span>
+                <span class="brand-text">Grafos Bootcamp</span>
+            </div>
+            <ul class="nav-links">
+                <li><a href="index.html">Inicio</a></li>
+                <li><a href="conceptos.html">Conceptos</a></li>
+                <li><a href="tipos.html" class="active">Tipos</a></li>
+                <li><a href="propiedades.html">Propiedades</a></li>
+                <li><a href="algoritmos.html">Algoritmos</a></li>
+                <li><a href="problemas.html">Problemas Reales</a></li>
+                <li><a href="neo4j.html">Neo4j</a></li>
+            </ul>
+            <button class="nav-mobile-btn" id="navToggle">☰</button>
+        </div>
+    </nav>
+
+    <div class="breadcrumb">
+        <div class="breadcrumb-inner">
+            <a href="index.html">Inicio</a>
+            <span class="breadcrumb-sep">›</span>
+            <span>Tipos de Grafos</span>
+        </div>
+    </div>
+
+    <div class="page-hero">
+        <span class="page-hero-icon">🔀</span>
+        <h1>Tipos de <span class="gradient-text">Grafos</span></h1>
+        <p>No todos los grafos son iguales. Dependiendo de cómo sean sus aristas o nodos, tenemos diferentes tipos: cada
+            uno modela unas situaciones mejor que otras.</p>
+    </div>
+
+    <div class="content">
+
+        <h2>Dirigido vs No Dirigido</h2>
+        <p>
+            La primera distinción fundamental en grafos es si las relaciones tienen <strong>dirección</strong> o no.
+        </p>
+
+        <!-- VISUAL: Directed vs Undirected -->
+        <div class="two-col">
+            <div class="graph-demo">
+                <span class="graph-demo-label">Grafo NO Dirigido — relación simétrica</span>
+                <svg viewBox="0 0 300 180" style="height:170px">
+                    <!-- Edges (no arrows) -->
+                    <line x1="80" y1="90" x2="155" y2="45" stroke="rgba(16,185,129,0.6)" stroke-width="2" />
+                    <line x1="80" y1="90" x2="155" y2="135" stroke="rgba(16,185,129,0.6)" stroke-width="2" />
+                    <line x1="175" y1="45" x2="240" y2="90" stroke="rgba(16,185,129,0.6)" stroke-width="2" />
+                    <line x1="175" y1="135" x2="240" y2="90" stroke="rgba(16,185,129,0.6)" stroke-width="2" />
+                    <!-- Nodes -->
+                    <circle cx="80" cy="90" r="25" fill="rgba(16,185,129,0.2)" stroke="#10b981" stroke-width="2" />
+                    <text x="80" y="95" text-anchor="middle" fill="#4ade80" font-size="12" font-weight="700"
+                        font-family="Inter">A</text>
+                    <circle cx="165" cy="45" r="25" fill="rgba(16,185,129,0.2)" stroke="#10b981" stroke-width="2" />
+                    <text x="165" y="50" text-anchor="middle" fill="#4ade80" font-size="12" font-weight="700"
+                        font-family="Inter">B</text>
+                    <circle cx="165" cy="135" r="25" fill="rgba(16,185,129,0.2)" stroke="#10b981" stroke-width="2" />
+                    <text x="165" y="140" text-anchor="middle" fill="#4ade80" font-size="12" font-weight="700"
+                        font-family="Inter">C</text>
+                    <circle cx="240" cy="90" r="25" fill="rgba(16,185,129,0.2)" stroke="#10b981" stroke-width="2" />
+                    <text x="240" y="95" text-anchor="middle" fill="#4ade80" font-size="12" font-weight="700"
+                        font-family="Inter">D</text>
+                    <!-- Label -->
+                    <text x="160" y="170" text-anchor="middle" fill="#4ade80" font-size="10" font-weight="600"
+                        font-family="Inter">Ej: AMIGO, CONECTADO, ADYACENTE</text>
+                </svg>
+            </div>
+            <div class="graph-demo">
+                <span class="graph-demo-label">Grafo Dirigido — relación asimétrica</span>
+                <svg viewBox="0 0 300 180" style="height:170px">
+                    <defs>
+                        <marker id="arr-d" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto">
+                            <path d="M0,0 L0,6 L8,3 z" fill="rgba(99,102,241,0.9)" />
+                        </marker>
+                    </defs>
+                    <!-- Directed edges -->
+                    <line x1="105" y1="80" x2="148" y2="52" stroke="rgba(99,102,241,0.6)" stroke-width="2"
+                        marker-end="url(#arr-d)" />
+                    <line x1="190" y1="47" x2="218" y2="76" stroke="rgba(99,102,241,0.6)" stroke-width="2"
+                        marker-end="url(#arr-d)" />
+                    <line x1="240" y1="105" x2="195" y2="133" stroke="rgba(99,102,241,0.6)" stroke-width="2"
+                        marker-end="url(#arr-d)" />
+                    <line x1="155" y1="143" x2="108" y2="107" stroke="rgba(99,102,241,0.6)" stroke-width="2"
+                        marker-end="url(#arr-d)" />
+                    <!-- Nodes -->
+                    <circle cx="80" cy="90" r="25" fill="rgba(99,102,241,0.2)" stroke="#6366f1" stroke-width="2" />
+                    <text x="80" y="95" text-anchor="middle" fill="#818cf8" font-size="12" font-weight="700"
+                        font-family="Inter">A</text>
+                    <circle cx="165" cy="40" r="25" fill="rgba(99,102,241,0.2)" stroke="#6366f1" stroke-width="2" />
+                    <text x="165" y="45" text-anchor="middle" fill="#818cf8" font-size="12" font-weight="700"
+                        font-family="Inter">B</text>
+                    <circle cx="242" cy="90" r="25" fill="rgba(99,102,241,0.2)" stroke="#6366f1" stroke-width="2" />
+                    <text x="242" y="95" text-anchor="middle" fill="#818cf8" font-size="12" font-weight="700"
+                        font-family="Inter">C</text>
+                    <circle cx="165" cy="145" r="25" fill="rgba(99,102,241,0.2)" stroke="#6366f1" stroke-width="2" />
+                    <text x="165" y="150" text-anchor="middle" fill="#818cf8" font-size="12" font-weight="700"
+                        font-family="Inter">D</text>
+                    <text x="160" y="175" text-anchor="middle" fill="#818cf8" font-size="10" font-weight="600"
+                        font-family="Inter">Ej: SIGUE, COMPRA, ENVÍA</text>
+                </svg>
+            </div>
+        </div>
+
+        <div class="table-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Tipo</th>
+                        <th>Descripción</th>
+                        <th>Ejemplo real</th>
+                        <th>Neo4j</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>No Dirigido</strong></td>
+                        <td>La relación va en ambos sentidos</td>
+                        <td>Amistad en Facebook, cables de red</td>
+                        <td><code>(a)-[:AMIGO]-(b)</code></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Dirigido</strong></td>
+                        <td>La relación tiene una dirección específica</td>
+                        <td>Seguir en Twitter, enviar email</td>
+                        <td><code>(a)-[:SIGUE]->(b)</code></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="info-box warning">
+            <span class="info-box-icon">⚠️</span>
+            <div class="info-box-text">
+                <strong>Ojo con Neo4j:</strong> En Neo4j <strong>todas las relaciones son dirigidas</strong> (tienen una
+                flecha).
+                Sin embargo, puedes hacer consultas ignorando la dirección con <code>(a)-[:AMIGO]-(b)</code> (sin
+                flecha).
+                El modelo de datos siempre almacena la dirección, pero las queries pueden ignorarla.
+            </div>
+        </div>
+
+        <!-- PONDERADO -->
+        <h2>Grafos Ponderados</h2>
+        <p>
+            En un <strong>grafo ponderado</strong>, las aristas tienen un número asociado llamado <strong>peso</strong>.
+            Este peso puede representar distancia, coste, tiempo, probabilidad, intensidad de la relación...
+        </p>
+
+        <div class="graph-demo">
+            <span class="graph-demo-label">Red de carreteras con distancias (km)</span>
+            <svg viewBox="0 0 650 200" style="height:200px">
+                <defs>
+                    <marker id="arr-w" markerWidth="7" markerHeight="7" refX="6" refY="3" orient="auto">
+                        <path d="M0,0 L0,6 L7,3 z" fill="rgba(6,182,212,0.8)" />
+                    </marker>
+                </defs>
+                <!-- Edges -->
+                <line x1="110" y1="100" x2="230" y2="60" stroke="rgba(6,182,212,0.5)" stroke-width="2" />
+                <line x1="110" y1="100" x2="230" y2="140" stroke="rgba(6,182,212,0.5)" stroke-width="2" />
+                <line x1="250" y1="60" x2="380" y2="100" stroke="rgba(6,182,212,0.5)" stroke-width="2" />
+                <line x1="250" y1="140" x2="380" y2="100" stroke="rgba(6,182,212,0.5)" stroke-width="2" />
+                <line x1="400" y1="100" x2="540" y2="100" stroke="rgba(6,182,212,0.5)" stroke-width="2" />
+
+                <!-- Peso en cada arista -->
+                <rect x="153" y="60" width="45" height="18" rx="4" fill="rgba(0,0,0,0.6)" stroke="rgba(6,182,212,0.3)"
+                    stroke-width="1" />
+                <text x="175" y="73" text-anchor="middle" fill="#22d3ee" font-size="11" font-weight="600"
+                    font-family="JetBrains Mono">45 km</text>
+
+                <rect x="153" y="115" width="45" height="18" rx="4" fill="rgba(0,0,0,0.6)" stroke="rgba(6,182,212,0.3)"
+                    stroke-width="1" />
+                <text x="175" y="128" text-anchor="middle" fill="#22d3ee" font-size="11" font-weight="600"
+                    font-family="JetBrains Mono">82 km</text>
+
+                <rect x="295" y="60" width="45" height="18" rx="4" fill="rgba(0,0,0,0.6)" stroke="rgba(6,182,212,0.3)"
+                    stroke-width="1" />
+                <text x="317" y="73" text-anchor="middle" fill="#22d3ee" font-size="11" font-weight="600"
+                    font-family="JetBrains Mono">67 km</text>
+
+                <rect x="295" y="120" width="45" height="18" rx="4" fill="rgba(0,0,0,0.6)" stroke="rgba(6,182,212,0.3)"
+                    stroke-width="1" />
+                <text x="317" y="133" text-anchor="middle" fill="#22d3ee" font-size="11" font-weight="600"
+                    font-family="JetBrains Mono">33 km</text>
+
+                <rect x="455" y="83" width="45" height="18" rx="4" fill="rgba(0,0,0,0.6)" stroke="rgba(6,182,212,0.3)"
+                    stroke-width="1" />
+                <text x="477" y="96" text-anchor="middle" fill="#22d3ee" font-size="11" font-weight="600"
+                    font-family="JetBrains Mono">120km</text>
+
+                <!-- Nodes -->
+                <circle cx="100" cy="100" r="35" fill="rgba(6,182,212,0.2)" stroke="#06b6d4" stroke-width="2" />
+                <text x="100" y="96" text-anchor="middle" fill="#22d3ee" font-size="11" font-weight="700"
+                    font-family="Inter">Madrid</text>
+                <text x="100" y="110" text-anchor="middle" fill="#64748b" font-size="9" font-family="Inter">🏙️</text>
+
+                <circle cx="240" cy="60" r="30" fill="rgba(6,182,212,0.2)" stroke="#06b6d4" stroke-width="2" />
+                <text x="240" y="56" text-anchor="middle" fill="#22d3ee" font-size="11" font-weight="700"
+                    font-family="Inter">Toledo</text>
+                <text x="240" y="70" text-anchor="middle" fill="#64748b" font-size="9" font-family="Inter">🏙️</text>
+
+                <circle cx="240" cy="143" r="30" fill="rgba(6,182,212,0.2)" stroke="#06b6d4" stroke-width="2" />
+                <text x="240" y="139" text-anchor="middle" fill="#22d3ee" font-size="11" font-weight="700"
+                    font-family="Inter">Cuenca</text>
+                <text x="240" y="153" text-anchor="middle" fill="#64748b" font-size="9" font-family="Inter">🏙️</text>
+
+                <circle cx="390" cy="100" r="30" fill="rgba(99,102,241,0.2)" stroke="#6366f1" stroke-width="2" />
+                <text x="390" y="96" text-anchor="middle" fill="#818cf8" font-size="11" font-weight="700"
+                    font-family="Inter">Valencia</text>
+                <text x="390" y="110" text-anchor="middle" fill="#64748b" font-size="9" font-family="Inter">🏙️</text>
+
+                <circle cx="557" cy="100" r="30" fill="rgba(245,158,11,0.2)" stroke="#f59e0b" stroke-width="2" />
+                <text x="557" y="96" text-anchor="middle" fill="#fbbf24" font-size="11" font-weight="700"
+                    font-family="Inter">Alicante</text>
+                <text x="557" y="110" text-anchor="middle" fill="#64748b" font-size="9" font-family="Inter">🏙️</text>
+            </svg>
+        </div>
+
+        <div class="code-block">
+            <div class="code-header">
+                <span class="code-lang">cypher — Grafo ponderado en Neo4j</span>
+                <button class="copy-btn" onclick="copyCode(this)">📋 Copiar</button>
+            </div>
+            <pre><code><span class="cmt">// Crear una relación ponderada (con distancia)</span>
+<span class="kw">CREATE</span> (madrid:<span class="fn">Ciudad</span> {nombre: <span class="str">"Madrid"</span>})
+<span class="kw">CREATE</span> (toledo:<span class="fn">Ciudad</span> {nombre: <span class="str">"Toledo"</span>})
+<span class="kw">CREATE</span> (madrid)-[:<span class="prop">CARRETERA</span> {distancia_km: <span class="num">45</span>, tipo: <span class="str">"autopista"</span>}]->(toledo)
+
+<span class="cmt">// Encontrar la ruta más corta por peso</span>
+<span class="kw">MATCH</span> (inicio:<span class="fn">Ciudad</span> {nombre: <span class="str">"Madrid"</span>}), (fin:<span class="fn">Ciudad</span> {nombre: <span class="str">"Alicante"</span>})
+<span class="kw">CALL</span> gds.shortestPath.dijkstra.stream(<span class="str">'mi_grafo'</span>, {
+  sourceNode: inicio,
+  targetNode: fin,
+  relationshipWeightProperty: <span class="str">'distancia_km'</span>
+})
+<span class="kw">YIELD</span> path, totalCost</code></pre>
+        </div>
+
+        <!-- ÁRBOL -->
+        <h2>Árboles</h2>
+        <p>
+            Un <strong>árbol</strong> es un tipo especial de grafo conexo y sin ciclos.
+            Tiene una estructura jerárquica muy natural para representar jerarquías y clasificaciones.
+        </p>
+
+        <div class="graph-demo">
+            <span class="graph-demo-label">Árbol — Estructura organizativa de empresa</span>
+            <svg viewBox="0 0 600 230" style="height:230px">
+                <!-- Level connections -->
+                <line x1="300" y1="45" x2="175" y2="110" stroke="rgba(245,158,11,0.5)" stroke-width="1.5" />
+                <line x1="300" y1="45" x2="425" y2="110" stroke="rgba(245,158,11,0.5)" stroke-width="1.5" />
+                <line x1="175" y1="130" x2="80" y2="190" stroke="rgba(99,102,241,0.4)" stroke-width="1.5" />
+                <line x1="175" y1="130" x2="175" y2="190" stroke="rgba(99,102,241,0.4)" stroke-width="1.5" />
+                <line x1="175" y1="130" x2="270" y2="190" stroke="rgba(99,102,241,0.4)" stroke-width="1.5" />
+                <line x1="425" y1="130" x2="370" y2="190" stroke="rgba(99,102,241,0.4)" stroke-width="1.5" />
+                <line x1="425" y1="130" x2="490" y2="190" stroke="rgba(99,102,241,0.4)" stroke-width="1.5" />
+
+                <!-- Root -->
+                <circle cx="300" cy="35" r="30" fill="rgba(245,158,11,0.3)" stroke="#f59e0b" stroke-width="2" />
+                <text x="300" y="30" text-anchor="middle" fill="#fbbf24" font-size="10" font-weight="700"
+                    font-family="Inter">CEO</text>
+                <text x="300" y="44" text-anchor="middle" fill="#64748b" font-size="9" font-family="Inter">raíz</text>
+
+                <!-- Level 1 -->
+                <circle cx="175" cy="120" r="28" fill="rgba(99,102,241,0.2)" stroke="#6366f1" stroke-width="2" />
+                <text x="175" y="115" text-anchor="middle" fill="#818cf8" font-size="10" font-weight="700"
+                    font-family="Inter">CTO</text>
+                <text x="175" y="128" text-anchor="middle" fill="#64748b" font-size="9" font-family="Inter">nivel
+                    1</text>
+
+                <circle cx="425" cy="120" r="28" fill="rgba(99,102,241,0.2)" stroke="#6366f1" stroke-width="2" />
+                <text x="425" y="115" text-anchor="middle" fill="#818cf8" font-size="10" font-weight="700"
+                    font-family="Inter">CFO</text>
+                <text x="425" y="128" text-anchor="middle" fill="#64748b" font-size="9" font-family="Inter">nivel
+                    1</text>
+
+                <!-- Level 2 -->
+                <circle cx="80" cy="200" r="24" fill="rgba(16,185,129,0.2)" stroke="#10b981" stroke-width="2" />
+                <text x="80" y="198" text-anchor="middle" fill="#4ade80" font-size="9" font-weight="700"
+                    font-family="Inter">Dev</text>
+                <text x="80" y="210" text-anchor="middle" fill="#64748b" font-size="8" font-family="Inter">hoja</text>
+
+                <circle cx="175" cy="200" r="24" fill="rgba(16,185,129,0.2)" stroke="#10b981" stroke-width="2" />
+                <text x="175" y="198" text-anchor="middle" fill="#4ade80" font-size="9" font-weight="700"
+                    font-family="Inter">QA</text>
+                <text x="175" y="210" text-anchor="middle" fill="#64748b" font-size="8" font-family="Inter">hoja</text>
+
+                <circle cx="270" cy="200" r="24" fill="rgba(16,185,129,0.2)" stroke="#10b981" stroke-width="2" />
+                <text x="270" y="198" text-anchor="middle" fill="#4ade80" font-size="9" font-weight="700"
+                    font-family="Inter">Infra</text>
+                <text x="270" y="210" text-anchor="middle" fill="#64748b" font-size="8" font-family="Inter">hoja</text>
+
+                <circle cx="370" cy="200" r="24" fill="rgba(16,185,129,0.2)" stroke="#10b981" stroke-width="2" />
+                <text x="370" y="198" text-anchor="middle" fill="#4ade80" font-size="9" font-weight="700"
+                    font-family="Inter">Conta</text>
+                <text x="370" y="210" text-anchor="middle" fill="#64748b" font-size="8" font-family="Inter">hoja</text>
+
+                <circle cx="490" cy="200" r="24" fill="rgba(16,185,129,0.2)" stroke="#10b981" stroke-width="2" />
+                <text x="490" y="198" text-anchor="middle" fill="#4ade80" font-size="9" font-weight="700"
+                    font-family="Inter">RRHH</text>
+                <text x="490" y="210" text-anchor="middle" fill="#64748b" font-size="8" font-family="Inter">hoja</text>
+            </svg>
+        </div>
+
+        <div class="two-col" style="margin-top:1.5rem">
+            <div class="mini-card">
+                <h5>🌳 Características de un Árbol</h5>
+                <ul>
+                    <li><strong>Sin ciclos</strong> (acíclico)</li>
+                    <li>Exactamente <strong>un camino</strong> entre cualquier par de nodos</li>
+                    <li>N nodos → N-1 aristas</li>
+                    <li>Siempre conexo</li>
+                </ul>
+            </div>
+            <div class="mini-card">
+                <h5>📋 Ejemplos de Árboles</h5>
+                <ul>
+                    <li>Jerarquía organizativa</li>
+                    <li>Árbol de categorías de productos</li>
+                    <li>Sistema de archivos</li>
+                    <li>Árbol genealógico (simplificado)</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- GRAFO BIPARTITO -->
+        <h2>Grafos Bipartitos</h2>
+        <p>
+            En un grafo <strong>bipartito</strong>, los nodos se dividen en dos grupos, y las aristas solo van
+            de un grupo al otro: nunca dentro del mismo grupo.
+            Son perfectos para modelar <strong>relaciones entre dos tipos</strong> de entidades.
+        </p>
+
+        <div class="graph-demo">
+            <span class="graph-demo-label">Grafo bipartito — Clientes y Productos comprados</span>
+            <svg viewBox="0 0 600 200" style="height:200px">
+                <!-- Connections -->
+                <line x1="120" y1="60" x2="390" y2="50" stroke="rgba(99,102,241,0.3)" stroke-width="1.5" />
+                <line x1="120" y1="60" x2="390" y2="100" stroke="rgba(99,102,241,0.3)" stroke-width="1.5" />
+                <line x1="120" y1="100" x2="390" y2="100" stroke="rgba(99,102,241,0.3)" stroke-width="1.5" />
+                <line x1="120" y1="100" x2="390" y2="150" stroke="rgba(99,102,241,0.3)" stroke-width="1.5" />
+                <line x1="120" y1="140" x2="390" y2="50" stroke="rgba(99,102,241,0.3)" stroke-width="1.5" />
+                <line x1="120" y1="140" x2="390" y2="150" stroke="rgba(99,102,241,0.3)" stroke-width="1.5" />
+
+                <!-- Group labels -->
+                <text x="75" y="22" text-anchor="middle" fill="#818cf8" font-size="11" font-weight="700"
+                    font-family="Inter">CLIENTES</text>
+                <rect x="47" y="27" width="56" height="2" rx="1" fill="rgba(99,102,241,0.5)" />
+                <text x="445" y="22" text-anchor="middle" fill="#4ade80" font-size="11" font-weight="700"
+                    font-family="Inter">PRODUCTOS</text>
+                <rect x="400" y="27" width="90" height="2" rx="1" fill="rgba(16,185,129,0.5)" />
+
+                <!-- Client nodes -->
+                <circle cx="120" cy="60" r="28" fill="rgba(99,102,241,0.2)" stroke="#6366f1" stroke-width="2" />
+                <text x="120" y="55" text-anchor="middle" fill="#818cf8" font-size="11" font-weight="700"
+                    font-family="Inter">Ana</text>
+                <text x="120" y="69" text-anchor="middle" fill="#64748b" font-size="8"
+                    font-family="Inter">Cliente</text>
+
+                <circle cx="120" cy="100" r="28" fill="rgba(99,102,241,0.2)" stroke="#6366f1" stroke-width="2" />
+                <text x="120" y="95" text-anchor="middle" fill="#818cf8" font-size="11" font-weight="700"
+                    font-family="Inter">Luis</text>
+                <text x="120" y="109" text-anchor="middle" fill="#64748b" font-size="8"
+                    font-family="Inter">Cliente</text>
+
+                <circle cx="120" cy="140" r="28" fill="rgba(99,102,241,0.2)" stroke="#6366f1" stroke-width="2" />
+                <text x="120" y="135" text-anchor="middle" fill="#818cf8" font-size="11" font-weight="700"
+                    font-family="Inter">Sara</text>
+                <text x="120" y="149" text-anchor="middle" fill="#64748b" font-size="8"
+                    font-family="Inter">Cliente</text>
+
+                <!-- Product nodes -->
+                <circle cx="390" cy="50" r="28" fill="rgba(16,185,129,0.2)" stroke="#10b981" stroke-width="2" />
+                <text x="390" y="45" text-anchor="middle" fill="#4ade80" font-size="10" font-weight="700"
+                    font-family="Inter">iPhone</text>
+                <text x="390" y="59" text-anchor="middle" fill="#64748b" font-size="8"
+                    font-family="Inter">Producto</text>
+
+                <circle cx="390" cy="100" r="28" fill="rgba(16,185,129,0.2)" stroke="#10b981" stroke-width="2" />
+                <text x="390" y="95" text-anchor="middle" fill="#4ade80" font-size="10" font-weight="700"
+                    font-family="Inter">MacBook</text>
+                <text x="390" y="109" text-anchor="middle" fill="#64748b" font-size="8"
+                    font-family="Inter">Producto</text>
+
+                <circle cx="390" cy="150" r="28" fill="rgba(16,185,129,0.2)" stroke="#10b981" stroke-width="2" />
+                <text x="390" y="145" text-anchor="middle" fill="#4ade80" font-size="10" font-weight="700"
+                    font-family="Inter">AirPods</text>
+                <text x="390" y="159" text-anchor="middle" fill="#64748b" font-size="8"
+                    font-family="Inter">Producto</text>
+
+                <!-- COMPRA label en medio -->
+                <text x="255" y="100" text-anchor="middle" fill="#6366f1" font-size="10" font-weight="600"
+                    font-family="Inter">COMPRA</text>
+            </svg>
+        </div>
+
+        <div class="info-box tip">
+            <span class="info-box-icon">🛒</span>
+            <div class="info-box-text">
+                <strong>¿Por qué son útiles los grafos bipartitos?</strong> Son la base de los sistemas de
+                <strong>recomendación</strong>.
+                Si Ana y Luis han comprado iPhone y MacBook (mismos productos), el sistema puede recomendar a Ana los
+                productos
+                que ha comprado Luis pero ella no. Esto se llama <em>collaborative filtering</em>.
+            </div>
+        </div>
+
+        <!-- MULTIGRAFOS -->
+        <h2>Multigrafos</h2>
+        <p>
+            Un <strong>multigrafo</strong> permite que existan <strong>múltiples aristas</strong> entre el mismo par de
+            nodos.
+            Neo4j soporta esto perfectamente: dos personas pueden estar conectadas por una relación <code>AMIGO</code>
+            y también por <code>TRABAJA_CON</code>.
+        </p>
+
+        <div class="code-block">
+            <div class="code-header">
+                <span class="code-lang">cypher — Multigrafo en Neo4j</span>
+                <button class="copy-btn" onclick="copyCode(this)">📋 Copiar</button>
+            </div>
+            <pre><code><span class="cmt">// Ana y Luis tienen DOS tipos de relación distintos</span>
+<span class="kw">MATCH</span> (ana:<span class="fn">Persona</span> {nombre: <span class="str">"Ana"</span>}), (luis:<span class="fn">Persona</span> {nombre: <span class="str">"Luis"</span>})
+
+<span class="cmt">// Relación 1: Son amigos</span>
+<span class="kw">CREATE</span> (ana)-[:<span class="prop">AMIGO</span> {desde: <span class="num">2018</span>}]->(luis)
+
+<span class="cmt">// Relación 2: También trabajan juntos</span>
+<span class="kw">CREATE</span> (ana)-[:<span class="prop">TRABAJA_CON</span> {proyecto: <span class="str">"Big Data"</span>}]->(luis)
+
+<span class="cmt">// Esto es un MULTIGRAFO: dos relaciones entre el mismo par de nodos</span></code></pre>
+        </div>
+
+        <!-- RESUMEN TIPOS -->
+        <h2>Resumen de Tipos</h2>
+
+        <div class="concept-grid">
+            <div class="concept-card purple">
+                <span class="concept-icon">↔️</span>
+                <h3>No Dirigido</h3>
+                <p>Relaciones simétricas. Si A está conectado a B, entonces B está conectado a A. Ej: Facebook amigos.
+                </p>
+            </div>
+            <div class="concept-card green">
+                <span class="concept-icon">➡️</span>
+                <h3>Dirigido (Dígrafo)</h3>
+                <p>Relaciones con sentido. A puede seguir a B sin que B le siga. Ej: Twitter follows.</p>
+            </div>
+            <div class="concept-card cyan">
+                <span class="concept-icon">⚖️</span>
+                <h3>Ponderado</h3>
+                <p>Las aristas tienen peso: distancia, coste, duración. Ej: Google Maps con tiempos de viaje.</p>
+            </div>
+            <div class="concept-card amber">
+                <span class="concept-icon">🌳</span>
+                <h3>Árbol</h3>
+                <p>Grafo conexo sin ciclos. Jerarquía natural. N nodos → N-1 aristas. Ej: organigrama de empresa.</p>
+            </div>
+            <div class="concept-card rose">
+                <span class="concept-icon">🎭</span>
+                <h3>Bipartito</h3>
+                <p>Dos grupos de nodos, aristas solo entre grupos. Base de los sistemas de recomendación. Ej:
+                    usuario-producto.</p>
+            </div>
+            <div class="concept-card indigo">
+                <span class="concept-icon">🔀</span>
+                <h3>Multigrafo</h3>
+                <p>Múltiples aristas entre el mismo par de nodos. Ej: dos personas conectadas por amistad Y trabajo.</p>
+            </div>
+        </div>
+
+        <div style="display:flex; gap:1rem; flex-wrap:wrap; margin-top:2rem">
+            <a href="conceptos.html" class="btn btn-outline">← Conceptos Básicos</a>
+            <a href="propiedades.html" class="btn btn-primary">→ Propiedades y Métricas</a>
+        </div>
+
+    </div>
+
+    <footer class="footer">
+        <div class="footer-inner">
+            <div class="footer-brand">
+                <div class="brand-logo">🕸️ Grafos Bootcamp</div>
+                <p>Apuntes de teoría de grafos para proyectos Big Data con Neo4j.</p>
+            </div>
+            <div class="footer-links">
+                <h5>Secciones</h5>
+                <ul>
+                    <li><a href="index.html">Inicio</a></li>
+                    <li><a href="conceptos.html">Conceptos</a></li>
+                    <li><a href="tipos.html">Tipos de Grafos</a></li>
+                    <li><a href="propiedades.html">Propiedades</a></li>
+                    <li><a href="algoritmos.html">Algoritmos</a></li>
+                    <li><a href="problemas.html">Problemas Reales</a></li>
+                    <li><a href="neo4j.html">Neo4j</a></li>
+                </ul>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p>Grafos Bootcamp — Apuntes para proyecto Big Data con Neo4j</p>
+        </div>
+    </footer>
+
+    <script>
+        const navbar = document.getElementById('navbar');
+        window.addEventListener('scroll', () => {
+            navbar.classList.toggle('scrolled', window.scrollY > 50);
+        });
+        document.getElementById('navToggle').addEventListener('click', () => {
+            document.querySelector('.nav-links').classList.toggle('open');
+        });
+        function copyCode(btn) {
+            const pre = btn.closest('.code-block').querySelector('pre');
+            navigator.clipboard.writeText(pre.innerText).then(() => {
+                btn.textContent = '✅ Copiado';
+                btn.classList.add('copied');
+                setTimeout(() => { btn.textContent = '📋 Copiar'; btn.classList.remove('copied'); }, 2000);
+            });
+        }
+    </script>
+</body>
+
+</html>

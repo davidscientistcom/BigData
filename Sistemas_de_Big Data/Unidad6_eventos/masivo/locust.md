@@ -22,7 +22,7 @@ En esta guía vamos a:
 
 ```bash
 # Crear entorno
-conda create -n locust python=3.11
+conda create -n locust python=3.13
 conda activate locust
 
 # Instalar Locust
