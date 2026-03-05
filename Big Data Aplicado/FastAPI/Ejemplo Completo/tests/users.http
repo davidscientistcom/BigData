@@ -1,0 +1,223 @@
+###############################################################################
+#  Fichero de pruebas REST para la API de Usuarios
+#
+#  Este fichero se usa con la extensión "REST Client" de VS Code.
+#  Instálala buscando: humao.rest-client
+#
+#  Cómo usarlo:
+#    1. Arranca el servidor:  uvicorn app.main:app --reload
+#    2. Abre este fichero en VS Code.
+#    3. Verás "Send Request" encima de cada petición → haz clic.
+#    4. La respuesta aparecerá en un panel a la derecha.
+#
+#  Los bloques se separan con ###
+#  Las variables se definen con @variable = valor
+###############################################################################
+
+# Variable base para no repetir la URL
+@baseUrl = http://127.0.0.1:8000
+
+
+###############################################################################
+# 0. HEALTH CHECK — Verificar que la API está activa
+###############################################################################
+
+### Raíz de la API
+GET {{baseUrl}}/
+
+
+###############################################################################
+# 1. CREAR USUARIOS (POST)
+###############################################################################
+
+### Crear usuario 1: Ana García (Madrid, 28 años)
+POST {{baseUrl}}/users/
+Content-Type: application/json
+
+{
+    "name": "Manolo García",
+    "age": 28,
+    "email": "manolo@example.com",
+    "city": "Madrid"
+}
+
+### Crear usuario 2: Carlos López (Barcelona, 35 años)
+POST {{baseUrl}}/users/
+Content-Type: application/json
+
+{
+    "name": "Carlos López",
+    "age": 35,
+    "email": "carlos@example.com",
+    "city": "Barcelona"
+}
+
+### Crear usuario 3: María Sánchez (Madrid, 22 años)
+POST {{baseUrl}}/users/
+Content-Type: application/json
+
+{
+    "name": "María Sánchez",
+    "age": 22,
+    "email": "maria@example.com",
+    "city": "Madrid"
+}
+
+### Crear usuario 4: Pedro Martín (Sevilla, 45 años)
+POST {{baseUrl}}/users/
+Content-Type: application/json
+
+{
+    "name": "Pedro Martín",
+    "age": 45,
+    "email": "pedro@example.com",
+    "city": "Sevilla"
+}
+
+### Crear usuario 5: Lucía Fernández (Barcelona, 19 años) — sin email
+POST {{baseUrl}}/users/
+Content-Type: application/json
+
+{
+    "name": "Lucía Fernández",
+    "age": 19,
+    "city": "Barcelona"
+}
+
+### Crear usuario con datos inválidos — edad negativa (debe dar 422)
+POST {{baseUrl}}/users/
+Content-Type: application/json
+
+{
+    "name": "Inválido",
+    "age": -5,
+    "city": "Nowhere"
+}
+
+### Crear usuario sin nombre (campo obligatorio — debe dar 422)
+POST {{baseUrl}}/users/
+Content-Type: application/json
+
+{
+    "age": 25,
+    "city": "Madrid"
+}
+
+
+###############################################################################
+# 2. LISTAR TODOS LOS USUARIOS (GET)
+###############################################################################
+
+### Obtener todos los usuarios
+GET {{baseUrl}}/users/
+
+
+###############################################################################
+# 3. OBTENER USUARIO POR ID (GET)
+###############################################################################
+
+### Obtener usuario con id=1 (Ana García)
+GET {{baseUrl}}/users/1
+
+### Obtener usuario con id=3 (María Sánchez)
+GET {{baseUrl}}/users/3
+
+### Obtener usuario inexistente (debe dar 404)
+GET {{baseUrl}}/users/999
+
+
+###############################################################################
+# 4. BÚSQUEDA CON FILTROS (GET /users/search)
+###############################################################################
+
+### Buscar por nombre parcial: "ana" → debería encontrar Ana García
+GET {{baseUrl}}/users/search?name=ana
+
+### Buscar por ciudad: Madrid → debería encontrar Ana y María
+GET {{baseUrl}}/users/search?city=madrid
+
+### Buscar por rango de edad: entre 20 y 30 años
+GET {{baseUrl}}/users/search?min_age=20&max_age=30
+
+### Buscar por edad mínima: mayores de 30
+GET {{baseUrl}}/users/search?min_age=30
+
+### Buscar por email parcial: "example.com"
+GET {{baseUrl}}/users/search?email=example.com
+
+### Buscar combinando filtros: ciudad=Barcelona AND edad >= 30
+GET {{baseUrl}}/users/search?city=barcelona&min_age=30
+
+### Buscar combinando filtros: nombre contiene "a" AND ciudad=Madrid
+GET {{baseUrl}}/users/search?name=a&city=madrid
+
+### Buscar sin resultados: ciudad=Valencia (no hay nadie)
+GET {{baseUrl}}/users/search?city=valencia
+
+
+###############################################################################
+# 5. ACTUALIZAR USUARIO (PUT — actualización parcial)
+###############################################################################
+
+### Actualizar solo la edad de Ana García (id=1): 28 → 29
+PUT {{baseUrl}}/users/1
+Content-Type: application/json
+
+{
+    "age": 29
+}
+
+### Actualizar nombre y ciudad de Carlos López (id=2)
+PUT {{baseUrl}}/users/2
+Content-Type: application/json
+
+{
+    "name": "Carlos López Ruiz",
+    "city": "Valencia"
+}
+
+### Verificar que Ana ahora tiene 29 años
+GET {{baseUrl}}/users/1
+
+### Verificar que Carlos ahora está en Valencia
+GET {{baseUrl}}/users/2
+
+###  Actualizar usuario inexistente (debe dar 404)
+PUT {{baseUrl}}/users/999
+Content-Type: application/json
+
+{
+    "name": "Fantasma"
+}
+
+
+###############################################################################
+# 6. ELIMINAR USUARIO (DELETE)
+###############################################################################
+
+### Eliminar usuario con id=4 (Pedro Martín)
+DELETE {{baseUrl}}/users/4
+
+###  Intentar eliminar el mismo usuario otra vez (debe dar 404)
+DELETE {{baseUrl}}/users/4
+
+###  Eliminar usuario inexistente (debe dar 404)
+DELETE {{baseUrl}}/users/999
+
+### Verificar que Pedro ya no aparece en la lista
+GET {{baseUrl}}/users/
+
+
+###############################################################################
+# 7. VERIFICACIONES FINALES
+###############################################################################
+
+### Listar todos los usuarios restantes (deberían quedar 4)
+GET {{baseUrl}}/users/
+
+### Buscar en Barcelona después de que Carlos se mudó a Valencia
+### Debería devolver solo a Lucía
+GET {{baseUrl}}/users/search?city=barcelona
+
+### Buscar en Valencia — debería devolver a Carlos
+GET {{baseUrl}}/users/search?city=valencia
