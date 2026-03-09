@@ -17,13 +17,14 @@
     <nav class="navbar" id="navbar">
         <div class="nav-inner">
             <div class="nav-brand"><span class="brand-icon">⚡</span><span class="brand-text">Flink Bootcamp</span></div>
-            <ul class="nav-links">
+                        <ul class="nav-links">
                 <li><a href="index.html">Inicio</a></li>
                 <li><a href="conceptos.html">Conceptos</a></li>
                 <li><a href="arquitectura.html">Arquitectura</a></li>
                 <li><a href="streams.html">Streams &amp; Batch</a></li>
-                <li><a href="operadores.html" class="active">Operadores</a></li>
+                <li><a href="operadores-visual.html" class="active">Operadores</a></li>
                 <li><a href="casos-uso.html">Casos de Uso</a></li>
+                <li><a href="pyflink.html">PyFlink</a></li>
             </ul>
             <button class="nav-mobile-btn" id="navToggle">☰</button>
         </div>
@@ -112,6 +113,25 @@
 <span class="cmt">// ["Hola", "Mundo", "Apache", "Flink", "Data"]</span></code></pre>
         </div>
 
+        <div class="code-block" style="margin-top: 1rem;">
+            <div class="code-header">
+                <span class="code-lang">python — map, flatMap y filter en PyFlink</span>
+                <button class="copy-btn" onclick="copyCode(this)">📋 Copiar</button>
+            </div>
+            <pre><code><span class="cmt"># map: convertir a mayúsculas</span>
+upper = raw_stream.<span class="fn">map</span>(<span class="kw">lambda</span> x: x.<span class="fn">upper</span>(), output_type=<span class="type">Types</span>.<span class="fn">STRING</span>())
+
+<span class="cmt"># flatMap: dividir en palabras</span>
+<span class="kw">def</span> <span class="fn">split_words</span>(line):
+    <span class="kw">for</span> word <span class="kw">in</span> line.<span class="fn">split</span>(<span class="str">" "</span>):
+        <span class="kw">yield</span> word
+
+words = raw_stream.<span class="fn">flat_map</span>(split_words, output_type=<span class="type">Types</span>.<span class="fn">STRING</span>())
+
+<span class="cmt"># filter: solo palabras largas</span>
+long_words = words.<span class="fn">filter</span>(<span class="kw">lambda</span> w: <span class="fn">len</span>(w) > <span class="num">3</span>)</code></pre>
+        </div>
+
         <h2>2. keyBy: el Operador Más Importante</h2>
         <p>El operador <code>keyBy</code> es crítico: <strong>agrupa el stream por una clave</strong> para que puedes
             aplicar operaciones stateful (con estado) por clave independientemente.</p>
@@ -133,6 +153,19 @@ sales
 <span class="cmt">// Resultado cada hora, por categoría:</span>
 <span class="cmt">// {"category": "electronics", "total": 15420.50, "count": 234}</span>
 <span class="cmt">// {"category": "books", "total": 3210.00, "count": 89}</span></code></pre>
+        </div>
+
+        <div class="code-block" style="margin-top: 1rem;">
+            <div class="code-header">
+                <span class="code-lang">python — keyBy en PyFlink</span>
+                <button class="copy-btn" onclick="copyCode(this)">📋 Copiar</button>
+            </div>
+            <pre><code><span class="cmt"># Agrupar por categoría (accediendo a índice de tupla o diccionario)</span>
+sales \
+    .<span class="fn">key_by</span>(<span class="kw">lambda</span> sale: sale[<span class="str">'category'</span>]) \
+    .<span class="fn">window</span>(<span class="type">TumblingEventTimeWindows</span>.<span class="fn">of</span>(<span class="type">Time</span>.<span class="fn">hours</span>(<span class="num">1</span>))) \
+    .<span class="fn">reduce</span>(suma_ventas_function) \
+    .<span class="fn">print</span>()</code></pre>
         </div>
 
         <div class="info-box warning">
@@ -181,6 +214,34 @@ sales
 }</code></pre>
         </div>
 
+        <div class="code-block" style="margin-top: 1rem;">
+            <div class="code-header">
+                <span class="code-lang">python — reduce vs aggregate en PyFlink</span>
+                <button class="copy-btn" onclick="copyCode(this)">📋 Copiar</button>
+            </div>
+            <pre><code><span class="cmt"># REDUCE en PyFlink</span>
+sales \
+    .<span class="fn">key_by</span>(<span class="kw">lambda</span> x: x[<span class="str">'user_id'</span>]) \
+    .<span class="fn">reduce</span>(<span class="kw">lambda</span> a, b: {
+        <span class="str">'user_id'</span>: a[<span class="str">'user_id'</span>],
+        <span class="str">'amount'</span>: a[<span class="str">'amount'</span>] + b[<span class="str">'amount'</span>]
+    })
+
+<span class="cmt"># AGGREGATE personalizado en Python</span>
+<span class="kw">class</span> <span class="fn">AvgAggregateFunction</span>(<span class="type">AggregateFunction</span>):
+    <span class="kw">def</span> <span class="fn">create_accumulator</span>(<span class="kw">self</span>):
+        <span class="kw">return</span> (<span class="num">0.0</span>, <span class="num">0</span>)  <span class="cmt"># suma, contador</span>
+
+    <span class="kw">def</span> <span class="fn">add</span>(<span class="kw">self</span>, sale, acc):
+        <span class="kw">return</span> (acc[<span class="num">0</span>] + sale[<span class="str">'amount'</span>], acc[<span class="num">1</span>] + <span class="num">1</span>)
+
+    <span class="kw">def</span> <span class="fn">get_result</span>(<span class="kw">self</span>, acc):
+        <span class="kw">return</span> acc[<span class="num">0</span>] / acc[<span class="num">1</span>] <span class="kw">if</span> acc[<span class="num">1</span>] != <span class="num">0</span> <span class="kw">else</span> <span class="num">0</span>
+
+    <span class="kw">def</span> <span class="fn">merge</span>(<span class="kw">self</span>, a, b):
+        <span class="kw">return</span> (a[<span class="num">0</span>] + b[<span class="num">0</span>], a[<span class="num">1</span>] + b[<span class="num">1</span>])</code></pre>
+        </div>
+
         <h2>4. Joins: combinar dos streams</h2>
         <p>Flink permite hacer <code>join</code> entre dos streams dentro de una ventana temporal. Muy útil para
             enriquecer eventos con información de otro stream.</p>
@@ -206,6 +267,28 @@ transactions
         profile.<span class="fn">getCountry</span>()
     ))
     .<span class="fn">print</span>();</code></pre>
+        </div>
+
+        <div class="code-block" style="margin-top: 1rem;">
+            <div class="code-header">
+                <span class="code-lang">python — Join en PyFlink</span>
+                <button class="copy-btn" onclick="copyCode(this)">📋 Copiar</button>
+            </div>
+            <pre><code><span class="kw">def</span> <span class="fn">enrich_transaction</span>(tx, profile):
+    <span class="kw">return</span> {
+        <span class="str">'id'</span>: tx[<span class="str">'id'</span>],
+        <span class="str">'amount'</span>: tx[<span class="str">'amount'</span>],
+        <span class="str">'risk'</span>: profile[<span class="str">'risk_score'</span>],
+        <span class="str">'country'</span>: profile[<span class="str">'country'</span>]
+    }
+
+transactions \
+    .<span class="fn">join</span>(profiles) \
+    .<span class="fn">where</span>(<span class="kw">lambda</span> tx: tx[<span class="str">'user_id'</span>]) \
+    .<span class="fn">equal_to</span>(<span class="kw">lambda</span> profile: profile[<span class="str">'user_id'</span>]) \
+    .<span class="fn">window</span>(<span class="type">TumblingEventTimeWindows</span>.<span class="fn">of</span>(<span class="type">Time</span>.<span class="fn">minutes</span>(<span class="num">5</span>))) \
+    .<span class="fn">apply</span>(enrich_transaction) \
+    .<span class="fn">print</span>()</code></pre>
         </div>
 
         <h2>5. connect y CoProcessFunction</h2>
@@ -243,7 +326,108 @@ txStream
     });</code></pre>
         </div>
 
-        <h2>6. Tabla resumen de Operadores</h2>
+        <div class="code-block" style="margin-top: 1rem;">
+            <div class="code-header">
+                <span class="code-lang">python — connect y CoProcessFunction en PyFlink</span>
+                <button class="copy-btn" onclick="copyCode(this)">📋 Copiar</button>
+            </div>
+            <pre><code><span class="kw">class</span> <span class="fn">RuleMatcher</span>(<span class="type">CoProcessFunction</span>):
+    <span class="kw">def</span> <span class="fn">__init__</span>(<span class="kw">self</span>):
+        <span class="kw">self</span>.rules_state = <span class="kw">None</span>
+
+    <span class="kw">def</span> <span class="fn">open</span>(<span class="kw">self</span>, runtime_context):
+        <span class="kw">self</span>.rules_state = runtime_context.<span class="fn">get_list_state</span>(
+            <span class="type">ListStateDescriptor</span>(<span class="str">"rules"</span>, <span class="type">Types</span>.<span class="fn">PICKLED_BYTE_ARRAY</span>())
+        )
+
+    <span class="kw">def</span> <span class="fn">process_element1</span>(<span class="kw">self</span>, tx, ctx, out):
+        <span class="cmt"># Procesar transacción con las reglas almacenadas</span>
+        <span class="kw">for</span> rule <span class="kw">in</span> <span class="kw">self</span>.rules_state.<span class="fn">get</span>():
+            <span class="kw">if</span> evaluate_rule(rule, tx):
+                out.<span class="fn">collect</span>({<span class="str">"tx"</span>: tx, <span class="str">"rule"</span>: rule, <span class="str">"alert"</span>: <span class="kw">True</span>})
+
+    <span class="kw">def</span> <span class="fn">process_element2</span>(<span class="kw">self</span>, rule, ctx, out):
+        <span class="cmt"># Guardar la nueva regla</span>
+        <span class="kw">self</span>.rules_state.<span class="fn">add</span>(rule)
+
+tx_stream \
+    .<span class="fn">connect</span>(rules_stream) \
+    .<span class="fn">key_by</span>(<span class="kw">lambda</span> tx: tx[<span class="str">'user_id'</span>], <span class="kw">lambda</span> rule: rule[<span class="str">'target_user'</span>]) \
+    .<span class="fn">process</span>(<span class="fn">RuleMatcher</span>())</code></pre>
+        </div>
+
+        <h2>6. Caso Práctico Completo: Detección de Fraude en Tiempo Real</h2>
+        <p>Vamos a construir un caso realista en <strong>PyFlink</strong> donde analizamos un flujo de transacciones
+            bancarias. Si un usuario realiza una <strong>transacción pequeña de prueba</strong> (&lt; 1€) seguida de una
+            <strong>transacción grande</strong> (&gt; 10,000€) en menos de 1 minuto, generaremos una alerta de fraude.
+            Usaremos el poderoso <code>KeyedProcessFunction</code> para manejar el estado y los temporizadores (timers).
+        </p>
+
+        <div class="code-block">
+            <div class="code-header">
+                <span class="code-lang">python — PyFlink: Detección de Fraude con ProcessFunction</span>
+                <button class="copy-btn" onclick="copyCode(this)">📋 Copiar</button>
+            </div>
+            <pre><code><span class="kw">from</span> pyflink.datastream <span class="kw">import</span> <span class="type">StreamExecutionEnvironment</span>
+<span class="kw">from</span> pyflink.datastream.functions <span class="kw">import</span> <span class="type">KeyedProcessFunction</span>
+<span class="kw">from</span> pyflink.datastream.state <span class="kw">import</span> <span class="type">ValueStateDescriptor</span>
+<span class="kw">from</span> pyflink.common.typeinfo <span class="kw">import</span> <span class="type">Types</span>
+
+<span class="kw">class</span> <span class="fn">FraudDetector</span>(<span class="type">KeyedProcessFunction</span>):
+    <span class="kw">def</span> <span class="fn">open</span>(<span class="kw">self</span>, runtime_context):
+        <span class="cmt"># Estado 1: marca si hemos visto una transacción muy pequeña</span>
+        <span class="kw">self</span>.flag_state = runtime_context.<span class="fn">get_state</span>(
+            <span class="type">ValueStateDescriptor</span>(<span class="str">"small_tx_flag"</span>, <span class="type">Types</span>.<span class="fn">BOOLEAN</span>())
+        )
+        <span class="cmt"># Estado 2: guarda el temporizador para limpiarlo si es necesario</span>
+        <span class="kw">self</span>.timer_state = runtime_context.<span class="fn">get_state</span>(
+            <span class="type">ValueStateDescriptor</span>(<span class="str">"timer"</span>, <span class="type">Types</span>.<span class="fn">LONG</span>())
+        )
+
+    <span class="kw">def</span> <span class="fn">process_element</span>(<span class="kw">self</span>, transaction, ctx, out):
+        last_flag = <span class="kw">self</span>.flag_state.<span class="fn">value</span>()
+
+        <span class="cmt"># Si el flag está activo (hubo tx pequeña) y esta tx es grande (>10k)...</span>
+        <span class="kw">if</span> last_flag <span class="kw">and</span> transaction[<span class="str">'amount'</span>] > <span class="num">10000</span>:
+            <span class="cmt"># Emitir la alerta al stream de salida</span>
+            alert = <span class="str">f"🚨 FRAUDE DETECTADO - Usuario: {ctx.get_current_key()}"</span>
+            out.<span class="fn">collect</span>(alert)
+            <span class="kw">self</span>.clean_up(ctx)  <span class="cmt"># Resetear estado</span>
+
+        <span class="cmt"># Si la transacción es pequeña, activamos el flag y un contador</span>
+        <span class="kw">if</span> transaction[<span class="str">'amount'</span>] &lt; <span class="num">1.00</span>:
+            <span class="kw">self</span>.flag_state.<span class="fn">update</span>(<span class="kw">True</span>)
+            
+            <span class="cmt"># Crear temporizador a 1 minuto vista desde ahora</span>
+            timer = ctx.<span class="fn">timer_service</span>().<span class="fn">current_processing_time</span>() + (<span class="num">60</span> * <span class="num">1000</span>)
+            ctx.<span class="fn">timer_service</span>().<span class="fn">register_processing_time_timer</span>(timer)
+            <span class="kw">self</span>.timer_state.<span class="fn">update</span>(timer)
+
+    <span class="kw">def</span> <span class="fn">on_timer</span>(<span class="kw">self</span>, timestamp, ctx, out):
+        <span class="cmt"># Si se ejecuta este método, significa que pasó 1 minuto y no hubo fraude</span>
+        <span class="kw">self</span>.clean_up(ctx)
+
+    <span class="kw">def</span> <span class="fn">clean_up</span>(<span class="kw">self</span>, ctx):
+        <span class="kw">self</span>.flag_state.<span class="fn">clear</span>()
+        timer = <span class="kw">self</span>.timer_state.<span class="fn">value</span>()
+        <span class="kw">if</span> timer <span class="kw">is not None</span>:
+            ctx.<span class="fn">timer_service</span>().<span class="fn">delete_processing_time_timer</span>(timer)
+        <span class="kw">self</span>.timer_state.<span class="fn">clear</span>()
+
+<span class="cmt"># Flujo principal del Job</span>
+env = <span class="type">StreamExecutionEnvironment</span>.<span class="fn">get_execution_environment</span>()
+<span class="cmt"># Supongamos 'transactions' viene de Kafka ya parseado...</span>
+transactions = ... 
+
+alerts = transactions \
+    .<span class="fn">key_by</span>(<span class="kw">lambda</span> tx: tx[<span class="str">'user_id'</span>]) \
+    .<span class="fn">process</span>(<span class="fn">FraudDetector</span>(), output_type=<span class="type">Types</span>.<span class="fn">STRING</span>())
+
+alerts.<span class="fn">print</span>()
+env.<span class="fn">execute</span>(<span class="str">"Mejor Detector de Fraude Flink"</span>)</code></pre>
+        </div>
+
+        <h2>7. Tabla resumen de Operadores</h2>
 
         <div class="table-wrapper">
             <table>
@@ -328,8 +512,9 @@ txStream
                     <li><a href="conceptos.html">Conceptos</a></li>
                     <li><a href="arquitectura.html">Arquitectura</a></li>
                     <li><a href="streams.html">Streams &amp; Batch</a></li>
-                    <li><a href="operadores.html">Operadores</a></li>
+                    <li><a href="operadores-visual.html">Operadores</a></li>
                     <li><a href="casos-uso.html">Casos de Uso</a></li>
+                    <li><a href="pyflink.html">PyFlink</a></li>
                 </ul>
             </div>
         </div>

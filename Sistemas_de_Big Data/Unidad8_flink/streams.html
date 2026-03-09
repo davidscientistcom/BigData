@@ -17,14 +17,14 @@
     <nav class="navbar" id="navbar">
         <div class="nav-inner">
             <div class="nav-brand"><span class="brand-icon">⚡</span><span class="brand-text">Flink Bootcamp</span></div>
-            <ul class="nav-links">
+                        <ul class="nav-links">
                 <li><a href="index.html">Inicio</a></li>
                 <li><a href="conceptos.html">Conceptos</a></li>
                 <li><a href="arquitectura.html">Arquitectura</a></li>
                 <li><a href="streams.html" class="active">Streams &amp; Batch</a></li>
                 <li><a href="operadores-visual.html">Operadores</a></li>
                 <li><a href="casos-uso.html">Casos de Uso</a></li>
-      <li><a href="pyflink.html">PyFlink</a></li>
+                <li><a href="pyflink.html">PyFlink</a></li>
             </ul>
             <button class="nav-mobile-btn" id="navToggle">☰</button>
         </div>
@@ -77,6 +77,40 @@ alerts.<span class="fn">addSink</span>(<span class="kw">new</span> <span class="
 env.<span class="fn">execute</span>(<span class="str">"Detección de transacciones sospechosas"</span>);</code></pre>
         </div>
 
+        <div class="code-block" style="margin-top: 1rem;">
+            <div class="code-header">
+                <span class="code-lang">python — Estructura básica con PyFlink</span>
+                <button class="copy-btn" onclick="copyCode(this)">📋 Copiar</button>
+            </div>
+            <pre><code><span class="kw">import</span> json
+<span class="kw">from</span> pyflink.datastream <span class="kw">import</span> <span class="type">StreamExecutionEnvironment</span>
+<span class="kw">from</span> pyflink.common.typeinfo <span class="kw">import</span> <span class="type">Types</span>
+<span class="kw">from</span> pyflink.datastream.window <span class="kw">import</span> <span class="type">TumblingEventTimeWindows</span>
+<span class="kw">from</span> pyflink.common.time <span class="kw">import</span> <span class="type">Time</span>
+
+<span class="cmt"># 1. Crear el entorno</span>
+env = <span class="type">StreamExecutionEnvironment</span>.<span class="fn">get_execution_environment</span>()
+
+<span class="cmt"># 2. Fuente (source) desde Kafka</span>
+<span class="cmt"># Supongamos que ya tenemos una fuente configurada llamada kafka_source</span>
+transactions = env.<span class="fn">add_source</span>(kafka_source)
+
+<span class="cmt"># 3. Transformaciones</span>
+alerts = transactions \
+    .<span class="fn">map</span>(<span class="kw">lambda</span> msg: json.<span class="fn">loads</span>(msg)) \
+    .<span class="fn">filter</span>(<span class="kw">lambda</span> tx: tx[<span class="str">'amount'</span>] > <span class="num">1000</span>) \
+    .<span class="fn">key_by</span>(<span class="kw">lambda</span> tx: tx[<span class="str">'user_id'</span>]) \
+    .<span class="fn">window</span>(<span class="type">TumblingEventTimeWindows</span>.<span class="fn">of</span>(<span class="type">Time</span>.<span class="fn">minutes</span>(<span class="num">5</span>))) \
+    .<span class="fn">reduce</span>(contar_y_sumar_funcion) \
+    .<span class="fn">filter</span>(<span class="kw">lambda</span> res: res[<span class="str">'count'</span>] > <span class="num">3</span>)
+
+<span class="cmt"># 4. Sink</span>
+alerts.<span class="fn">add_sink</span>(elasticsearch_sink)
+
+<span class="cmt"># 5. Ejecutar</span>
+env.<span class="fn">execute</span>(<span class="str">"PyFlink DataStream Job"</span>)</code></pre>
+        </div>
+
         <h2>2. Ventanas Temporales (Windows)</h2>
         <p>Las ventanas son fundamentales en streaming: permiten <strong>agrupar eventos en intervalos de
                 tiempo</strong> para realizar agregaciones. Sin ventanas, no podríamos calcular "cuántas compras se
@@ -126,9 +160,19 @@ env.<span class="fn">execute</span>(<span class="str">"Detección de transaccion
             </div>
             <pre><code>stream
     .<span class="fn">keyBy</span>(<span class="type">Transaction</span>::<span class="fn">getUserId</span>)
-    <span class="cmt">// Ventana fija de 5 minutos en Event Time</span>
     .<span class="fn">window</span>(<span class="fn">TumblingEventTimeWindows</span>.<span class="fn">of</span>(<span class="type">Time</span>.<span class="fn">minutes</span>(<span class="num">5</span>)))
     .<span class="fn">sum</span>(<span class="str">"amount"</span>);  <span class="cmt">// suma de importes por usuario cada 5 min</span></code></pre>
+        </div>
+
+        <div class="code-block" style="margin-top: 1rem;">
+            <div class="code-header">
+                <span class="code-lang">python — Tumbling Window de 5 minutos en PyFlink</span>
+                <button class="copy-btn" onclick="copyCode(this)">📋 Copiar</button>
+            </div>
+            <pre><code>stream \
+    .<span class="fn">key_by</span>(<span class="kw">lambda</span> tx: tx[<span class="str">'user_id'</span>]) \
+    .<span class="fn">window</span>(<span class="type">TumblingEventTimeWindows</span>.<span class="fn">of</span>(<span class="type">Time</span>.<span class="fn">minutes</span>(<span class="num">5</span>))) \
+    .<span class="fn">reduce</span>(<span class="kw">lambda</span> a, b: (a[<span class="num">0</span>], a[<span class="num">1</span>] + b[<span class="num">1</span>]))  <span class="cmt"># reduce para sumar</span></code></pre>
         </div>
 
         <h3>2.2 Sliding Window (Ventana Deslizante)</h3>
@@ -177,6 +221,17 @@ env.<span class="fn">execute</span>(<span class="str">"Detección de transaccion
     .<span class="fn">aggregate</span>(<span class="kw">new</span> <span class="fn">AverageAggregate</span>());  <span class="cmt">// precio medio</span></code></pre>
         </div>
 
+        <div class="code-block" style="margin-top: 1rem;">
+            <div class="code-header">
+                <span class="code-lang">python — Sliding Window en PyFlink</span>
+                <button class="copy-btn" onclick="copyCode(this)">📋 Copiar</button>
+            </div>
+            <pre><code>stream \
+    .<span class="fn">key_by</span>(<span class="kw">lambda</span> trade: trade[<span class="str">'symbol'</span>]) \
+    .<span class="fn">window</span>(<span class="type">SlidingEventTimeWindows</span>.<span class="fn">of</span>(<span class="type">Time</span>.<span class="fn">minutes</span>(<span class="num">10</span>), <span class="type">Time</span>.<span class="fn">minutes</span>(<span class="num">5</span>))) \
+    .<span class="fn">reduce</span>(calcular_media_funcion)</code></pre>
+        </div>
+
         <h3>2.3 Session Window (Ventana de Sesión)</h3>
         <p>Agrupa eventos por <strong>períodos de actividad</strong>. Una ventana de sesión se cierra cuando pasa un
             tiempo X sin actividad. Ideal para analizar sesiones de usuario.</p>
@@ -201,6 +256,17 @@ env.<span class="fn">execute</span>(<span class="str">"Detección de transaccion
     .<span class="fn">window</span>(<span class="fn">EventTimeSessionWindows</span>.<span class="fn">withGap</span>(<span class="type">Time</span>.<span class="fn">minutes</span>(<span class="num">30</span>)))
     .<span class="fn">aggregate</span>(<span class="kw">new</span> <span class="fn">SessionSummaryAggregator</span>());
 <span class="cmt">// Resultado: duración total, páginas visitadas, tipo de sesión por usuario</span></code></pre>
+        </div>
+
+        <div class="code-block" style="margin-top: 1rem;">
+            <div class="code-header">
+                <span class="code-lang">python — Session Window en PyFlink</span>
+                <button class="copy-btn" onclick="copyCode(this)">📋 Copiar</button>
+            </div>
+            <pre><code>stream \
+    .<span class="fn">key_by</span>(<span class="kw">lambda</span> event: event[<span class="str">'user_id'</span>]) \
+    .<span class="fn">window</span>(<span class="type">EventTimeSessionWindows</span>.<span class="fn">with_gap</span>(<span class="type">Time</span>.<span class="fn">minutes</span>(<span class="num">30</span>))) \
+    .<span class="fn">reduce</span>(acumular_sesion_funcion)</code></pre>
         </div>
 
         <h2>3. Resumen de Ventanas</h2>
@@ -244,10 +310,61 @@ env.<span class="fn">execute</span>(<span class="str">"Detección de transaccion
             </table>
         </div>
 
-        <h2>4. Flink para Batch: Table API y SQL</h2>
+        <h2>5. Caso Práctico: Analítica de Sesiones de Usuario</h2>
+        <p>Imaginemos que tenemos un flujo de eventos de navegación en nuestra web. Queremos analizar automáticamente
+            cada sesión (secuencia de clics), calcular su duración y mostrar cuántas páginas visitó. En PyFlink, las
+            <strong>Session Windows</strong> son perfectas para esto.</p>
+
+        <div class="code-block">
+            <div class="code-header">
+                <span class="code-lang">python — PyFlink: Analítica con Session Windows</span>
+                <button class="copy-btn" onclick="copyCode(this)">📋 Copiar</button>
+            </div>
+            <pre><code><span class="kw">from</span> pyflink.datastream <span class="kw">import</span> <span class="type">StreamExecutionEnvironment</span>
+<span class="kw">from</span> pyflink.datastream.window <span class="kw">import</span> <span class="type">EventTimeSessionWindows</span>
+<span class="kw">from</span> pyflink.common.time <span class="kw">import</span> <span class="type">Time</span>
+<span class="kw">from</span> pyflink.common.typeinfo <span class="kw">import</span> <span class="type">Types</span>
+
+env = <span class="type">StreamExecutionEnvironment</span>.<span class="fn">get_execution_environment</span>()
+<span class="cmt"># stream simulating web clicks: {'user_id': 1, 'url': '/home', 'timestamp': 16000000}</span>
+clicks = ... 
+
+<span class="kw">def</span> <span class="fn">reduce_session</span>(a, b):
+    <span class="cmt"># A y B son diccionarios representando la sesión acumulada hasta ahora</span>
+    <span class="cmt"># Calculamos la duración (timestamp max - timestamp min)</span>
+    start_time = <span class="fn">min</span>(a[<span class="str">'start_time'</span>], b[<span class="str">'start_time'</span>])
+    end_time = <span class="fn">max</span>(a[<span class="str">'end_time'</span>], b[<span class="str">'end_time'</span>])
+    
+    <span class="kw">return</span> {
+        <span class="str">'user_id'</span>: a[<span class="str">'user_id'</span>],
+        <span class="str">'pages_visited'</span>: a[<span class="str">'pages_visited'</span>] + b[<span class="str">'pages_visited'</span>],
+        <span class="str">'start_time'</span>: start_time,
+        <span class="str">'end_time'</span>: end_time,
+        <span class="str">'duration_seconds'</span>: (end_time - start_time) / <span class="num">1000</span>
+    }
+
+<span class="cmt"># Transformamos evento de entrada al formato del acumulador</span>
+session_stream = clicks \
+    .<span class="fn">map</span>(<span class="kw">lambda</span> c: {
+        <span class="str">'user_id'</span>: c[<span class="str">'user_id'</span>],
+        <span class="str">'pages_visited'</span>: <span class="num">1</span>,       <span class="cmt"># 1 click = 1 página</span>
+        <span class="str">'start_time'</span>: c[<span class="str">'timestamp'</span>],
+        <span class="str">'end_time'</span>: c[<span class="str">'timestamp'</span>],
+        <span class="str">'duration_seconds'</span>: <span class="num">0</span>     <span class="cmt"># Comienza en 0</span>
+    }) \
+    .<span class="fn">key_by</span>(<span class="kw">lambda</span> s: s[<span class="str">'user_id'</span>]) \
+    .<span class="fn">window</span>(<span class="type">EventTimeSessionWindows</span>.<span class="fn">with_gap</span>(<span class="type">Time</span>.<span class="fn">minutes</span>(<span class="num">30</span>))) \
+    .<span class="fn">reduce</span>(reduce_session)
+
+session_stream.<span class="fn">print</span>()
+env.<span class="fn">execute</span>(<span class="str">"Session Analytics Job"</span>)</code></pre>
+        </div>
+
+        <h2>6. Flink para Batch: Table API y SQL</h2>
         <p>Flink también puede procesar datos en batch (ficheros, datasets finitos). La <strong>Table API</strong> y
             <strong>Flink SQL</strong> ofrecen una interfaz de alto nivel similar a SQL que funciona igual para
-            streaming y batch.</p>
+            streaming y batch.
+        </p>
 
         <div class="code-block">
             <div class="code-header">
@@ -310,7 +427,7 @@ env.<span class="fn">execute</span>(<span class="str">"Detección de transaccion
                     <li><a href="streams.html">Streams &amp; Batch</a></li>
                     <li><a href="operadores-visual.html">Operadores</a></li>
                     <li><a href="casos-uso.html">Casos de Uso</a></li>
-      <li><a href="pyflink.html">PyFlink</a></li>
+                    <li><a href="pyflink.html">PyFlink</a></li>
                 </ul>
             </div>
         </div>
