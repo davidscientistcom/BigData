@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Streams y Batch — Flink Bootcamp</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+
+    <nav class="navbar" id="navbar">
+        <div class="nav-inner">
+            <div class="nav-brand"><span class="brand-icon">⚡</span><span class="brand-text">Flink Bootcamp</span></div>
+            <ul class="nav-links">
+                <li><a href="index.html">Inicio</a></li>
+                <li><a href="conceptos.html">Conceptos</a></li>
+                <li><a href="arquitectura.html">Arquitectura</a></li>
+                <li><a href="streams.html" class="active">Streams &amp; Batch</a></li>
+                <li><a href="operadores-visual.html">Operadores</a></li>
+                <li><a href="casos-uso.html">Casos de Uso</a></li>
+      <li><a href="pyflink.html">PyFlink</a></li>
+            </ul>
+            <button class="nav-mobile-btn" id="navToggle">☰</button>
+        </div>
+    </nav>
+
+    <div class="breadcrumb">
+        <div class="breadcrumb-inner">
+            <a href="index.html">Inicio</a><span class="breadcrumb-sep">›</span><span>Streams &amp; Batch</span>
+        </div>
+    </div>
+
+    <div class="page-hero">
+        <span class="page-hero-icon">🌊</span>
+        <h1>Streams &amp; <span class="gradient-text">Batch</span></h1>
+        <p>DataStream API, ventanas temporales (tumbling, sliding, session), watermarks y procesamiento batch con Flink.
+        </p>
+    </div>
+
+    <div class="content">
+
+        <h2>1. DataStream API: el corazón de Flink</h2>
+        <p>La <strong>DataStream API</strong> es la API principal de Flink para procesamiento de streams. Representa un
+            flujo de datos que puede ser transformado, filtrado y agregado mediante operadores encadenados.</p>
+
+        <div class="code-block">
+            <div class="code-header">
+                <span class="code-lang">java — Estructura básica de un job con DataStream API</span>
+                <button class="copy-btn" onclick="copyCode(this)">📋 Copiar</button>
+            </div>
+            <pre><code><span class="cmt">// 1. Crear el entorno de ejecución</span>
+<span class="type">StreamExecutionEnvironment</span> env =
+    <span class="type">StreamExecutionEnvironment</span>.<span class="fn">getExecutionEnvironment</span>();
+
+<span class="cmt">// 2. Definir la fuente (source)</span>
+<span class="type">DataStream</span>&lt;<span class="type">Transaction</span>&gt; transactions = env
+    .<span class="fn">addSource</span>(<span class="kw">new</span> <span class="fn">FlinkKafkaConsumer</span>(<span class="str">"transactions"</span>, schema, kafkaProps));
+
+<span class="cmt">// 3. Transformar los datos</span>
+<span class="type">DataStream</span>&lt;<span class="type">Alert</span>&gt; alerts = transactions
+    .<span class="fn">filter</span>(tx -&gt; tx.<span class="fn">getAmount</span>() > <span class="num">1000</span>)         <span class="cmt">// solo importes altos</span>
+    .<span class="fn">keyBy</span>(<span class="type">Transaction</span>::<span class="fn">getUserId</span>)              <span class="cmt">// agrupa por usuario</span>
+    .<span class="fn">window</span>(<span class="fn">TumblingEventTimeWindows</span>.<span class="fn">of</span>(<span class="type">Time</span>.<span class="fn">minutes</span>(<span class="num">5</span>)))
+    .<span class="fn">aggregate</span>(<span class="kw">new</span> <span class="fn">CountAndSumAggregator</span>())       <span class="cmt">// cuenta y suma</span>
+    .<span class="fn">filter</span>(result -&gt; result.<span class="fn">getCount</span>() > <span class="num">3</span>);         <span class="cmt">// más de 3 en 5 min</span>
+
+<span class="cmt">// 4. Escribir el resultado (sink)</span>
+alerts.<span class="fn">addSink</span>(<span class="kw">new</span> <span class="fn">ElasticsearchSink</span>(esConfig));
+
+<span class="cmt">// 5. Ejecutar el job</span>
+env.<span class="fn">execute</span>(<span class="str">"Detección de transacciones sospechosas"</span>);</code></pre>
+        </div>
+
+        <h2>2. Ventanas Temporales (Windows)</h2>
+        <p>Las ventanas son fundamentales en streaming: permiten <strong>agrupar eventos en intervalos de
+                tiempo</strong> para realizar agregaciones. Sin ventanas, no podríamos calcular "cuántas compras se
+            hicieron en los últimos 5 minutos".</p>
+
+        <h3>2.1 Tumbling Window (Ventana Fija)</h3>
+        <p>Ventanas de <strong>tamaño fijo sin solapamiento</strong>. Cada evento pertenece exactamente a una ventana.
+        </p>
+
+        <div class="diagram-demo">
+            <span class="diagram-demo-label">Tumbling Window de 5 minutos</span>
+            <svg viewBox="0 0 700 100" style="height:100px">
+                <defs>
+                    <marker id="atw" markerWidth="7" markerHeight="7" refX="6" refY="3" orient="auto">
+                        <path d="M0,0 L0,6 L8,3 z" fill="rgba(232,66,26,0.6)" />
+                    </marker>
+                </defs>
+                <line x1="30" y1="50" x2="670" y2="50" stroke="rgba(255,255,255,0.1)" stroke-width="1"
+                    marker-end="url(#atw)" />
+                <!-- Window 1: 00-05 -->
+                <rect x="30" y="25" width="190" height="30" rx="6" fill="rgba(232,66,26,0.25)" stroke="#e8421a"
+                    stroke-width="1.5" />
+                <text x="125" y="44" text-anchor="middle" fill="#ff6b47" font-size="10" font-weight="700"
+                    font-family="Inter">Ventana 1: 12:00 - 12:05</text>
+                <!-- Window 2: 05-10 -->
+                <rect x="230" y="25" width="190" height="30" rx="6" fill="rgba(139,92,246,0.25)" stroke="#8b5cf6"
+                    stroke-width="1.5" />
+                <text x="325" y="44" text-anchor="middle" fill="#a78bfa" font-size="10" font-weight="700"
+                    font-family="Inter">Ventana 2: 12:05 - 12:10</text>
+                <!-- Window 3: 10-15 -->
+                <rect x="430" y="25" width="190" height="30" rx="6" fill="rgba(16,185,129,0.25)" stroke="#10b981"
+                    stroke-width="1.5" />
+                <text x="525" y="44" text-anchor="middle" fill="#4ade80" font-size="10" font-weight="700"
+                    font-family="Inter">Ventana 3: 12:10 - 12:15</text>
+                <!-- Time labels -->
+                <text x="30" y="85" fill="#4b5563" font-size="9" font-family="Inter">12:00</text>
+                <text x="218" y="85" fill="#4b5563" font-size="9" font-family="Inter">12:05</text>
+                <text x="418" y="85" fill="#4b5563" font-size="9" font-family="Inter">12:10</text>
+                <text x="618" y="85" fill="#4b5563" font-size="9" font-family="Inter">12:15</text>
+            </svg>
+        </div>
+
+        <div class="code-block">
+            <div class="code-header">
+                <span class="code-lang">java — Tumbling Window de 5 minutos</span>
+                <button class="copy-btn" onclick="copyCode(this)">📋 Copiar</button>
+            </div>
+            <pre><code>stream
+    .<span class="fn">keyBy</span>(<span class="type">Transaction</span>::<span class="fn">getUserId</span>)
+    <span class="cmt">// Ventana fija de 5 minutos en Event Time</span>
+    .<span class="fn">window</span>(<span class="fn">TumblingEventTimeWindows</span>.<span class="fn">of</span>(<span class="type">Time</span>.<span class="fn">minutes</span>(<span class="num">5</span>)))
+    .<span class="fn">sum</span>(<span class="str">"amount"</span>);  <span class="cmt">// suma de importes por usuario cada 5 min</span></code></pre>
+        </div>
+
+        <h3>2.2 Sliding Window (Ventana Deslizante)</h3>
+        <p>Ventanas de <strong>tamaño fijo pero con solapamiento</strong>. Definidas por tamaño y paso (<em>slide</em>).
+            Un evento puede pertenecer a varias ventanas.</p>
+
+        <div class="diagram-demo">
+            <span class="diagram-demo-label">Sliding Window: tamaño 10min, slide 5min</span>
+            <svg viewBox="0 0 700 120" style="height:120px">
+                <!-- Window 1 -->
+                <rect x="30" y="20" width="290" height="25" rx="5" fill="rgba(232,66,26,0.2)" stroke="#e8421a"
+                    stroke-width="1.5" />
+                <text x="175" y="37" text-anchor="middle" fill="#ff6b47" font-size="9" font-weight="600"
+                    font-family="Inter">Ventana 1: 12:00 - 12:10</text>
+                <!-- Window 2 -->
+                <rect x="180" y="52" width="290" height="25" rx="5" fill="rgba(139,92,246,0.2)" stroke="#8b5cf6"
+                    stroke-width="1.5" />
+                <text x="325" y="69" text-anchor="middle" fill="#a78bfa" font-size="9" font-weight="600"
+                    font-family="Inter">Ventana 2: 12:05 - 12:15</text>
+                <!-- Window 3 -->
+                <rect x="330" y="84" width="290" height="25" rx="5" fill="rgba(16,185,129,0.2)" stroke="#10b981"
+                    stroke-width="1.5" />
+                <text x="475" y="101" text-anchor="middle" fill="#4ade80" font-size="9" font-weight="600"
+                    font-family="Inter">Ventana 3: 12:10 - 12:20</text>
+                <!-- Time labels -->
+                <text x="30" y="118" fill="#4b5563" font-size="8" font-family="Inter">12:00</text>
+                <text x="175" y="118" fill="#4b5563" font-size="8" font-family="Inter">12:05</text>
+                <text x="328" y="118" fill="#4b5563" font-size="8" font-family="Inter">12:10</text>
+                <text x="474" y="118" fill="#4b5563" font-size="8" font-family="Inter">12:15</text>
+                <text x="618" y="118" fill="#4b5563" font-size="8" font-family="Inter">12:20</text>
+            </svg>
+        </div>
+
+        <div class="code-block">
+            <div class="code-header">
+                <span class="code-lang">java — Sliding Window: media móvil de precio en 10 min cada 5 min</span>
+                <button class="copy-btn" onclick="copyCode(this)">📋 Copiar</button>
+            </div>
+            <pre><code>stream
+    .<span class="fn">keyBy</span>(<span class="type">Trade</span>::<span class="fn">getSymbol</span>)
+    <span class="cmt">// Ventana de 10 min, desliza cada 5 min</span>
+    .<span class="fn">window</span>(<span class="fn">SlidingEventTimeWindows</span>.<span class="fn">of</span>(
+        <span class="type">Time</span>.<span class="fn">minutes</span>(<span class="num">10</span>),  <span class="cmt">// tamaño de la ventana</span>
+        <span class="type">Time</span>.<span class="fn">minutes</span>(<span class="num">5</span>)   <span class="cmt">// slide: cada 5 minutos se genera un resultado</span>
+    ))
+    .<span class="fn">aggregate</span>(<span class="kw">new</span> <span class="fn">AverageAggregate</span>());  <span class="cmt">// precio medio</span></code></pre>
+        </div>
+
+        <h3>2.3 Session Window (Ventana de Sesión)</h3>
+        <p>Agrupa eventos por <strong>períodos de actividad</strong>. Una ventana de sesión se cierra cuando pasa un
+            tiempo X sin actividad. Ideal para analizar sesiones de usuario.</p>
+
+        <div class="info-box info">
+            <span class="info-box-icon">💡</span>
+            <div class="info-box-text">
+                <strong>Ejemplo práctico:</strong> Si un usuario navega en una web, cada clic es un evento. Si pasa más
+                de 30 minutos sin hacer nada, consideramos que la sesión ha acabado. La siguiente acción abre una nueva
+                sesión. Esto es exactamente lo que modela una Session Window.
+            </div>
+        </div>
+
+        <div class="code-block">
+            <div class="code-header">
+                <span class="code-lang">java — Session Window: análisis de sesiones web</span>
+                <button class="copy-btn" onclick="copyCode(this)">📋 Copiar</button>
+            </div>
+            <pre><code>stream
+    .<span class="fn">keyBy</span>(<span class="type">WebEvent</span>::<span class="fn">getUserId</span>)
+    <span class="cmt">// Cierra la ventana si pasan más de 30 min sin actividad</span>
+    .<span class="fn">window</span>(<span class="fn">EventTimeSessionWindows</span>.<span class="fn">withGap</span>(<span class="type">Time</span>.<span class="fn">minutes</span>(<span class="num">30</span>)))
+    .<span class="fn">aggregate</span>(<span class="kw">new</span> <span class="fn">SessionSummaryAggregator</span>());
+<span class="cmt">// Resultado: duración total, páginas visitadas, tipo de sesión por usuario</span></code></pre>
+        </div>
+
+        <h2>3. Resumen de Ventanas</h2>
+
+        <div class="table-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Tipo</th>
+                        <th>Solapamiento</th>
+                        <th>Caso de uso</th>
+                        <th>API</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Tumbling</strong></td>
+                        <td>No</td>
+                        <td>Reportes por períodos fijos (ventas cada 5 min)</td>
+                        <td><code>TumblingEventTimeWindows.of(Time.minutes(5))</code></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Sliding</strong></td>
+                        <td>Sí</td>
+                        <td>Medias móviles, detección de tendencias</td>
+                        <td><code>SlidingEventTimeWindows.of(size, slide)</code></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Session</strong></td>
+                        <td>Variable</td>
+                        <td>Análisis de sesiones, comportamiento de usuario</td>
+                        <td><code>EventTimeSessionWindows.withGap(Time.minutes(30))</code></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Count</strong></td>
+                        <td>No</td>
+                        <td>Procesar exactamente N eventos (micro-batches)</td>
+                        <td><code>GlobalWindows + CountTrigger.of(N)</code></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <h2>4. Flink para Batch: Table API y SQL</h2>
+        <p>Flink también puede procesar datos en batch (ficheros, datasets finitos). La <strong>Table API</strong> y
+            <strong>Flink SQL</strong> ofrecen una interfaz de alto nivel similar a SQL que funciona igual para
+            streaming y batch.</p>
+
+        <div class="code-block">
+            <div class="code-header">
+                <span class="code-lang">sql — Flink SQL: análisis de ventas en tiempo real</span>
+                <button class="copy-btn" onclick="copyCode(this)">📋 Copiar</button>
+            </div>
+            <pre><code><span class="cmt">-- Crear tabla que lee de Kafka</span>
+<span class="kw">CREATE TABLE</span> <span class="fn">ventas</span> (
+    user_id     <span class="type">STRING</span>,
+    product_id  <span class="type">STRING</span>,
+    amount      <span class="type">DECIMAL</span>(<span class="num">10</span>, <span class="num">2</span>),
+    ts          <span class="type">TIMESTAMP</span>(<span class="num">3</span>),
+    <span class="kw">WATERMARK FOR</span> ts <span class="kw">AS</span> ts - <span class="type">INTERVAL</span> <span class="str">'5'</span> <span class="type">SECOND</span>
+) <span class="kw">WITH</span> (
+    <span class="str">'connector'</span> = <span class="str">'kafka'</span>,
+    <span class="str">'topic'</span>     = <span class="str">'ventas'</span>,
+    <span class="str">'format'</span>    = <span class="str">'json'</span>
+);
+
+<span class="cmt">-- Top usuarios por ventas en ventanas de 1 hora</span>
+<span class="kw">SELECT</span>
+    user_id,
+    <span class="fn">TUMBLE_START</span>(ts, <span class="type">INTERVAL</span> <span class="str">'1'</span> <span class="type">HOUR</span>) <span class="kw">AS</span> hora,
+    <span class="fn">SUM</span>(amount) <span class="kw">AS</span> total_ventas,
+    <span class="fn">COUNT</span>(*) <span class="kw">AS</span> num_compras
+<span class="kw">FROM</span> ventas
+<span class="kw">GROUP BY</span>
+    user_id,
+    <span class="fn">TUMBLE</span>(ts, <span class="type">INTERVAL</span> <span class="str">'1'</span> <span class="type">HOUR</span>)
+<span class="kw">ORDER BY</span> total_ventas <span class="kw">DESC</span>;</code></pre>
+        </div>
+
+        <div class="info-box tip">
+            <span class="info-box-icon">💡</span>
+            <div class="info-box-text">
+                <strong>Ventaja clave:</strong> El mismo código SQL funciona sobre datos históricos (batch) y sobre un
+                stream en tiempo real. Cambias la fuente de datos (un archivo CSV vs un topic de Kafka) pero la query es
+                idéntica. Esto simplifica enormemente el desarrollo.
+            </div>
+        </div>
+
+        <div style="display:flex; gap:1rem; flex-wrap:wrap; margin-top:2rem">
+            <a href="operadores.html" class="btn btn-primary">→ Operadores y Transformaciones</a>
+            <a href="arquitectura.html" class="btn btn-outline">← Arquitectura</a>
+        </div>
+    </div>
+
+    <footer class="footer">
+        <div class="footer-inner">
+            <div class="footer-brand">
+                <div class="brand-logo">⚡ Flink Bootcamp</div>
+                <p>Apuntes de Apache Flink para proyectos Big Data.</p>
+            </div>
+            <div class="footer-links">
+                <h5>Secciones</h5>
+                <ul>
+                    <li><a href="index.html">Inicio</a></li>
+                    <li><a href="conceptos.html">Conceptos</a></li>
+                    <li><a href="arquitectura.html">Arquitectura</a></li>
+                    <li><a href="streams.html">Streams &amp; Batch</a></li>
+                    <li><a href="operadores-visual.html">Operadores</a></li>
+                    <li><a href="casos-uso.html">Casos de Uso</a></li>
+      <li><a href="pyflink.html">PyFlink</a></li>
+                </ul>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p>Flink Bootcamp — Big Data</p>
+        </div>
+    </footer>
+
+    <script>
+        const navbar = document.getElementById('navbar');
+        window.addEventListener('scroll', () => { navbar.classList.toggle('scrolled', window.scrollY > 50); });
+        document.getElementById('navToggle').addEventListener('click', () => { document.querySelector('.nav-links').classList.toggle('open'); });
+        function copyCode(btn) {
+            const pre = btn.closest('.code-block').querySelector('pre');
+            navigator.clipboard.writeText(pre.innerText).then(() => {
+                btn.textContent = '✅ Copiado'; btn.classList.add('copied');
+                setTimeout(() => { btn.textContent = '📋 Copiar'; btn.classList.remove('copied'); }, 2000);
+            });
+        }
+    </script>
+</body>
+
+</html>

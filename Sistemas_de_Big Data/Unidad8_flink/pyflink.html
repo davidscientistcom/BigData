@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PyFlink — Flink en Python — Flink Bootcamp</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+
+    <nav class="navbar" id="navbar">
+        <div class="nav-inner">
+            <div class="nav-brand"><span class="brand-icon">⚡</span><span class="brand-text">Flink Bootcamp</span></div>
+            <ul class="nav-links">
+                <li><a href="index.html">Inicio</a></li>
+                <li><a href="conceptos.html">Conceptos</a></li>
+                <li><a href="arquitectura.html">Arquitectura</a></li>
+                <li><a href="streams.html">Streams &amp; Batch</a></li>
+                <li><a href="operadores-visual.html">Operadores</a></li>
+                <li><a href="casos-uso.html">Casos de Uso</a></li>
+                <li><a href="pyflink.html" class="active">PyFlink</a></li>
+            </ul>
+            <button class="nav-mobile-btn" id="navToggle">☰</button>
+        </div>
+    </nav>
+
+    <div class="breadcrumb">
+        <div class="breadcrumb-inner">
+            <a href="index.html">Inicio</a><span class="breadcrumb-sep">›</span><span>PyFlink — Flink con Python</span>
+        </div>
+    </div>
+
+    <div class="page-hero">
+        <span class="page-hero-icon">🐍</span>
+        <h1>PyFlink — Flink con <span class="gradient-text">Python</span></h1>
+        <p>Sí, Apache Flink tiene una API oficial para Python. Todo el poder de Flink con la simplicidad de Python.</p>
+    </div>
+
+    <div class="content">
+
+        <h2>1. ¿Qué es PyFlink?</h2>
+        <p>
+            <strong>PyFlink</strong> es la API oficial de Python para Apache Flink. Disponible desde Flink 1.9 (2019) y
+            mejorada
+            significativamente en versiones posteriores. Permite escribir jobs de Flink completamente en Python, sin
+            necesidad
+            de tocar Java.
+        </p>
+
+        <div class="info-box flink">
+            <span class="info-box-icon">🐍</span>
+            <div class="info-box-text">
+                <strong>¿Es igual que la versión de Java?</strong> Casi. PyFlink expone las mismas APIs (DataStream,
+                Table API y
+                SQL), pero hay algunas limitaciones: las operaciones <em>stateful</em> muy complejas y ciertas
+                fuentes/sinks avanzados
+                pueden requerir algo de Java/Scala como conector. Para el 90% de los casos de uso, Python es
+                perfectamente suficiente.
+            </div>
+        </div>
+
+        <div class="two-col">
+            <div class="mini-card">
+                <h5>✅ PyFlink es ideal para...</h5>
+                <ul>
+                    <li>Data Scientists que conocen Python</li>
+                    <li>Pipelines con lógica en pandas/numpy</li>
+                    <li>Uso de modelos ML (scikit-learn, etc.)</li>
+                    <li>Flink SQL (mismo SQL, sin Java)</li>
+                    <li>Prototipos y proyectos de clase</li>
+                </ul>
+            </div>
+            <div class="mini-card">
+                <h5>⚠️ Limitaciones vs Java</h5>
+                <ul>
+                    <li>Algo más de overhead (UDFs en Python se serializan)</li>
+                    <li>Algunas fuentes/sinks solo en Java</li>
+                    <li>Estado muy complejo más verboso</li>
+                    <li>Documentación menos extensa</li>
+                    <li>Ecosistema más joven</li>
+                </ul>
+            </div>
+        </div>
+
+        <h2>2. Instalación</h2>
+
+        <div class="code-block">
+            <div class="code-header">
+                <span class="code-lang">bash — Instalar PyFlink</span>
+                <button class="copy-btn" onclick="copyCode(this)">📋 Copiar</button>
+            </div>
+            <pre><code><span class="cmt"># Instalar PyFlink (requiere Python 3.6+)</span>
+pip install apache-flink
+
+<span class="cmt"># Verificar instalación</span>
+python -c <span class="str">"import pyflink; print(pyflink.__version__)"</span>
+
+<span class="cmt"># Para usar Flink SQL con PyFlink también necesitas Java 8 o 11</span>
+java -version</code></pre>
+        </div>
+
+        <h2>3. Tu primer job en PyFlink — Paso a Paso</h2>
+        <p>Vamos a crear un job completo que lee palabras, las cuenta y muestra el resultado. El clásico "Word Count"
+            del mundo de Big Data.</p>
+
+        <div class="steps">
+            <div class="step">
+                <div class="step-num">1</div>
+                <div class="step-body">
+                    <h5>Crear el entorno de ejecución</h5>
+                    <p>Es el punto de partida de cualquier job Flink. Define si es streaming o batch.</p>
+                </div>
+            </div>
+            <div class="step">
+                <div class="step-num">2</div>
+                <div class="step-body">
+                    <h5>Definir la fuente de datos (source)</h5>
+                    <p>De dónde vienen los datos: un fichero, Kafka, o una lista de elementos para pruebas.</p>
+                </div>
+            </div>
+            <div class="step">
+                <div class="step-num">3</div>
+                <div class="step-body">
+                    <h5>Aplicar transformaciones</h5>
+                    <p>Usar map, filter, keyBy, reduce... para procesar los datos.</p>
+                </div>
+            </div>
+            <div class="step">
+                <div class="step-num">4</div>
+                <div class="step-body">
+                    <h5>Escribir el resultado (sink)</h5>
+                    <p>Donde van los resultados: consola, fichero, base de datos, Kafka...</p>
+                </div>
+            </div>
+            <div class="step">
+                <div class="step-num">5</div>
+                <div class="step-body">
+                    <h5>Ejecutar el job</h5>
+                    <p>Con <code>env.execute()</code>. Hasta este momento, Flink solo ha construido el plan, no ha
+                        ejecutado nada.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="code-block">
+            <div class="code-header">
+                <span class="code-lang">python — Word Count completo con PyFlink DataStream API</span>
+                <button class="copy-btn" onclick="copyCode(this)">📋 Copiar</button>
+            </div>
+            <pre><code><span class="kw">from</span> pyflink.datastream <span class="kw">import</span> <span class="type">StreamExecutionEnvironment</span>
+<span class="kw">from</span> pyflink.common.typeinfo <span class="kw">import</span> <span class="type">Types</span>
+
+<span class="cmt"># 1. Crear el entorno</span>
+env = <span class="type">StreamExecutionEnvironment</span>.<span class="fn">get_execution_environment</span>()
+env.<span class="fn">set_parallelism</span>(<span class="num">1</span>)  <span class="cmt"># 1 instancia paralela (para pruebas)</span>
+
+<span class="cmt"># 2. Fuente: lista de frases de ejemplo</span>
+data = env.<span class="fn">from_collection</span>(
+    collection=[
+        <span class="str">"Apache Flink es genial"</span>,
+        <span class="str">"Flink procesa streams en tiempo real"</span>,
+        <span class="str">"Big Data con Apache Flink"</span>,
+    ],
+    type_info=<span class="type">Types</span>.<span class="fn">STRING</span>()
+)
+
+<span class="cmt"># 3. Transformaciones: dividir en palabras y contar</span>
+word_count = (
+    data
+    .<span class="fn">flat_map</span>(                             <span class="cmt"># dividir cada frase en palabras</span>
+        <span class="kw">lambda</span> line, collector:
+            [collector.<span class="fn">collect</span>((word, <span class="num">1</span>))
+             <span class="kw">for</span> word <span class="kw">in</span> line.<span class="fn">split</span>()],
+        output_type=<span class="type">Types</span>.<span class="fn">TUPLE</span>([<span class="type">Types</span>.<span class="fn">STRING</span>(), <span class="type">Types</span>.<span class="fn">INT</span>()])
+    )
+    .<span class="fn">key_by</span>(<span class="kw">lambda</span> x: x[<span class="num">0</span>])               <span class="cmt"># agrupar por palabra</span>
+    .<span class="fn">reduce</span>(<span class="kw">lambda</span> a, b: (a[<span class="num">0</span>], a[<span class="num">1</span>] + b[<span class="num">1</span>]))  <span class="cmt"># sumar contadores</span>
+)
+
+<span class="cmt"># 4. Sink: mostrar en consola</span>
+word_count.<span class="fn">print</span>()
+
+<span class="cmt"># 5. Ejecutar</span>
+env.<span class="fn">execute</span>(<span class="str">"Word Count con PyFlink"</span>)
+
+<span class="cmt"># Salida esperada:
+# ('Apache', 2)
+# ('Flink', 3)
+# ('es', 1)
+# ('genial', 1)
+# ('procesa', 1)
+# ('streams', 1)  ...</span></code></pre>
+        </div>
+
+        <h2>4. PyFlink con Table API y SQL</h2>
+        <p>La opción más sencilla para quien conoce SQL. Con la <strong>Table API</strong> puedes escribir queries SQL
+            sobre streams en tiempo real exactamente igual que sobre tablas de una base de datos.</p>
+
+        <div class="code-block">
+            <div class="code-header">
+                <span class="code-lang">python — PyFlink con SQL: ventas por categoría en tiempo real</span>
+                <button class="copy-btn" onclick="copyCode(this)">📋 Copiar</button>
+            </div>
+            <pre><code><span class="kw">from</span> pyflink.table <span class="kw">import</span> <span class="type">EnvironmentSettings</span>, <span class="type">TableEnvironment</span>
+
+<span class="cmt"># Crear Table Environment (streaming)</span>
+env_settings = <span class="type">EnvironmentSettings</span>.<span class="fn">in_streaming_mode</span>()
+t_env = <span class="type">TableEnvironment</span>.<span class="fn">create</span>(env_settings)
+
+<span class="cmt"># Crear tabla fuente desde Kafka</span>
+t_env.<span class="fn">execute_sql</span>(<span class="str">"""
+    CREATE TABLE ventas (
+        producto   STRING,
+        categoria  STRING,
+        importe    DECIMAL(10, 2),
+        ts         TIMESTAMP(3),
+        WATERMARK FOR ts AS ts - INTERVAL '5' SECOND
+    ) WITH (
+        'connector' = 'kafka',
+        'topic'     = 'ventas',
+        'properties.bootstrap.servers' = 'localhost:9092',
+        'format'    = 'json'
+    )
+"""</span>)
+
+<span class="cmt"># Query SQL: ventas totales por categoría en ventanas de 1 hora</span>
+resultado = t_env.<span class="fn">sql_query</span>(<span class="str">"""
+    SELECT
+        categoria,
+        TUMBLE_START(ts, INTERVAL '1' HOUR) AS hora,
+        SUM(importe)  AS total,
+        COUNT(*)      AS num_ventas
+    FROM ventas
+    GROUP BY
+        categoria,
+        TUMBLE(ts, INTERVAL '1' HOUR)
+"""</span>)
+
+<span class="cmt"># Mostrar resultado</span>
+resultado.<span class="fn">execute</span>().<span class="fn">print</span>()</code></pre>
+        </div>
+
+        <h2>5. User Defined Functions (UDFs) en Python</h2>
+        <p>Las <strong>UDFs</strong> permiten usar código Python personalizado dentro de queries SQL o Table API de
+            Flink. ¡Incluso puedes usar librerías científicas como NumPy o scikit-learn!</p>
+
+        <div class="code-block">
+            <div class="code-header">
+                <span class="code-lang">python — UDF: calcular categoría de riesgo dentro de Flink SQL</span>
+                <button class="copy-btn" onclick="copyCode(this)">📋 Copiar</button>
+            </div>
+            <pre><code><span class="kw">from</span> pyflink.table.udf <span class="kw">import</span> udf
+<span class="kw">from</span> pyflink.common <span class="kw">import</span> Row
+
+<span class="cmt"># Definir la función Python como UDF</span>
+<span class="kw">@udf</span>(result_type=<span class="str">'STRING'</span>)
+<span class="kw">def</span> <span class="fn">categoria_riesgo</span>(importe: float, num_transacciones: int) -> str:
+    <span class="str">"""Clasifica el riesgo de un cliente basándose en su comportamiento."""</span>
+    <span class="kw">if</span> importe > <span class="num">10000</span> <span class="kw">or</span> num_transacciones > <span class="num">50</span>:
+        <span class="kw">return</span> <span class="str">"ALTO"</span>
+    <span class="kw">elif</span> importe > <span class="num">1000</span> <span class="kw">or</span> num_transacciones > <span class="num">10</span>:
+        <span class="kw">return</span> <span class="str">"MEDIO"</span>
+    <span class="kw">else</span>:
+        <span class="kw">return</span> <span class="str">"BAJO"</span>
+
+<span class="cmt"># Registrar la UDF en el entorno</span>
+t_env.<span class="fn">create_temporary_function</span>(<span class="str">"categoria_riesgo"</span>, categoria_riesgo)
+
+<span class="cmt"># Usar la UDF en una query SQL ← como cualquier función SQL</span>
+t_env.<span class="fn">execute_sql</span>(<span class="str">"""
+    SELECT
+        user_id,
+        SUM(importe) AS total,
+        COUNT(*)     AS num_tx,
+        categoria_riesgo(SUM(importe), COUNT(*)) AS riesgo
+    FROM transacciones
+    GROUP BY user_id
+"""</span>)</code></pre>
+        </div>
+
+        <h2>6. Comparativa: Java vs Python en Flink</h2>
+
+        <div class="table-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Aspecto</th>
+                        <th>Java/Scala</th>
+                        <th>Python (PyFlink)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Rendimiento</strong></td>
+                        <td><span class="badge badge-green">Máximo</span></td>
+                        <td><span class="badge badge-amber">Alto (ligero overhead en UDFs)</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Facilidad</strong></td>
+                        <td><span class="badge badge-amber">Media</span></td>
+                        <td><span class="badge badge-green">Alta (sintaxis Python)</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>APIs disponibles</strong></td>
+                        <td>DataStream, Table, SQL, CEP, ML</td>
+                        <td>DataStream, Table, SQL (CEP limitado)</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Librerías ML</strong></td>
+                        <td>Solo Flink ML</td>
+                        <td>scikit-learn, pandas, numpy, etc.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Ideal para</strong></td>
+                        <td>Producción, máximo rendimiento</td>
+                        <td>Data Science, prototipado, formación</td>
+                    </tr>
+                    <tr>
+                        <td><strong>En proyectos Big Data</strong></td>
+                        <td>Estándar en grandes empresas</td>
+                        <td>Cada vez más adoptado</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="info-box tip">
+            <span class="info-box-icon">💡</span>
+            <div class="info-box-text">
+                <strong>Recomendación para clase:</strong> Para aprender Flink, <strong>PyFlink es perfecto</strong>. La
+                sintaxis Python hace el código más legible y no te distrae con detalles de Java. Una vez que entiendes
+                los conceptos (streams, ventanas, operadores), migrar a Java/Scala es trivial si el trabajo lo requiere.
+            </div>
+        </div>
+
+        <div style="display:flex; gap:1rem; flex-wrap:wrap; margin-top:2rem">
+            <a href="operadores-visual.html" class="btn btn-primary">→ Ver Operadores Paso a Paso</a>
+            <a href="casos-uso.html" class="btn btn-outline">→ Casos de Uso</a>
+        </div>
+    </div>
+
+    <footer class="footer">
+        <div class="footer-inner">
+            <div class="footer-brand">
+                <div class="brand-logo">⚡ Flink Bootcamp</div>
+                <p>Apuntes de Apache Flink para proyectos Big Data.</p>
+            </div>
+            <div class="footer-links">
+                <h5>Secciones</h5>
+                <ul>
+                    <li><a href="index.html">Inicio</a></li>
+                    <li><a href="conceptos.html">Conceptos</a></li>
+                    <li><a href="arquitectura.html">Arquitectura</a></li>
+                    <li><a href="streams.html">Streams &amp; Batch</a></li>
+                    <li><a href="operadores-visual.html">Operadores</a></li>
+                    <li><a href="casos-uso.html">Casos de Uso</a></li>
+                    <li><a href="pyflink.html">PyFlink</a></li>
+                </ul>
+            </div>
+            <div class="footer-links">
+                <h5>Recursos</h5>
+                <ul>
+                    <li><a href="https://nightlies.apache.org/flink/flink-docs-stable/docs/dev/python/overview/"
+                            target="_blank">📘 PyFlink Docs</a></li>
+                    <li><a href="https://flink.apache.org/downloads/" target="_blank">⬇️ Descargar Flink</a></li>
+                </ul>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p>Flink Bootcamp — Big Data · PyFlink</p>
+        </div>
+    </footer>
+
+    <script>
+        const navbar = document.getElementById('navbar');
+        window.addEventListener('scroll', () => { navbar.classList.toggle('scrolled', window.scrollY > 50); });
+        document.getElementById('navToggle').addEventListener('click', () => { document.querySelector('.nav-links').classList.toggle('open'); });
+        function copyCode(btn) {
+            const pre = btn.closest('.code-block').querySelector('pre');
+            navigator.clipboard.writeText(pre.innerText).then(() => {
+                btn.textContent = '✅ Copiado'; btn.classList.add('copied');
+                setTimeout(() => { btn.textContent = '📋 Copiar'; btn.classList.remove('copied'); }, 2000);
+            });
+        }
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Arquitectura de Flink — Flink Bootcamp</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+
+    <nav class="navbar" id="navbar">
+        <div class="nav-inner">
+            <div class="nav-brand"><span class="brand-icon">⚡</span><span class="brand-text">Flink Bootcamp</span></div>
+            <ul class="nav-links">
+                <li><a href="index.html">Inicio</a></li>
+                <li><a href="conceptos.html">Conceptos</a></li>
+                <li><a href="arquitectura.html" class="active">Arquitectura</a></li>
+                <li><a href="streams.html">Streams &amp; Batch</a></li>
+                <li><a href="operadores-visual.html">Operadores</a></li>
+                <li><a href="casos-uso.html">Casos de Uso</a></li>
+      <li><a href="pyflink.html">PyFlink</a></li>
+            </ul>
+            <button class="nav-mobile-btn" id="navToggle">☰</button>
+        </div>
+    </nav>
+
+    <div class="breadcrumb">
+        <div class="breadcrumb-inner">
+            <a href="index.html">Inicio</a><span class="breadcrumb-sep">›</span><span>Arquitectura</span>
+        </div>
+    </div>
+
+    <div class="page-hero">
+        <span class="page-hero-icon">🏗️</span>
+        <h1>Arquitectura de <span class="gradient-text">Flink</span></h1>
+        <p>Cómo está construido un clúster Flink: JobManager, TaskManagers, paralelismo, checkpoints y tolerancia a
+            fallos.</p>
+    </div>
+
+    <div class="content">
+
+        <h2>1. Visión General del Clúster</h2>
+        <p>Un clúster de Flink tiene tres componentes principales que trabajan juntos para procesar datos de forma
+            distribuida:</p>
+
+        <div class="diagram-demo">
+            <span class="diagram-demo-label">Arquitectura de un clúster Apache Flink</span>
+            <svg viewBox="0 0 700 280" style="height:280px">
+                <!-- Client -->
+                <rect x="20" y="110" width="100" height="60" rx="10" fill="rgba(6,182,212,0.2)" stroke="#06b6d4"
+                    stroke-width="2" />
+                <text x="70" y="136" text-anchor="middle" fill="#22d3ee" font-size="11" font-weight="700"
+                    font-family="Inter">Client</text>
+                <text x="70" y="152" text-anchor="middle" fill="#64748b" font-size="9" font-family="Inter">Tu
+                    programa</text>
+                <text x="70" y="164" text-anchor="middle" fill="#64748b" font-size="9"
+                    font-family="Inter">Java/Python</text>
+
+                <!-- Arrow to JobManager -->
+                <line x1="120" y1="140" x2="195" y2="140" stroke="rgba(6,182,212,0.6)" stroke-width="1.5"
+                    marker-end="url(#am)" />
+                <text x="157" y="132" text-anchor="middle" fill="#22d3ee" font-size="8" font-family="Inter">Job
+                    Graph</text>
+
+                <!-- JobManager -->
+                <rect x="200" y="70" width="150" height="140" rx="12" fill="rgba(232,66,26,0.15)" stroke="#e8421a"
+                    stroke-width="2" />
+                <text x="275" y="96" text-anchor="middle" fill="#ff6b47" font-size="12" font-weight="800"
+                    font-family="Inter">JobManager</text>
+                <text x="275" y="110" text-anchor="middle" fill="#64748b" font-size="9"
+                    font-family="Inter">(Coordinador)</text>
+
+                <rect x="215" y="120" width="120" height="20" rx="4" fill="rgba(232,66,26,0.25)" />
+                <text x="275" y="133" text-anchor="middle" fill="#fca5a5" font-size="8" font-weight="600"
+                    font-family="Inter">Job Scheduler</text>
+
+                <rect x="215" y="148" width="120" height="20" rx="4" fill="rgba(232,66,26,0.25)" />
+                <text x="275" y="161" text-anchor="middle" fill="#fca5a5" font-size="8" font-weight="600"
+                    font-family="Inter">Checkpoint Coordinator</text>
+
+                <rect x="215" y="176" width="120" height="20" rx="4" fill="rgba(232,66,26,0.25)" />
+                <text x="275" y="189" text-anchor="middle" fill="#fca5a5" font-size="8" font-weight="600"
+                    font-family="Inter">REST API</text>
+
+                <!-- Arrows to TaskManagers -->
+                <defs>
+                    <marker id="am" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+                        <path d="M0,0 L0,6 L8,3 z" fill="rgba(232,66,26,0.8)" />
+                    </marker>
+                </defs>
+                <line x1="350" y1="100" x2="420" y2="70" stroke="rgba(232,66,26,0.5)" stroke-width="1.5"
+                    marker-end="url(#am)" />
+                <line x1="350" y1="140" x2="420" y2="140" stroke="rgba(232,66,26,0.5)" stroke-width="1.5"
+                    marker-end="url(#am)" />
+                <line x1="350" y1="178" x2="420" y2="210" stroke="rgba(232,66,26,0.5)" stroke-width="1.5"
+                    marker-end="url(#am)" />
+
+                <!-- TaskManager 1 -->
+                <rect x="420" y="30" width="130" height="90" rx="10" fill="rgba(16,185,129,0.15)" stroke="#10b981"
+                    stroke-width="1.5" />
+                <text x="485" y="55" text-anchor="middle" fill="#4ade80" font-size="10" font-weight="700"
+                    font-family="Inter">TaskManager 1</text>
+                <rect x="432" y="65" width="50" height="16" rx="4" fill="rgba(16,185,129,0.3)" />
+                <text x="457" y="76" text-anchor="middle" fill="#4ade80" font-size="8" font-family="Inter">Slot 1</text>
+                <rect x="490" y="65" width="50" height="16" rx="4" fill="rgba(16,185,129,0.3)" />
+                <text x="515" y="76" text-anchor="middle" fill="#4ade80" font-size="8" font-family="Inter">Slot 2</text>
+                <rect x="432" y="89" width="50" height="16" rx="4" fill="rgba(16,185,129,0.3)" />
+                <text x="457" y="100" text-anchor="middle" fill="#4ade80" font-size="8" font-family="Inter">Slot
+                    3</text>
+                <rect x="490" y="89" width="50" height="16" rx="4" fill="rgba(16,185,129,0.3)" />
+                <text x="515" y="100" text-anchor="middle" fill="#4ade80" font-size="8" font-family="Inter">Slot
+                    4</text>
+
+                <!-- TaskManager 2 -->
+                <rect x="420" y="110" width="130" height="60" rx="10" fill="rgba(139,92,246,0.15)" stroke="#8b5cf6"
+                    stroke-width="1.5" />
+                <text x="485" y="133" text-anchor="middle" fill="#a78bfa" font-size="10" font-weight="700"
+                    font-family="Inter">TaskManager 2</text>
+                <rect x="432" y="143" width="50" height="16" rx="4" fill="rgba(139,92,246,0.3)" />
+                <text x="457" y="154" text-anchor="middle" fill="#a78bfa" font-size="8" font-family="Inter">Slot
+                    1</text>
+                <rect x="490" y="143" width="50" height="16" rx="4" fill="rgba(139,92,246,0.3)" />
+                <text x="515" y="154" text-anchor="middle" fill="#a78bfa" font-size="8" font-family="Inter">Slot
+                    2</text>
+
+                <!-- TaskManager 3 -->
+                <rect x="420" y="185" width="130" height="60" rx="10" fill="rgba(245,158,11,0.15)" stroke="#f59e0b"
+                    stroke-width="1.5" />
+                <text x="485" y="208" text-anchor="middle" fill="#fbbf24" font-size="10" font-weight="700"
+                    font-family="Inter">TaskManager 3</text>
+                <rect x="432" y="218" width="50" height="16" rx="4" fill="rgba(245,158,11,0.3)" />
+                <text x="457" y="229" text-anchor="middle" fill="#fbbf24" font-size="8" font-family="Inter">Slot
+                    1</text>
+                <rect x="490" y="218" width="50" height="16" rx="4" fill="rgba(245,158,11,0.3)" />
+                <text x="515" y="229" text-anchor="middle" fill="#fbbf24" font-size="8" font-family="Inter">Slot
+                    2</text>
+
+                <!-- Labels -->
+                <text x="70" y="185" text-anchor="middle" fill="#4b5563" font-size="9" font-family="Inter">Envía el
+                    job</text>
+                <text x="275" y="225" text-anchor="middle" fill="#4b5563" font-size="9"
+                    font-family="Inter">Coordina</text>
+                <text x="485" y="258" text-anchor="middle" fill="#4b5563" font-size="9" font-family="Inter">Ejecutan las
+                    tareas</text>
+            </svg>
+        </div>
+
+        <h2>2. JobManager: el Cerebro</h2>
+        <p>El <strong>JobManager</strong> es el nodo coordinador del clúster. Solo hay uno activo a la vez (en modo HA
+            puede haber réplicas en standby). Sus responsabilidades son:</p>
+
+        <div class="concept-grid">
+            <div class="concept-card orange">
+                <span class="concept-icon">📋</span>
+                <h3>Job Scheduling</h3>
+                <p>Recibe el grafo de ejecución del job y lo distribuye entre los TaskManagers disponibles, asignando
+                    tareas a slots.</p>
+            </div>
+            <div class="concept-card purple">
+                <span class="concept-icon">💾</span>
+                <h3>Checkpoint Coordinator</h3>
+                <p>Coordina la creación periódica de checkpoints para garantizar la tolerancia a fallos y la
+                    recuperación.</p>
+            </div>
+            <div class="concept-card cyan">
+                <span class="concept-icon">🌐</span>
+                <h3>REST API &amp; Web UI</h3>
+                <p>Ofrece una interfaz web y API REST para monitorizar jobs, ver métricas y gestionar el clúster.</p>
+            </div>
+        </div>
+
+        <h2>3. TaskManagers: los Trabajadores</h2>
+        <p>Los <strong>TaskManagers</strong> son los nodos trabajadores. Pueden ser decenas o cientos en producción.
+            Cada uno ejecuta las tareas asignadas por el JobManager.</p>
+        <p>Cada TaskManager tiene un número fijo de <strong>slots</strong>: unidades de trabajo paralelo. Un slot puede
+            ejecutar una tarea del job. El número de slots determina el paralelismo máximo del clúster.</p>
+
+        <div class="info-box info">
+            <span class="info-box-icon">💡</span>
+            <div class="info-box-text">
+                <strong>Analogía:</strong> El JobManager es el director de una orquesta. Los TaskManagers son los
+                músicos. Los slots son los instrumentos. El JobManager decide quién toca qué parte, y los músicos
+                ejecutan la partitura en paralelo.
+            </div>
+        </div>
+
+        <h2>4. Paralelismo</h2>
+        <p>El <strong>paralelismo</strong> define cuántas instancias paralelas de un operador se ejecutan
+            simultáneamente. Más paralelismo = más velocidad de procesamiento (hasta el límite del hardware).</p>
+
+        <div class="code-block">
+            <div class="code-header">
+                <span class="code-lang">java — Configurar paralelismo en Flink</span>
+                <button class="copy-btn" onclick="copyCode(this)">📋 Copiar</button>
+            </div>
+            <pre><code><span class="type">StreamExecutionEnvironment</span> env = <span class="type">StreamExecutionEnvironment</span>.<span class="fn">getExecutionEnvironment</span>();
+
+<span class="cmt">// Paralelismo global para todo el job</span>
+env.<span class="fn">setParallelism</span>(<span class="num">4</span>);
+
+<span class="type">DataStream</span>&lt;<span class="type">String</span>&gt; stream = env
+    .<span class="fn">addSource</span>(source)           <span class="cmt">// paralelismo = 4</span>
+    .<span class="fn">map</span>(x -&gt; x.<span class="fn">toUpperCase</span>())  <span class="cmt">// paralelismo = 4</span>
+    .<span class="fn">filter</span>(x -&gt; x.<span class="fn">length</span>() > <span class="num">3</span>) <span class="cmt">// paralelismo = 4</span>
+    .<span class="fn">setParallelism</span>(<span class="num">2</span>)           <span class="cmt">// ← solo este operador con 2 instancias</span>
+    .<span class="fn">print</span>();
+
+env.<span class="fn">execute</span>(<span class="str">"Mi Job Flink"</span>);</code></pre>
+        </div>
+
+        <h2>5. Checkpoints y Tolerancia a Fallos</h2>
+        <p>Los <strong>checkpoints</strong> son la clave de la tolerancia a fallos en Flink. Periódicamente, Flink
+            guarda el estado completo del job en almacenamiento duradero (HDFS, S3). Si algo falla, Flink puede retomar
+            desde el último checkpoint.</p>
+
+        <div class="steps">
+            <div class="step">
+                <div class="step-num">1</div>
+                <div class="step-body">
+                    <h5>Flink inserta "barreras de checkpoint" en el stream</h5>
+                    <p>Son marcas especiales que fluyen a través del grafo de operadores indicando dónde empieza un
+                        checkpoint.</p>
+                </div>
+            </div>
+            <div class="step">
+                <div class="step-num">2</div>
+                <div class="step-body">
+                    <h5>Cada operador guarda su estado al recibir la barrera</h5>
+                    <p>ValueState, ListState, MapState... todo se serializa y guarda en el backend de estado
+                        configurado.</p>
+                </div>
+            </div>
+            <div class="step">
+                <div class="step-num">3</div>
+                <div class="step-body">
+                    <h5>El JobManager confirma el checkpoint completo</h5>
+                    <p>Cuando todos los operadores han guardado su estado, el checkpoint se considera exitoso.</p>
+                </div>
+            </div>
+            <div class="step">
+                <div class="step-num">4</div>
+                <div class="step-body">
+                    <h5>En caso de fallo, se restaura desde el último checkpoint</h5>
+                    <p>Flink reinicia los TaskManagers y restaura el estado desde el checkpoint, retomando el
+                        procesamiento sin perder datos.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="code-block">
+            <div class="code-header">
+                <span class="code-lang">java — Configurar checkpoints</span>
+                <button class="copy-btn" onclick="copyCode(this)">📋 Copiar</button>
+            </div>
+            <pre><code><span class="cmt">// Activar checkpoints cada 30 segundos</span>
+env.<span class="fn">enableCheckpointing</span>(<span class="num">30_000</span>);
+
+<span class="cmt">// Configuración avanzada</span>
+env.<span class="fn">getCheckpointConfig</span>()
+    .<span class="fn">setCheckpointingMode</span>(<span class="type">CheckpointingMode</span>.<span class="prop">EXACTLY_ONCE</span>);
+
+env.<span class="fn">getCheckpointConfig</span>()
+    .<span class="fn">setMinPauseBetweenCheckpoints</span>(<span class="num">5_000</span>); <span class="cmt">// mín 5s entre checkpoints</span>
+
+env.<span class="fn">getCheckpointConfig</span>()
+    .<span class="fn">setCheckpointTimeout</span>(<span class="num">60_000</span>); <span class="cmt">// timeout de 60s</span>
+
+<span class="cmt">// Usar RocksDB como backend de estado (para grandes estados)</span>
+env.<span class="fn">setStateBackend</span>(<span class="kw">new</span> <span class="fn">RocksDBStateBackend</span>(<span class="str">"hdfs://namenode:8020/flink/checkpoints"</span>));</code></pre>
+        </div>
+
+        <h2>6. Garantías de Procesamiento</h2>
+
+        <div class="table-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Garantía</th>
+                        <th>Descripción</th>
+                        <th>Cuándo usarla</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><span class="badge badge-orange">At-most-once</span></td>
+                        <td>Cada evento se procesa como máximo una vez. Puede haber pérdidas.</td>
+                        <td>Logs de baja criticidad</td>
+                    </tr>
+                    <tr>
+                        <td><span class="badge badge-amber">At-least-once</span></td>
+                        <td>Cada evento se procesa al menos una vez. Puede haber duplicados.</td>
+                        <td>Cuando los duplicados son aceptables</td>
+                    </tr>
+                    <tr>
+                        <td><span class="badge badge-green">Exactly-once</span></td>
+                        <td>Cada evento se procesa exactamente una vez. Sin pérdidas ni duplicados.</td>
+                        <td>Fraude, pagos, inventarios</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="info-box flink">
+            <span class="info-box-icon">⚡</span>
+            <div class="info-box-text">
+                <strong>Exactly-once en Flink:</strong> Es la garantía más potente. Flink la consigue combinando
+                checkpoints con transacciones en los sinks (ej: Kafka transaccional). El dato se procesa una vez y se
+                escribe una vez, incluso si el sistema falla y se reinicia.
+            </div>
+        </div>
+
+        <div style="display:flex; gap:1rem; flex-wrap:wrap; margin-top:2rem">
+            <a href="streams.html" class="btn btn-primary">→ Streams y Ventanas</a>
+            <a href="operadores.html" class="btn btn-outline">→ Operadores</a>
+        </div>
+    </div>
+
+    <footer class="footer">
+        <div class="footer-inner">
+            <div class="footer-brand">
+                <div class="brand-logo">⚡ Flink Bootcamp</div>
+                <p>Apuntes de Apache Flink para proyectos Big Data.</p>
+            </div>
+            <div class="footer-links">
+                <h5>Secciones</h5>
+                <ul>
+                    <li><a href="index.html">Inicio</a></li>
+                    <li><a href="conceptos.html">Conceptos</a></li>
+                    <li><a href="arquitectura.html">Arquitectura</a></li>
+                    <li><a href="streams.html">Streams &amp; Batch</a></li>
+                    <li><a href="operadores-visual.html">Operadores</a></li>
+                    <li><a href="casos-uso.html">Casos de Uso</a></li>
+      <li><a href="pyflink.html">PyFlink</a></li>
+                </ul>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p>Flink Bootcamp — Big Data</p>
+        </div>
+    </footer>
+
+    <script>
+        const navbar = document.getElementById('navbar');
+        window.addEventListener('scroll', () => { navbar.classList.toggle('scrolled', window.scrollY > 50); });
+        document.getElementById('navToggle').addEventListener('click', () => { document.querySelector('.nav-links').classList.toggle('open'); });
+        function copyCode(btn) {
+            const pre = btn.closest('.code-block').querySelector('pre');
+            navigator.clipboard.writeText(pre.innerText).then(() => {
+                btn.textContent = '✅ Copiado'; btn.classList.add('copied');
+                setTimeout(() => { btn.textContent = '📋 Copiar'; btn.classList.remove('copied'); }, 2000);
+            });
+        }
+    </script>
+</body>
+
+</html>
