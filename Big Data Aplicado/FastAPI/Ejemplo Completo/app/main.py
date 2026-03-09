@@ -24,7 +24,7 @@ Punto de entrada de la aplicación FastAPI.
 
 from fastapi import FastAPI
 
-from app.routers import users
+from app.routers import users, coches
 
 # ──────────────────────────────────────────────────────────────────
 # Creamos la instancia de FastAPI con metadatos para Swagger
@@ -74,6 +74,7 @@ Router  →  Service  →  Repository (interfaz)
 # El prefijo /users y el tag ya están definidos en el router.
 # include_router() los "monta" en la app principal.
 app.include_router(users.router)
+app.include_router(coches.router)
 
 
 # ──────────────────────────────────────────────────────────────────

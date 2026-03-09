@@ -18,7 +18,8 @@ El servicio y los endpoints NO se tocan.
 from typing import Optional
 
 from app.models.user import UserCreate, UserUpdate, UserResponse
-from app.repositories.base import UserRepository
+from app.models.coche import CocheCreate, CocheUpdate, CocheResponse
+from app.repositories.base import UserRepository, CocheRepository
 
 
 class MemoryUserRepository(UserRepository):
@@ -161,3 +162,51 @@ class MemoryUserRepository(UserRepository):
             results.append(UserResponse(**user_dict))
 
         return results
+
+
+class MemoryCocheRepository(CocheRepository):
+    """
+    Repositorio EN MEMORIA para coches.
+    """
+
+    def __init__(self) -> None:
+        self._storage: dict[int, dict] = {}
+        self._next_id: int = 1
+
+    def create(self, coche_data: CocheCreate) -> CocheResponse:
+        coche_id = self._next_id
+        self._next_id += 1
+        coche_dict = coche_data.model_dump()
+        coche_dict["id"] = coche_id
+        self._storage[coche_id] = coche_dict
+        return CocheResponse(**coche_dict)
+
+    def get_by_id(self, coche_id: int) -> Optional[CocheResponse]:
+        coche_dict = self._storage.get(coche_id)
+        if coche_dict is None:
+            return None
+        return CocheResponse(**coche_dict)
+
+    def get_by_user_id(self, user_id: int) -> list[CocheResponse]:
+        """Busca todos los coches de un dueño concreto."""
+        return [
+            CocheResponse(**data)
+            for data in self._storage.values()
+            if data.get("user_id") == user_id
+        ]
+
+    def get_all(self) -> list[CocheResponse]:
+        return [CocheResponse(**data) for data in self._storage.values()]
+
+    def update(self, coche_id: int, coche_data: CocheUpdate) -> Optional[CocheResponse]:
+        if coche_id not in self._storage:
+            return None
+
+        update_fields = coche_data.model_dump(exclude_unset=True)
+        self._storage[coche_id].update(update_fields)
+
+        return CocheResponse(**self._storage[coche_id])
+
+    def delete(self, coche_id: int) -> bool:
+        removed = self._storage.pop(coche_id, None)
+        return removed is not None

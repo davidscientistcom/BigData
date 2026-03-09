@@ -31,6 +31,7 @@ from abc import ABC, abstractmethod
 from typing import Optional
 
 from app.models.user import UserCreate, UserUpdate, UserResponse
+from app.models.coche import CocheCreate, CocheUpdate, CocheResponse
 
 
 class UserRepository(ABC):
