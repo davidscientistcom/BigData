@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Apache Kafka Bootcamp — Streaming en Tiempo Real</title>
+    <meta name="description"
+        content="Aprende Apache Kafka desde cero: arquitectura, topics, particiones, productores, consumidores. La plataforma de streaming más potente del mundo.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js"></script>
+</head>
+
+<body>
+
+    <!-- NAVBAR -->
+    <nav class="navbar" id="navbar">
+        <div class="nav-inner">
+            <div class="nav-brand">
+                <span class="brand-icon">📨</span>
+                <span class="brand-text">Kafka Bootcamp</span>
+            </div>
+            <ul class="nav-links">
+                <li><a href="index.html" class="active">Inicio</a></li>
+                <li><a href="conceptos.html">Conceptos</a></li>
+                <li><a href="arquitectura.html">Arquitectura</a></li>
+                <li><a href="topics-particiones.html">Topics & Particiones</a></li>
+                <li><a href="productor-consumidor.html">Productor/Consumidor</a></li>
+                <li><a href="ejemplos-practicos.html">Ejemplos Prácticos</a></li>
+                <li><a href="docker-compose.html">Docker Compose</a></li>
+            </ul>
+            <button class="nav-mobile-btn" id="navToggle">☰</button>
+        </div>
+    </nav>
+
+    <!-- HERO -->
+    <header class="hero">
+        <div class="hero-bg-grid"></div>
+        <div class="hero-content">
+            <div class="hero-badge">
+                <span class="badge-dot"></span>
+                Big Data · Stream Processing · Real-Time · Distributed
+            </div>
+            <h1 class="hero-title">
+                Apache<br><span class="gradient-text kafka-gradient">Kafka</span>
+            </h1>
+            <p class="hero-subtitle">La plataforma de streaming distribuida más potente</p>
+            <p class="hero-desc">
+                Apuntes completos de <strong style="color:#00a8e8">Apache Kafka</strong>: qué es, su arquitectura
+                distribuida, cómo funcionan los topics y particiones, productores, consumidores, garantías de entrega,
+                y cómo construir sistemas de streaming que procesan millones de eventos por segundo. <strong>Con detalle,
+                    con visuales, con ejemplos reales.</strong>
+            </p>
+            <div class="hero-actions">
+                <a href="conceptos.html" class="btn btn-primary kafka-btn">🚀 Empezar desde cero</a>
+                <a href="arquitectura.html" class="btn btn-kafka">🏗️ Ver Arquitectura</a>
+                <a href="ejemplos-practicos.html" class="btn btn-outline">📚 Ejemplos Prácticos</a>
+            </div>
+            <div class="hero-stats">
+                <div class="stat"><span class="stat-num">8</span> Secciones</div>
+                <div class="stat-sep"></div>
+                <div class="stat"><span class="stat-num">40+</span> Conceptos</div>
+                <div class="stat-sep"></div>
+                <div class="stat"><span class="stat-num">50+</span> Ejemplos</div>
+                <div class="stat-sep"></div>
+                <div class="stat"><span class="stat-num">∞ Msg/s</span> Throughput</div>
+            </div>
+        </div>
+
+        <!-- Hero Visual: Kafka Cluster -->
+        <div class="hero-visual">
+            <svg id="kafkaCluster" width="500" height="400" viewBox="0 0 500 400" style="max-width: 100%; height: auto;">
+                <!-- Brokers -->
+                <rect x="40" y="60" width="100" height="80" fill="none" stroke="#00a8e8" stroke-width="2" rx="4"/>
+                <rect x="170" y="60" width="100" height="80" fill="none" stroke="#00a8e8" stroke-width="2" rx="4"/>
+                <rect x="300" y="60" width="100" height="80" fill="none" stroke="#00a8e8" stroke-width="2" rx="4"/>
+                
+                <text x="90" y="105" font-size="14" font-weight="bold" fill="#00a8e8" text-anchor="middle">Broker 0</text>
+                <text x="220" y="105" font-size="14" font-weight="bold" fill="#00a8e8" text-anchor="middle">Broker 1</text>
+                <text x="350" y="105" font-size="14" font-weight="bold" fill="#00a8e8" text-anchor="middle">Broker 2</text>
+                
+                <!-- Topic Box -->
+                <rect x="80" y="190" width="340" height="50" fill="none" stroke="#10b981" stroke-width="2" stroke-dasharray="5,5" rx="4"/>
+                <text x="250" y="220" font-size="16" font-weight="bold" fill="#10b981" text-anchor="middle">Topic: eventos-compras</text>
+                
+                <!-- Partitions -->
+                <rect x="100" y="280" width="80" height="50" fill="none" stroke="#f59e0b" stroke-width="2" rx="3"/>
+                <rect x="210" y="280" width="80" height="50" fill="none" stroke="#f59e0b" stroke-width="2" rx="3"/>
+                <rect x="320" y="280" width="80" height="50" fill="none" stroke="#f59e0b" stroke-width="2" rx="3"/>
+                
+                <text x="140" y="310" font-size="12" font-weight="600" fill="#f59e0b" text-anchor="middle">Partition 0</text>
+                <text x="250" y="310" font-size="12" font-weight="600" fill="#f59e0b" text-anchor="middle">Partition 1</text>
+                <text x="360" y="310" font-size="12" font-weight="600" fill="#f59e0b" text-anchor="middle">Partition 2</text>
+                
+                <!-- Labels -->
+                <text x="250" y="380" font-size="11" fill="#94a3b8" text-anchor="middle">Sharding: Hash(key) % 3</text>
+            </svg>
+        </div>
+        
+        <div style="text-align: center; font-size: 13px; color: var(--text2); margin-top: 12px;">
+            <p>💡 Kafka: 1+ millones de mensajes/s por broker</p>
+        </div>
+    </header>
+
+    <!-- SECTION: ¿Por qué Kafka? -->
+    <section class="section">
+        <div class="container">
+            <h2 class="section-title">¿Por qué Kafka es la solución número 1?</h2>
+            <div class="why-grid">
+                <div class="why-card">
+                    <div class="why-icon">⚡</div>
+                    <h3>Luz</h3>
+                    <p><strong>Throughput extremo</strong>: Millones de mensajes por segundo sin sudar</p>
+                </div>
+                <div class="why-card">
+                    <div class="why-icon">🔄</div>
+                    <h3>Distribuido</h3>
+                    <p><strong>Escalable horizontalmente</strong>: Añade brokers cuando lo necesites</p>
+                </div>
+                <div class="why-card">
+                    <div class="why-icon">💾</div>
+                    <h3>Persistencia</h3>
+                    <p><strong>Replayable</strong>: Revive datos, replay el histórico completo</p>
+                </div>
+                <div class="why-card">
+                    <div class="why-icon">🛡️</div>
+                    <h3>Robusto</h3>
+                    <p><strong>Garantías ACID</strong>: Exactly-once, no pierdas ni un mensaje</p>
+                </div>
+                <div class="why-card">
+                    <div class="why-icon">🌐</div>
+                    <h3>Conectado</h3>
+                    <p><strong>Kafka Connect</strong>: Integra con cientos de sistemas</p>
+                </div>
+                <div class="why-card">
+                    <div class="why-icon">🎯</div>
+                    <h3>Real-Time</h3>
+                    <p><strong>Latencia baja</strong>: Procesamiento en tiempo real</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- SECTION: Conceptos Clave -->
+    <section class="section bg-alt">
+        <div class="container">
+            <h2 class="section-title">Los 5 Pilares de Kafka</h2>
+            <div class="pillars">
+                <div class="pillar pillar-1">
+                    <div class="pillar-number">1</div>
+                    <h3>Topics</h3>
+                    <p>Temas donde se publican mensajes. Categorías de eventos.</p>
+                </div>
+                <div class="pillar pillar-2">
+                    <div class="pillar-number">2</div>
+                    <h3>Particiones</h3>
+                    <p>Dividen horizontalmente un topic. Mayor paralelismo.</p>
+                </div>
+                <div class="pillar pillar-3">
+                    <div class="pillar-number">3</div>
+                    <h3>Brokers</h3>
+                    <p>Servidores Kafka que almacenan y sirven mensajes.</p>
+                </div>
+                <div class="pillar pillar-4">
+                    <div class="pillar-number">4</div>
+                    <h3>Productor</h3>
+                    <p>Quien envía mensajes a Kafka. La fuente.</p>
+                </div>
+                <div class="pillar pillar-5">
+                    <div class="pillar-number">5</div>
+                    <h3>Consumidor</h3>
+                    <p>Quien lee mensajes de Kafka. El destino.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- SECTION: Quick Diagram -->
+    <section class="section">
+        <div class="container">
+            <h2 class="section-title">Visión General de Kafka</h2>
+            <div class="mermaid-container">
+                <div class="mermaid">
+                    graph LR
+                        A["📱 Productor 1"] -->|"envía event"| B["📨 KAFKA TOPIC"]
+                        C["🖥️  Productor 2"] -->|"envía event"| B
+                        B -->|"Partición 0"| D["📊 Consumidor A"]
+                        B -->|"Partición 1"| E["📊 Consumidor B"]
+                        B -->|"Partición 2"| F["📊 Consumidor C"]
+                        style B fill:#00a8e8,stroke:#0080b8,stroke-width:3px,color:#fff
+                        style A fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+                        style C fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+                        style D fill:#f59e0b,stroke:#d97706,stroke-width:2px,color:#fff
+                        style E fill:#f59e0b,stroke:#d97706,stroke-width:2px,color:#fff
+                        style F fill:#f59e0b,stroke:#d97706,stroke-width:2px,color:#fff
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- SECTION: What's Inside -->
+    <section class="section bg-alt">
+        <div class="container">
+            <h2 class="section-title">Qué encontrarás en estos apuntes</h2>
+            <div class="timeline">
+                <div class="timeline-item timeline-check">
+                    <div class="timeline-marker"></div>
+                    <div class="timeline-content">
+                        <h4>📚 Conceptos Fundamentales</h4>
+                        <p>Qué es Kafka, por qué nació, diferencias con RabbitMQ y cómo encaja en tu stack.</p>
+                    </div>
+                </div>
+                <div class="timeline-item timeline-check">
+                    <div class="timeline-marker"></div>
+                    <div class="timeline-content">
+                        <h4>🏗️ Arquitectura Distribuida</h4>
+                        <p>Cómo funciona internamente, Zookeeper, replicación, líderes, seguidores. Todo.</p>
+                    </div>
+                </div>
+                <div class="timeline-item timeline-check">
+                    <div class="timeline-marker"></div>
+                    <div class="timeline-content">
+                        <h4>🎯 Topics y Particiones</h4>
+                        <p><strong>Con VISUALES interactivas</strong>. Ver cómo se distribuyen mensajes en tiempo real.</p>
+                    </div>
+                </div>
+                <div class="timeline-item timeline-check">
+                    <div class="timeline-marker"></div>
+                    <div class="timeline-content">
+                        <h4>📤➡️📥 Productores y Consumidores</h4>
+                        <p>Cómo se publican y leen mensajes. Garantías de entrega. Grupos de consumo.</p>
+                    </div>
+                </div>
+                <div class="timeline-item timeline-check">
+                    <div class="timeline-marker"></div>
+                    <div class="timeline-content">
+                        <h4>💯 Garantías y Transacciones</h4>
+                        <p>At-most-once, At-least-once, Exactly-once. Cómo NO perder datos.</p>
+                    </div>
+                </div>
+                <div class="timeline-item timeline-check">
+                    <div class="timeline-marker"></div>
+                    <div class="timeline-content">
+                        <h4>🔥 Ejemplos de Simple a Complejo</h4>
+                        <p>Desde "Hola mundo" hasta sistemas reales con Docker Compose.</p>
+                    </div>
+                </div>
+                <div class="timeline-item timeline-check">
+                    <div class="timeline-marker"></div>
+                    <div class="timeline-content">
+                        <h4>🐳 Docker Compose Setup</h4>
+                        <p>Levanta un cluster de Kafka en tu maquina. Listo para jugar.</p>
+                    </div>
+                </div>
+                <div class="timeline-item timeline-check">
+                    <div class="timeline-marker"></div>
+                    <div class="timeline-content">
+                        <h4>⚙️ Configuración y Tuning</h4>
+                        <p>Cómo optimizar Kafka para producción. Compresión, batching, timeouts.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- SECTION: Call to Action -->
+    <section class="section cta-section">
+        <div class="container">
+            <h2>¿Listo para dominarlo?</h2>
+            <p>Empieza con los conceptos fundamentales y progresa hasta construir sistemas distribuidos reales.</p>
+            <div class="cta-actions">
+                <a href="conceptos.html" class="btn btn-primary kafka-btn">📖 Empezar →</a>
+                <a href="ejemplos-practicos.html" class="btn btn-outline">💻 Ver Ejemplos →</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <p>📚 Apuntes de Apache Kafka para Big Data · Curso de Sistemas de Big Data</p>
+    </footer>
+
+    <script>
+        mermaid.initialize({ startOnLoad: true, theme: 'dark' });
+        mermaid.contentLoaded();
+
+        // SVG animation on scroll
+        gsap.registerPlugin(ScrollTrigger);
+        
+        const svg = document.getElementById('kafkaCluster');
+        if (svg) {
+            // Animate SVG elements on scroll
+            gsap.from(svg.querySelectorAll('rect'), {
+                scrollTrigger: {
+                    trigger: '.hero-visual',
+                    start: 'top 80%',
+                    end: 'center 50%',
+                    toggleActions: 'play none none none'
+                },
+                opacity: 0,
+                y: 20,
+                stagger: 0.1,
+                duration: 0.6
+            });
+        }
+
+        // Navbar animations
+        const navbar = document.getElementById('navbar');
+        window.addEventListener('scroll', () => {
+            if (window.scrollY > 50) {
+                navbar.classList.add('scrolled');
+            } else {
+                navbar.classList.remove('scrolled');
+            }
+        });
+
+        // Mobile nav toggle
+        const navToggle = document.getElementById('navToggle');
+        const navLinks = document.querySelector('.nav-links');
+        navToggle?.addEventListener('click', () => {
+            navLinks.classList.toggle('active');
+        });
+    </script>
+</body>
+
+</html>

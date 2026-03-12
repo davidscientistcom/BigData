@@ -1,0 +1,1309 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Topics y Particiones de Kafka</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js"></script>
+</head>
+
+<body>
+
+    <!-- NAVBAR -->
+    <nav class="navbar" id="navbar">
+        <div class="nav-inner">
+            <div class="nav-brand">
+                <span class="brand-icon">📨</span>
+                <span class="brand-text">Kafka Bootcamp</span>
+            </div>
+            <ul class="nav-links">
+                <li><a href="index.html">Inicio</a></li>
+                <li><a href="conceptos.html">Conceptos</a></li>
+                <li><a href="arquitectura.html">Arquitectura</a></li>
+                <li><a href="topics-particiones.html" class="active">Topics & Particiones</a></li>
+                <li><a href="productor-consumidor.html">Productor/Consumidor</a></li>
+                <li><a href="ejemplos-practicos.html">Ejemplos Prácticos</a></li>
+                <li><a href="docker-compose.html">Docker Compose</a></li>
+            </ul>
+            <button class="nav-mobile-btn" id="navToggle">☰</button>
+        </div>
+    </nav>
+
+    <!-- PAGE HEADER -->
+    <div class="page-header">
+        <div class="container">
+            <h1>Topics y Particiones</h1>
+            <p>Cómo Kafka distribuye y paraleliza los datos</p>
+        </div>
+    </div>
+
+    <!-- SECTION: TOPICS BASICS -->
+    <section class="section">
+        <div class="container">
+            <h2>¿Qué es un Topic?</h2>
+            <p class="intro-text">
+                Un <span class="highlight">topic</span> es un <strong>canal lógico</strong> donde los productores
+                envían mensajes y los consumidores los leen. Es como una "categoría" o "tema" de conversación.
+            </p>
+
+            <div class="concept-box">
+                <div class="concept-icon">📨</div>
+                <div class="concept-content">
+                    <h3>Ejemplo de Topics</h3>
+                    <ul style="margin-top: 8px; margin-left: 20px;">
+                        <li><code>eventos-compras</code> → Todos los eventos de compra</li>
+                        <li><code>logs-api</code> → Logs del servidor API</li>
+                        <li><code>metricas-sistema</code> → Métricas de CPU, RAM, etc</li>
+                        <li><code>notificaciones-email</code> → Emails a enviar</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="feature-boxes">
+                <div class="feature-box">
+                    <h4>✅ Persistente</h4>
+                    <p>Los datos se guardan en disco. Puedes leerlos ahora o dentro de días.</p>
+                </div>
+                <div class="feature-box">
+                    <h4>📊 Replicado</h4>
+                    <p>Cada tema se replica en múltiples brokers para tolerancia a fallos.</p>
+                </div>
+                <div class="feature-box">
+                    <h4>🔄 Multiconsumo</h4>
+                    <p>Múltiples consumidores pueden leer el MISMO topic simultáneamente.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- SECTION: PARTITIONS INTRO -->
+    <section class="section bg-alt">
+        <div class="container">
+            <h2>Las Particiones: El Corazón del Paralelismo</h2>
+
+            <p class="intro-text">
+                Un topic NO es un único archivo. Se divide en múltiples <strong>particiones</strong>, cada una en un
+                broker diferente (potencialmente). Esto permite <strong>paralelismo y scaling</strong>.
+            </p>
+
+            <div class="concept-box">
+                <div class="concept-icon">🧩</div>
+                <div class="concept-content">
+                    <h3>¿Por qué particiones?</h3>
+                    <p>
+                        Si todo estuviera en 1 partición, solo 1 consumidor podría leer a la vez (bottleneck).
+                        Con N particiones, N consumidores pueden leer en paralelo. <strong>Escalabilidad horizontal.</strong>
+                    </p>
+                </div>
+            </div>
+
+            <svg id="partisSVG" width="100%" height="300" viewBox="0 0 900 300" style="display: block; margin: 32px auto; border: 1px solid var(--border); border-radius: 12px; background: var(--surface2);">
+                <!-- Topic -->
+                <rect x="50" y="30" width="800" height="60" fill="none" stroke="#00a8e8" stroke-width="2" rx="4"/>
+                <text x="450" y="65" font-size="16" font-weight="bold" fill="#00a8e8" text-anchor="middle">Topic: eventos-compras</text>
+                
+                <!-- Partitions -->
+                <g id="partition0">
+                    <rect x="100" y="130" width="220" height="130" fill="none" stroke="#10b981" stroke-width="2" rx="4"/>
+                    <text x="210" y="155" font-size="14" font-weight="bold" fill="#10b981" text-anchor="middle">Partition 0</text>
+                    <line x1="115" y1="170" x2="295" y2="170" stroke="#10b981" stroke-width="1"/>
+                    <text x="115" y="185" font-size="11" fill="#ccc">Msg 1 (offset 0)</text>
+                    <text x="115" y="200" font-size="11" fill="#ccc">Msg 3 (offset 1)</text>
+                    <text x="115" y="215" font-size="11" fill="#ccc">Msg 5 (offset 2)</text>
+                    <text x="115" y="230" font-size="11" fill="#10b981">→  Consumer 1 lee aquí</text>
+                </g>
+                
+                <g id="partition1">
+                    <rect x="370" y="130" width="220" height="130" fill="none" stroke="#f59e0b" stroke-width="2" rx="4"/>
+                    <text x="480" y="155" font-size="14" font-weight="bold" fill="#f59e0b" text-anchor="middle">Partition 1</text>
+                    <line x1="385" y1="170" x2="565" y2="170" stroke="#f59e0b" stroke-width="1"/>
+                    <text x="385" y="185" font-size="11" fill="#ccc">Msg 2 (offset 0)</text>
+                    <text x="385" y="200" font-size="11" fill="#ccc">Msg 4 (offset 1)</text>
+                    <text x="385" y="215" font-size="11" fill="#ccc">Msg 6 (offset 2)</text>
+                    <text x="385" y="230" font-size="11" fill="#f59e0b">→  Consumer 2 lee aquí</text>
+                </g>
+                
+                <g id="partition2">
+                    <rect x="640" y="130" width="220" height="130" fill="none" stroke="#8b5cf6" stroke-width="2" rx="4"/>
+                    <text x="750" y="155" font-size="14" font-weight="bold" fill="#8b5cf6" text-anchor="middle">Partition 2</text>
+                    <line x1="655" y1="170" x2="835" y2="170" stroke="#8b5cf6" stroke-width="1"/>
+                    <text x="655" y="185" font-size="11" fill="#ccc">Msg 7 (offset 0)</text>
+                    <text x="655" y="200" font-size="11" fill="#ccc">Msg 8 (offset 1)</text>
+                    <text x="655" y="215" font-size="11" fill="#ccc">Msg 9 (offset 2)</text>
+                    <text x="655" y="230" font-size="11" fill="#8b5cf6">→  Consumer 3 lee aquí</text>
+                </g>
+                
+                <!-- Sharding label -->
+                <text x="450" y="290" font-size="12" fill="#94a3b8" text-anchor="middle">Sharding: Los N consumidores leen en paralelo = Escalabilidad</text>
+            </svg>
+
+            <div class="info-box">
+                <strong>Control de Particiones:</strong>
+                <ul>
+                    <li><code>num.partitions</code> - Número de particiones (default: 1, usualmente más)</li>
+                    <li><code>replication.factor</code> - Cuántas copias de cada partición (default: 1, usa 3 en prod)</li>
+                </ul>
+            </div>
+        </div>
+    </section>
+
+    <!-- SECTION: MESSAGE DISTRIBUTION -->
+    <section class="section">
+        <div class="container">
+            <h2>¿Cómo se distribuyen los mensajes entre particiones?</h2>
+
+            <p class="intro-text">
+                Cuando un productor envía un mensaje, Kafka decide a cuál partición lo manda. La decisión se toma así:
+            </p>
+
+            <div class="distribution-steps">
+                <div class="dist-step">
+                    <div class="step-number">1</div>
+                    <h4>¿Hay KEY?</h4>
+                    <p>Si el mensaje tiene una KEY (ej: user_id)</p>
+                </div>
+
+                <div class="dist-arrow">→</div>
+
+                <div class="dist-step">
+                    <div class="step-number">2</div>
+                    <h4>Hash de KEY</h4>
+                    <p>Kafka hace hash(KEY) % num_partitions</p>
+                </div>
+
+                <div class="dist-arrow">→</div>
+
+                <div class="dist-step">
+                    <div class="step-number">3</div>
+                    <h4>Partición Destino</h4>
+                    <p>El mensaje va a esa partición siempre</p>
+                </div>
+
+                <div class="dist-arrow">→</div>
+
+                <div class="dist-step">
+                    <div class="step-number">4</div>
+                    <h4>Garantía: Orden</h4>
+                    <p>Mensajes con misma KEY en same partition = orden garantizado</p>
+                </div>
+            </div>
+
+            <div class="concept-box" style="margin-top: 32px;">
+                <div class="concept-icon">🔑</div>
+                <div class="concept-content">
+                    <h3>¿Sin KEY?</h3>
+                    <p>Si no hay KEY, Kafka usa round-robin o random. El mensaje va a cualquier partición.
+                        <strong>No hay garantía de orden entre mensajes diferentes.</strong></p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- SECTION: KEY PARTITIONING EXAMPLE -->
+    <section class="section bg-alt">
+        <div class="container">
+            <h2>Ejemplo: Particionamiento por KEY</h2>
+
+            <p class="intro-text" style="margin-bottom: 24px;">
+                Veamos cómo Kafka distribuye mensajes cuando la KEY es el user_id:
+            </p>
+
+            <div class="key-partitioning-example">
+                <svg id="keyPartitionSVG" width="100%" height="400" viewBox="0 0 400 400" style="border: 1px solid var(--border); border-radius: 12px; background: var(--surface);">
+                    <!-- Producers -->
+                    <text x="50" y="25" font-size="12" font-weight="bold" fill="#94a3b8">Productores enviando eventos</text>
+                    <g>
+                        <circle cx="80" cy="60" r="20" fill="#00a8e8" opacity="0.3"/>
+                        <text x="80" y="65" font-size="11" fill="#fff" text-anchor="middle" font-weight="600">user_123</text>
+                    </g>
+                    <g>
+                        <circle cx="150" cy="60" r="20" fill="#10b981" opacity="0.3"/>
+                        <text x="150" y="65" font-size="11" fill="#fff" text-anchor="middle" font-weight="600">user_456</text>
+                    </g>
+                    <g>
+                        <circle cx="220" cy="60" r="20" fill="#f59e0b" opacity="0.3"/>
+                        <text x="220" y="65" font-size="11" fill="#fff" text-anchor="middle" font-weight="600">user_789</text>
+                    </g>
+                    <text x="290" y="65" font-size="10" fill="#ccc">Keys</text>
+                    
+                    <!-- Hash calculation -->
+                    <text x="50" y="130" font-size="11" font-weight="600" fill="#94a3b8">hash(key) % 3 particiones</text>
+                    
+                    <text x="40" y="165" font-size="10" fill="#00a8e8">hash(user_123) % 3  =  0</text>
+                    <text x="40" y="185" font-size="10" fill="#10b981">hash(user_456) % 3  =  1</text>
+                    <text x="40" y="205" font-size="10" fill="#f59e0b">hash(user_789) % 3  =  2</text>
+                    
+                    <!-- Partitions -->
+                    <text x="50" y="250" font-size="11" font-weight="600" fill="#94a3b8">Particiones</text>
+                    
+                    <g>
+                        <rect x="40" y="265" width="100" height="60" fill="none" stroke="#00a8e8" stroke-width="2" rx="3"/>
+                        <text x="90" y="283" font-size="12" font-weight="bold" fill="#00a8e8" text-anchor="middle">Partition 0</text>
+                        <text x="90" y="300" font-size="10" fill="#ccc" text-anchor="middle">user_123</text>
+                        <text x="90" y="315" font-size="10" fill="#ccc" text-anchor="middle">user_123</text>
+                    </g>
+                    
+                    <g>
+                        <rect x="150" y="265" width="100" height="60" fill="none" stroke="#10b981" stroke-width="2" rx="3"/>
+                        <text x="200" y="283" font-size="12" font-weight="bold" fill="#10b981" text-anchor="middle">Partition 1</text>
+                        <text x="200" y="300" font-size="10" fill="#ccc" text-anchor="middle">user_456</text>
+                        <text x="200" y="315" font-size="10" fill="#ccc" text-anchor="middle">user_456</text>
+                    </g>
+                    
+                    <g>
+                        <rect x="260" y="265" width="100" height="60" fill="none" stroke="#f59e0b" stroke-width="2" rx="3"/>
+                        <text x="310" y="283" font-size="12" font-weight="bold" fill="#f59e0b" text-anchor="middle">Partition 2</text>
+                        <text x="310" y="300" font-size="10" fill="#ccc" text-anchor="middle">user_789</text>
+                        <text x="310" y="315" font-size="10" fill="#ccc" text-anchor="middle">user_789</text>
+                    </g>
+                    
+                    <!-- Guarantee -->
+                    <text x="200" y="385" font-size="11" fill="#10b981" text-anchor="middle" font-weight="600">✅ Misma KEY siempre en NNHEY partición = Orden garantizado</text>
+                </svg>
+            </div>
+
+            <div class="explanation-box">
+                <h4 style="margin-bottom: 12px;">¿Qué pasa aquí?</h4>
+                <ul>
+                    <li><strong>user_123</strong> todos a Partition 0 (orden garantizado)</li>
+                    <li><strong>user_456</strong> todos a Partition 1 (orden garantizado)</li>
+                    <li><strong>user_789</strong> todos a Partition 2 (orden garantizado)</li>
+                    <li>Pero si eres consumidor y quieres procesar exactamente-once, debe ser dentro de la misma partición</li>
+                </ul>
+            </div>
+        </div>
+    </section>
+
+    <!-- SECTION: PARTITION ORDERING -->
+    <section class="section">
+        <div class="container">
+            <h2>Orden de Mensajes</h2>
+
+            <div class="ordering-grid">
+                <div class="ordering-card">
+                    <div class="ordering-icon">✅</div>
+                    <h3>Dentro de 1 Partición</h3>
+                    <p><strong>Orden Global Garantizado</strong></p>
+                    <p style="font-size: 12px; margin-top: 8px; color: var(--text2);">
+                        Los mensajes se leen en el mismo orden que se escribieron.
+                        Offset 0, 1, 2, 3... siempre.
+                    </p>
+                </div>
+
+                <div class="ordering-card">
+                    <div class="ordering-icon">❌</div>
+                    <h3>Entre Particiones</h3>
+                    <p><strong>Orden NO Garantizado</strong></p>
+                    <p style="font-size: 12px; margin-top: 8px; color: var(--text2);">
+                        Un mensaje de Partición 0 puede procesarse después que uno de Partición 1.
+                        Es paralelo, no hay sincronización.
+                    </p>
+                </div>
+            </div>
+
+            <div class="concept-box" style="margin-top: 32px;">
+                <div class="concept-icon">💡</div>
+                <div class="concept-content">
+                    <h3>Implicación: Si necesitas orden total...</h3>
+                    <p>Usa <strong>1 sola partición</strong>. Pero ojo: pierde paralelismo.
+                        Mejor es usar una KEY para particionar por entidad (user, producto, etc) y procesar
+                        en paralelo por entidad (cada consumidor se encarga de ciertos usuarios).</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- SECTION: OFFSETS -->
+    <section class="section bg-alt">
+        <div class="container">
+            <h2>Offsets: Tu Posición en el Log</h2>
+
+            <p class="intro-text">
+                El <span class="highlight">offset</span> es un número que indica la posición actual en una partición. <strong>Es tu marcador de progreso.</strong>
+                Cada consumidor en un grupo de consumidores mantiene su propio offset por partición.
+            </p>
+
+            <!-- Single Partition View -->
+            <h3 style="margin-top: 32px; margin-bottom: 16px;">Una sola Partición</h3>
+            <p style="margin-bottom: 16px;">Dentro de una partición, los offsets son lineales:</p>
+
+            <div class="offset-visualization">
+                <svg id="offsetSVG" width="100%" height="250" viewBox="0 0 900 250" style="border: 1px solid var(--border); border-radius: 12px; background: var(--surface2); display: block; margin: 24px auto;">
+                    <!-- Consumed offsets (0-4) -->
+                    <g id="offset0">
+                        <rect x="50" y="80" width="80" height="80" fill="rgba(16,185,129,0.3)" stroke="#10b981" stroke-width="1" rx="2"/>
+                        <text x="90" y="175" font-size="10" fill="#94a3b8" text-anchor="middle">0</text>
+                    </g>
+                    <g id="offset1">
+                        <rect x="140" y="80" width="80" height="80" fill="rgba(16,185,129,0.3)" stroke="#10b981" stroke-width="1" rx="2"/>
+                        <text x="180" y="175" font-size="10" fill="#94a3b8" text-anchor="middle">1</text>
+                    </g>
+                    <g id="offset2">
+                        <rect x="230" y="80" width="80" height="80" fill="rgba(16,185,129,0.3)" stroke="#10b981" stroke-width="1" rx="2"/>
+                        <text x="270" y="175" font-size="10" fill="#94a3b8" text-anchor="middle">2</text>
+                    </g>
+                    <g id="offset3">
+                        <rect x="320" y="80" width="80" height="80" fill="rgba(16,185,129,0.3)" stroke="#10b981" stroke-width="1" rx="2"/>
+                        <text x="360" y="175" font-size="10" fill="#94a3b8" text-anchor="middle">3</text>
+                    </g>
+                    <g id="offset4">
+                        <rect x="410" y="80" width="80" height="80" fill="rgba(16,185,129,0.3)" stroke="#10b981" stroke-width="1" rx="2"/>
+                        <text x="450" y="175" font-size="10" fill="#94a3b8" text-anchor="middle">4</text>
+                    </g>
+                    
+                    <!-- Current offset (5) -->
+                    <g id="offset5">
+                        <rect x="500" y="80" width="80" height="80" fill="rgba(0,168,232,0.3)" stroke="#00a8e8" stroke-width="2" rx="2"/>
+                        <text x="540" y="125" font-size="11" fill="#00a8e8" text-anchor="middle" font-weight="bold">CURRENT</text>
+                        <text x="540" y="175" font-size="10" fill="#94a3b8" text-anchor="middle">5</text>
+                    </g>
+                    
+                    <!-- Not consumed offsets (6-9) -->
+                    <g id="offset6">
+                        <rect x="590" y="80" width="80" height="80" fill="rgba(148,163,184,0.1)" stroke="#94a3b8" stroke-width="1" stroke-dasharray="3,3" rx="2"/>
+                        <text x="630" y="175" font-size="10" fill="#94a3b8" text-anchor="middle">6</text>
+                    </g>
+                    <g id="offset7">
+                        <rect x="680" y="80" width="80" height="80" fill="rgba(148,163,184,0.1)" stroke="#94a3b8" stroke-width="1" stroke-dasharray="3,3" rx="2"/>
+                        <text x="720" y="175" font-size="10" fill="#94a3b8" text-anchor="middle">7</text>
+                    </g>
+                    <g id="offset8">
+                        <rect x="770" y="80" width="80" height="80" fill="rgba(148,163,184,0.1)" stroke="#94a3b8" stroke-width="1" stroke-dasharray="3,3" rx="2"/>
+                        <text x="810" y="175" font-size="10" fill="#94a3b8" text-anchor="middle">8</text>
+                    </g>
+                    
+                    <!-- Legend -->
+                    <g id="legend">
+                        <rect x="50" y="210" width="15" height="15" fill="#10b981"/>
+                        <text x="75" y="223" font-size="12" fill="#94a3b8">Consumed</text>
+                        
+                        <rect x="200" y="210" width="15" height="15" fill="#00a8e8"/>
+                        <text x="225" y="223" font-size="12" fill="#94a3b8">Current Position</text>
+                        
+                        <rect x="420" y="210" width="15" height="15" fill="none" stroke="#94a3b8" stroke-width="1" stroke-dasharray="3,3"/>
+                        <text x="445" y="223" font-size="12" fill="#94a3b8">Not Consumed</text>
+                    </g>
+                </svg>
+            </div>
+
+            <div class="offset-concepts">
+                <div class="offset-concept">
+                    <h4>📍 Offset Actual</h4>
+                    <p>Tu consumidor está en offset 5. Es la posición en este momento.</p>
+                </div>
+                <div class="offset-concept">
+                    <h4>💾 Offset Committed</h4>
+                    <p>Llamas <code>commit()</code> → el offset se guarda internamente en Kafka</p>
+                </div>
+                <div class="offset-concept">
+                    <h4>🔄 Recovery</h4>
+                    <p>Si crashea, al reiniciar, lee desde el último committed offset</p>
+                </div>
+            </div>
+
+            <!-- Multiple Partitions Scenario -->
+            <h3 style="margin-top: 40px; margin-bottom: 16px;">Escenario: Topic con 3 Particiones</h3>
+            <p style="margin-bottom: 16px;">Cada partición tiene su propio log y cada consumidor trackea su posición por partición:</p>
+
+            <div style="background: var(--surface); padding: 24px; border-radius: 12px; border: 1px solid var(--border); margin-bottom: 24px;">
+                <svg width="100%" height="320" viewBox="0 0 900 320" style="display: block;">
+                    <!-- Title -->
+                    <text x="450" y="25" font-size="14" font-weight="bold" fill="#94a3b8" text-anchor="middle">Topic: "pagos" | 3 Particiones | Consumer Group: "analytics"</text>
+                    
+                    <!-- Partition 0 -->
+                    <g>
+                        <rect x="50" y="50" width="250" height="240" fill="none" stroke="#10b981" stroke-width="2" rx="4"/>
+                        <text x="175" y="75" font-size="12" font-weight="bold" fill="#10b981" text-anchor="middle">Partition 0</text>
+                        
+                        <!-- Log entries -->
+                        <rect x="65" y="90" width="220" height="20" fill="rgba(16,185,129,0.2)" stroke="#10b981"/>
+                        <text x="70" y="105" font-size="11" fill="#fff">Offset 0: user_123 → $50</text>
+                        
+                        <rect x="65" y="115" width="220" height="20" fill="rgba(16,185,129,0.2)" stroke="#10b981"/>
+                        <text x="70" y="130" font-size="11" fill="#fff">Offset 1: user_123 → $100</text>
+                        
+                        <rect x="65" y="140" width="220" height="20" fill="rgba(0,168,232,0.3)" stroke="#00a8e8" stroke-width="2"/>
+                        <text x="70" y="155" font-size="11" fill="#fff">Offset 2: user_123 → $75 ⬅️ AQUI</text>
+                        
+                        <rect x="65" y="165" width="220" height="20" fill="rgba(148,163,184,0.1)" stroke="#94a3b8" stroke-dasharray="2,2"/>
+                        <text x="70" y="180" font-size="11" fill="#ccc">Offset 3: user_123 → $200</text>
+                        
+                        <text x="175" y="210" font-size="11" fill="#10b981" font-weight="600" text-anchor="middle">Consumer Offset: 2</text>
+                        <text x="175" y="230" font-size="10" fill="#94a3b8" text-anchor="middle">Log End Offset: 3</text>
+                        <text x="175" y="250" font-size="10" fill="#f59e0b" text-anchor="middle">📊 Lag: 1 mensaje</text>
+                    </g>
+                    
+                    <!-- Partition 1 -->
+                    <g>
+                        <rect x="325" y="50" width="250" height="240" fill="none" stroke="#f59e0b" stroke-width="2" rx="4"/>
+                        <text x="450" y="75" font-size="12" font-weight="bold" fill="#f59e0b" text-anchor="middle">Partition 1</text>
+                        
+                        <!-- Log entries -->
+                        <rect x="340" y="90" width="220" height="20" fill="rgba(245,158,11,0.2)" stroke="#f59e0b"/>
+                        <text x="345" y="105" font-size="11" fill="#fff">Offset 0: user_456 → $30</text>
+                        
+                        <rect x="340" y="115" width="220" height="20" fill="rgba(245,158,11,0.2)" stroke="#f59e0b"/>
+                        <text x="345" y="130" font-size="11" fill="#fff">Offset 1: user_456 → $60</text>
+                        
+                        <rect x="340" y="140" width="220" height="20" fill="rgba(245,158,11,0.2)" stroke="#f59e0b"/>
+                        <text x="345" y="155" font-size="11" fill="#fff">Offset 2: user_456 → $45</text>
+                        
+                        <rect x="340" y="165" width="220" height="20" fill="rgba(0,168,232,0.3)" stroke="#00a8e8" stroke-width="2"/>
+                        <text x="345" y="180" font-size="11" fill="#fff">Offset 3: user_456 → $80 ⬅️ AQUI</text>
+                        
+                        <text x="450" y="210" font-size="11" fill="#f59e0b" font-weight="600" text-anchor="middle">Consumer Offset: 3</text>
+                        <text x="450" y="230" font-size="10" fill="#94a3b8" text-anchor="middle">Log End Offset: 3</text>
+                        <text x="450" y="250" font-size="10" fill="#10b981" text-anchor="middle">✅ Lag: 0 mensajes</text>
+                    </g>
+                    
+                    <!-- Partition 2 -->
+                    <g>
+                        <rect x="600" y="50" width="250" height="240" fill="none" stroke="#8b5cf6" stroke-width="2" rx="4"/>
+                        <text x="725" y="75" font-size="12" font-weight="bold" fill="#8b5cf6" text-anchor="middle">Partition 2</text>
+                        
+                        <!-- Log entries -->
+                        <rect x="615" y="90" width="220" height="20" fill="rgba(139,92,246,0.2)" stroke="#8b5cf6"/>
+                        <text x="620" y="105" font-size="11" fill="#fff">Offset 0: user_789 → $120</text>
+                        
+                        <rect x="615" y="115" width="220" height="20" fill="rgba(139,92,246,0.2)" stroke="#8b5cf6"/>
+                        <text x="620" y="130" font-size="11" fill="#fff">Offset 1: user_789 → $95</text>
+                        
+                        <rect x="615" y="140" width="220" height="20" fill="rgba(0,168,232,0.3)" stroke="#00a8e8" stroke-width="2"/>
+                        <text x="620" y="155" font-size="11" fill="#fff">Offset 2: user_789 → $55 ⬅️ AQUI</text>
+                        
+                        <rect x="615" y="165" width="220" height="20" fill="rgba(148,163,184,0.1)" stroke="#94a3b8" stroke-dasharray="2,2"/>
+                        <text x="620" y="180" font-size="11" fill="#ccc">Offset 3: user_789 → $200</text>
+                        
+                        <rect x="615" y="193" width="220" height="20" fill="rgba(148,163,184,0.1)" stroke="#94a3b8" stroke-dasharray="2,2"/>
+                        <text x="620" y="208" font-size="11" fill="#ccc">Offset 4: user_789 → $150</text>
+                        
+                        <text x="725" y="230" font-size="11" fill="#8b5cf6" font-weight="600" text-anchor="middle">Consumer Offset: 2</text>
+                        <text x="725" y="250" font-size="10" fill="#94a3b8" text-anchor="middle">Log End Offset: 4</text>
+                        <text x="725" y="270" font-size="10" fill="#f59e0b" text-anchor="middle">📊 Lag: 2 mensajes</text>
+                    </g>
+                </svg>
+            </div>
+
+            <!-- Consumer Lag Explanation -->
+            <div class="concept-box" style="margin: 24px 0;">
+                <div class="concept-icon">📊</div>
+                <div class="concept-content">
+                    <h3>Consumer Lag</h3>
+                    <p><code>Lag = Log End Offset - Consumer Offset</code></p>
+                    <p style="margin-top: 12px; color: var(--text2); font-size: 14px;">
+                        El <strong>lag</strong> es cuántos mensajes sin procesar tienes en una partición.
+                        <br/>• <strong>Lag = 0</strong> → Estás al día ✅
+                        <br/>• <strong>Lag > 0</strong> → Tienes retraso 📉
+                        <br/>• Useful para ver si un consumidor está cayendo detrás del rate de producción.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Brokers & Replication -->
+            <h3 style="margin-top: 40px; margin-bottom: 16px;">Offsets en Brokers Replicados</h3>
+            <p style="margin-bottom: 16px;">Los offsets se guardan EN KAFKA (o en Zookeeper), no en tu consumidor. Esto permite recuperación:</p>
+
+            <div style="background: var(--surface); padding: 24px; border-radius: 12px; border: 1px solid var(--border); margin-bottom: 24px;">
+                <svg width="100%" height="300" viewBox="0 0 900 300" style="display: block;">
+                    <!-- Title -->
+                    <text x="450" y="25" font-size="14" font-weight="bold" fill="#94a3b8" text-anchor="middle">Cluster Kafka: 3 Brokers | Offset Storage</text>
+                    
+                    <!-- Broker 1 (Leader) -->
+                    <g>
+                        <rect x="50" y="60" width="220" height="220" fill="none" stroke="#10b981" stroke-width="2" rx="4"/>
+                        <text x="160" y="85" font-size="12" font-weight="bold" fill="#10b981" text-anchor="middle">Broker 1 (Leader)</text>
+                        
+                        <rect x="65" y="100" width="190" height="150" fill="rgba(16,185,129,0.1)" stroke="#10b981" stroke-width="1" rx="2"/>
+                        <text x="160" y="120" font-size="11" fill="#10b981" font-weight="600" text-anchor="middle">Topic: pagos | Partition 0</text>
+                        
+                        <text x="75" y="140" font-size="10" fill="#ccc">Offset 0 → Msg: user_123</text>
+                        <text x="75" y="157" font-size="10" fill="#ccc">Offset 1 → Msg: user_456</text>
+                        <text x="75" y="174" font-size="10" fill="#ccc">Offset 2 → Msg: user_789</text>
+                        <text x="75" y="191" font-size="10" fill="#10b981">Offset 3 → Msg: user_123</text>
+                        <text x="75" y="208" font-size="10" fill="#ccc">Offset 4 → Msg: user_456</text>
+                        
+                        <text x="160" y="235" font-size="10" fill="#94a3b8" text-anchor="middle">✅ Escribe Log</text>
+                    </g>
+                    
+                    <!-- Broker 2 (Replica) -->
+                    <g>
+                        <rect x="325" y="60" width="220" height="220" fill="none" stroke="#f59e0b" stroke-width="2" rx="4" stroke-dasharray="3,3"/>
+                        <text x="435" y="85" font-size="12" font-weight="bold" fill="#f59e0b" text-anchor="middle">Broker 2 (Replica)</text>
+                        
+                        <rect x="340" y="100" width="190" height="150" fill="rgba(245,158,11,0.1)" stroke="#f59e0b" stroke-width="1" rx="2" stroke-dasharray="1,1"/>
+                        <text x="435" y="120" font-size="11" fill="#f59e0b" font-weight="600" text-anchor="middle">Topic: pagos | Partition 0</text>
+                        
+                        <text x="350" y="140" font-size="10" fill="#ccc">Offset 0 → Msg: user_123</text>
+                        <text x="350" y="157" font-size="10" fill="#ccc">Offset 1 → Msg: user_456</text>
+                        <text x="350" y="174" font-size="10" fill="#ccc">Offset 2 → Msg: user_789</text>
+                        <text x="350" y="191" font-size="10" fill="#f59e0b">Offset 3 → Msg: user_123</text>
+                        <text x="350" y="208" font-size="10" fill="#ccc">Offset 4 → Msg: user_456</text>
+                        
+                        <text x="435" y="235" font-size="10" fill="#94a3b8" text-anchor="middle">📋 Copia sincronizada</text>
+                    </g>
+                    
+                    <!-- Consumer Offsets Topic -->
+                    <g>
+                        <rect x="600" y="60" width="270" height="220" fill="none" stroke="#8b5cf6" stroke-width="2" rx="4"/>
+                        <text x="735" y="85" font-size="12" font-weight="bold" fill="#8b5cf6" text-anchor="middle">Sistema de Offsets</text>
+                        
+                        <rect x="615" y="100" width="240" height="160" fill="rgba(139,92,246,0.1)" stroke="#8b5cf6" stroke-width="1" rx="2"/>
+                        
+                        <text x="625" y="120" font-size="11" fill="#8b5cf6" font-weight="600">Consumer Group: "analytics"</text>
+                        
+                        <text x="625" y="145" font-size="10" fill="#ccc">Consumer 1</text>
+                        <text x="635" y="160" font-size="9" fill="#10b981">Topic: pagos, Partition 0 → Offset 4</text>
+                        
+                        <text x="625" y="182" font-size="10" fill="#ccc">Consumer 2</text>
+                        <text x="635" y="197" font-size="9" fill="#10b981">Topic: pagos, Partition 1 → Offset 7</text>
+                        
+                        <text x="625" y="219" font-size="10" fill="#ccc">Consumer 3</text>
+                        <text x="635" y="234" font-size="9" fill="#10b981">Topic: pagos, Partition 2 → Offset 5</text>
+                        
+                        <text x="735" y="270" font-size="10" fill="#94a3b8" text-anchor="middle">💾 Stored in: __consumer_offsets</text>
+                    </g>
+                </svg>
+            </div>
+
+            <!-- Scenario: Consumer Crash & Recovery -->
+            <h3 style="margin-top: 40px; margin-bottom: 16px;">Escenario 1: Crash del Consumidor</h3>
+            <p style="margin-bottom: 16px;">¿Qué pasa cuando un consumidor se cae?</p>
+
+            <div class="scenario-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 24px;">
+                <div style="background: var(--surface); padding: 20px; border-radius: 12px; border-left: 4px solid #10b981;">
+                    <h4 style="color: #10b981; margin-bottom: 12px;">❌ Antes del Crash</h4>
+                    <ul style="list-style: none; padding: 0;">
+                        <li style="padding: 6px 0; border-bottom: 1px solid var(--border);">
+                            <code>Consumer Offset: 5</code>
+                        </li>
+                        <li style="padding: 6px 0; border-bottom: 1px solid var(--border);">
+                            <code>Last Committed: 3</code>
+                        </li>
+                        <li style="padding: 6px 0;">
+                            <code>Log End Offset: 10</code>
+                        </li>
+                    </ul>
+                    <p style="margin-top: 12px; font-size: 13px; color: var(--text2);">Procesados: mensajes 0-3, actual en 5, sin procesar 4 y 5</p>
+                </div>
+                
+                <div style="background: var(--surface); padding: 20px; border-radius: 12px; border-left: 4px solid #f59e0b;">
+                    <h4 style="color: #f59e0b; margin-bottom: 12px;">⏱️ Después del Crash</h4>
+                    <ul style="list-style: none; padding: 0;">
+                        <li style="padding: 6px 0; border-bottom: 1px solid var(--border);">
+                            <code>Consumer: MUERTO</code>
+                        </li>
+                        <li style="padding: 6px 0; border-bottom: 1px solid var(--border);">
+                            <code>Last Committed: 3</code> (guardado en Kafka)
+                        </li>
+                        <li style="padding: 6px 0;">
+                            <code>Rebalance: Si hay más consumidores en grupo</code>
+                        </li>
+                    </ul>
+                    <p style="margin-top: 12px; font-size: 13px; color: var(--text2);">Mensajes 4-5: NO fueron confirmados. Riesgo de reprocesamiento.</p>
+                </div>
+            </div>
+
+            <!-- Scenario: Multiple Consumers -->
+            <h3 style="margin-top: 40px; margin-bottom: 16px;">Escenario 2: Múltiples Consumidores en un Grupo</h3>
+            <p style="margin-bottom: 16px;">Cada consumidor gestiona sus propios offsets por partición:</p>
+
+            <div style="background: var(--surface); padding: 24px; border-radius: 12px; border: 1px solid var(--border); margin-bottom: 24px;">
+                <svg width="100%" height="250" viewBox="0 0 900 250" style="display: block;">
+                    <!-- Consumer Group Label -->
+                    <text x="450" y="25" font-size="14" font-weight="bold" fill="#94a3b8" text-anchor="middle">Consumer Group "payments" | 3 consumidores, 3 particiones</text>
+                    
+                    <!-- Consumer 1 -->
+                    <g>
+                        <rect x="50" y="50" width="250" height="180" fill="none" stroke="#10b981" stroke-width="2" rx="4"/>
+                        <text x="175" y="75" font-size="12" font-weight="bold" fill="#10b981" text-anchor="middle">Consumer 1</text>
+                        
+                        <text x="65" y="105" font-size="11" fill="#ccc">Assigned:</text>
+                        <text x="65" y="125" font-size="10" fill="#10b981" font-weight="600">Partition 0</text>
+                        
+                        <text x="65" y="150" font-size="10" fill="#ccc">Current Offset: <tspan fill="#10b981" font-weight="600">7</tspan></text>
+                        <text x="65" y="168" font-size="10" fill="#ccc">Committed Offset: <tspan fill="#10b981" font-weight="600">6</tspan></text>
+                        <text x="65" y="186" font-size="10" fill="#ccc">Lag: <tspan fill="#f59e0b" font-weight="600">0</tspan></text>
+                        
+                        <text x="175" y="230" font-size="11" fill="#10b981" text-anchor="middle">✅ Al día</text>
+                    </g>
+                    
+                    <!-- Consumer 2 -->
+                    <g>
+                        <rect x="325" y="50" width="250" height="180" fill="none" stroke="#f59e0b" stroke-width="2" rx="4"/>
+                        <text x="450" y="75" font-size="12" font-weight="bold" fill="#f59e0b" text-anchor="middle">Consumer 2</text>
+                        
+                        <text x="340" y="105" font-size="11" fill="#ccc">Assigned:</text>
+                        <text x="340" y="125" font-size="10" fill="#f59e0b" font-weight="600">Partition 1</text>
+                        
+                        <text x="340" y="150" font-size="10" fill="#ccc">Current Offset: <tspan fill="#f59e0b" font-weight="600">4</tspan></text>
+                        <text x="340" y="168" font-size="10" fill="#ccc">Committed Offset: <tspan fill="#f59e0b" font-weight="600">2</tspan></text>
+                        <text x="340" y="186" font-size="10" fill="#ccc">Lag: <tspan fill="#f59e0b" font-weight="600">2</tspan></text>
+                        
+                        <text x="450" y="230" font-size="11" fill="#f59e0b" text-anchor="middle">⚠️ Atrasado</text>
+                    </g>
+                    
+                    <!-- Consumer 3 -->
+                    <g>
+                        <rect x="600" y="50" width="270" height="180" fill="none" stroke="#8b5cf6" stroke-width="2" rx="4"/>
+                        <text x="735" y="75" font-size="12" font-weight="bold" fill="#8b5cf6" text-anchor="middle">Consumer 3</text>
+                        
+                        <text x="615" y="105" font-size="11" fill="#ccc">Assigned:</text>
+                        <text x="615" y="125" font-size="10" fill="#8b5cf6" font-weight="600">Partition 2</text>
+                        
+                        <text x="615" y="150" font-size="10" fill="#ccc">Current Offset: <tspan fill="#8b5cf6" font-weight="600">12</tspan></text>
+                        <text x="615" y="168" font-size="10" fill="#ccc">Committed Offset: <tspan fill="#8b5cf6" font-weight="600">8</tspan></text>
+                        <text x="615" y="186" font-size="10" fill="#ccc">Lag: <tspan fill="#f59e0b" font-weight="600">4</tspan></text>
+                        
+                        <text x="735" y="230" font-size="11" fill="#8b5cf6" text-anchor="middle">⚠️ Muy atrasado</text>
+                    </g>
+                </svg>
+            </div>
+
+            <div class="concept-box" style="margin-bottom: 24px;">
+                <div class="concept-icon">🔄</div>
+                <div class="concept-content">
+                    <h3>¿Qué significa el Lag?</h3>
+                    <p style="margin-top: 12px; color: var(--text2); font-size: 14px;">
+                        <strong>Consumer 1:</strong> Lag=0 → Procesando al ritmo de producción ✅
+                        <br/><strong>Consumer 2:</strong> Lag=2 → 2 mensajes retrasado, pero recuperándose
+                        <br/><strong>Consumer 3:</strong> Lag=4 → Procesando lentamente, acumulando retraso 📉
+                    </p>
+                </div>
+            </div>
+
+            <div class="offset-strategies">
+                <h3 style="margin-bottom: 24px;">Estrategias de Commit</h3>
+
+                <div class="strategy-card">
+                    <h4>Auto-Commit (Default)</h4>
+                    <p>Cada 5s (default), Kafka guarda automáticamente el offset.</p>
+                    <div class="strategy-pros-cons">
+                        <div class="pros">
+                            <strong>✅ Pros:</strong> Simple, sin overhead manual
+                        </div>
+                        <div class="cons">
+                            <strong>❌ Cons:</strong> Puedes procesar el mismo mensaje 2x si crasheas entre mensajes
+                        </div>
+                    </div>
+                </div>
+
+                <div class="strategy-card">
+                    <h4>Manual Commit (Sync)</h4>
+                    <p>Tu código llama <code>consumer.commitSync()</code> después de procesar.</p>
+                    <div class="strategy-pros-cons">
+                        <div class="pros">
+                            <strong>✅ Pros:</strong> Control total, garantía de exactly-once
+                        </div>
+                        <div class="cons">
+                            <strong>❌ Cons:</strong> Más lento, overhead
+                        </div>
+                    </div>
+                </div>
+
+                <div class="strategy-card">
+                    <h4>Manual Commit (Async)</h4>
+                    <p><code>consumer.commitAsync()</code> en background.</p>
+                    <div class="strategy-pros-cons">
+                        <div class="pros">
+                            <strong>✅ Pros:</strong> Control + velocidad
+                        </div>
+                        <div class="cons">
+                            <strong>❌ Cons:</strong> Complejo, manejo de errores
+                        </div>
+                    </div>
+                </div>
+
+                <div class="strategy-card" style="background: rgba(139, 92, 246, 0.05); border-left: 4px solid #8b5cf6;">
+                    <h4>🎯 ¿Cuál elegir?</h4>
+                    <p style="margin-top: 8px; font-size: 13px;">
+                        <strong>Auto-commit:</strong> Dev rápido, tolerancia a duplicados
+                        <br/><strong>Manual Sync:</strong> Garantías fuertes, sistemas críticos (pagos, transacciones)
+                        <br/><strong>Manual Async:</strong> Balance entre velocidad y control
+                    </p>
+                </div>
+            </div>
+
+            <!-- Scenario: Adding New Consumer (Rebalance Impact on Offsets) -->
+            <h3 style="margin-top: 40px; margin-bottom: 16px;">Escenario 3: Añadir un Consumidor Nueva (Rebalance)</h3>
+            <p style="margin-bottom: 16px;">¿Qué pasa con los offsets cuando llega un consumidor nuevo?</p>
+
+            <div class="scenario-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 24px;">
+                <div style="background: var(--surface); padding: 20px; border-radius: 12px; border-left: 4px solid #10b981;">
+                    <h4 style="color: #10b981; margin-bottom: 12px;">ANTES: 2 Consumidores | 4 Particiones</h4>
+                    <ul style="list-style: none; padding: 0; font-size: 13px;">
+                        <li style="padding: 8px 0; border-bottom: 1px solid var(--border);">
+                            <code style="color: #10b981;">Consumer 1</code> → P0, P1 (Offset: 10, 15)
+                        </li>
+                        <li style="padding: 8px 0;">
+                            <code style="color: #f59e0b;">Consumer 2</code> → P2, P3 (Offset: 8, 12)
+                        </li>
+                    </ul>
+                    <p style="margin-top: 12px; font-size: 12px; color: var(--text2);">✅ Estado estable, cada consumidor procesa 2 particiones</p>
+                </div>
+                
+                <div style="background: var(--surface); padding: 20px; border-radius: 12px; border-left: 4px solid #f59e0b;">
+                    <h4 style="color: #f59e0b; margin-bottom: 12px;">DESPUÉS: 3 Consumidores | 4 Particiones</h4>
+                    <ul style="list-style: none; padding: 0; font-size: 13px;">
+                        <li style="padding: 8px 0; border-bottom: 1px solid var(--border);">
+                            <code style="color: #10b981;">Consumer 1</code> → P0 (Offset: 10 ✅)
+                        </li>
+                        <li style="padding: 8px 0; border-bottom: 1px solid var(--border);">
+                            <code style="color: #f59e0b;">Consumer 2</code> → P2 (Offset: 8 ✅)
+                        </li>
+                        <li style="padding: 8px 0;">
+                            <code style="color: #8b5cf6;">Consumer 3</code> → P1, P3 (Offset: NUEVO)
+                        </li>
+                    </ul>
+                    <p style="margin-top: 12px; font-size: 12px; color: var(--text2);">⚠️ REBALANCE ocurrió, nuevas asignaciones</p>
+                </div>
+            </div>
+
+            <div class="concept-box" style="margin-bottom: 24px;">
+                <div class="concept-icon">🔑</div>
+                <div class="concept-content">
+                    <h3>¿Qué pasó con los offsets en P1 y P3?</h3>
+                    <p style="margin-top: 12px; color: var(--text2); font-size: 14px;">
+                        ✅ <strong>Los offsets guardados NO se pierden.</strong> Están en Kafka.
+                        <br/>
+                        • P1: El último committed offset de Consumer 1 (offset 15) se mantiene guardado
+                        <br/>
+                        • P3: El último committed offset de Consumer 2 (offset 12) se mantiene guardado
+                        <br/>
+                        • Consumer 3 comienza desde: P1 → offset 15, P3 → offset 12
+                        <br/>
+                        <strong>IMPORTANTE:</strong> Sin el offset guardado, Consumer 3 tendría que reread desde el principio (ej: auto.offset.reset=earliest)
+                    </p>
+                </div>
+            </div>
+
+            <!-- Quick Reference Table -->
+            <h3 style="margin-top: 40px; margin-bottom: 20px;">📋 Referencia Rápida: Offsets</h3>
+            <div style="background: var(--surface); padding: 24px; border-radius: 12px; border: 1px solid var(--border); overflow-x: auto;">
+                <table style="width: 100%; font-size: 13px;">
+                    <thead>
+                        <tr style="border-bottom: 2px solid var(--border);">
+                            <th style="text-align: left; padding: 12px; color: #10b981;">Concepto</th>
+                            <th style="text-align: left; padding: 12px; color: #f59e0b;">Descripción</th>
+                            <th style="text-align: left; padding: 12px; color: #8b5cf6;">Rango/Ejemplo</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr style="border-bottom: 1px solid var(--border);">
+                            <td style="padding: 12px;"><code>Consumer Offset</code></td>
+                            <td style="padding: 12px;">Posición actual del consumidor en una partición</td>
+                            <td style="padding: 12px;">0, 1, 2, ..., 1000+</td>
+                        </tr>
+                        <tr style="border-bottom: 1px solid var(--border);">
+                            <td style="padding: 12px;"><code>Log End Offset</code></td>
+                            <td style="padding: 12px;">Último offset disponible en la partición</td>
+                            <td style="padding: 12px;">LEO = 1050</td>
+                        </tr>
+                        <tr style="border-bottom: 1px solid var(--border);">
+                            <td style="padding: 12px;"><code>Committed Offset</code></td>
+                            <td style="padding: 12px;">Último offset guardado en Kafka (seguro)</td>
+                            <td style="padding: 12px;">Committed = 995</td>
+                        </tr>
+                        <tr style="border-bottom: 1px solid var(--border);">
+                            <td style="padding: 12px;"><code style="color: #f59e0b;">Consumer Lag</code></td>
+                            <td style="padding: 12px;">LEO - Consumer Offset = retraso</td>
+                            <td style="padding: 12px;">1050 - 1000 = 50 mensajes</td>
+                        </tr>
+                        <tr style="border-bottom: 1px solid var(--border);">
+                            <td style="padding: 12px;"><code>__consumer_offsets</code></td>
+                            <td style="padding: 12px;">Topic interno donde Kafka guarda los offsets</td>
+                            <td style="padding: 12px;">Replicado, compactado automáticamente</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 12px;"><code style="color: #8b5cf6;">Rebalance</code></td>
+                            <td style="padding: 12px;">Ocurre cuando consumidores se unen/salen; pausar lectura</td>
+                            <td style="padding: 12px;">⏱️ ~5-10 segundos típicamente</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+
+    <!-- SECTION: CONSUMER GROUP PARTITIONS -->
+    <section class="section">
+        <div class="container">
+            <h2>Grupos de Consumidores y Particiones</h2>
+
+            <p class="intro-text">
+                Un topic con 3 particiones y un grupo de consumidores con 3 miembros:
+                cada consumidor típicamente obtiene 1 partición.
+            </p>
+
+            <div class="mermaid-container">
+                <div class="mermaid">
+                    graph TB
+                        T["📨 Topic: compras<br/>3 Particiones"]
+                        
+                        P0["Partición 0<br/>Offset: 0-999"]
+                        P1["Partición 1<br/>Offset: 0-1200"]
+                        P2["Partición 2<br/>Offset: 0-850"]
+                        
+                        CG["👥 Consumer Group: analytics<br/>3 Miembros"]
+                        
+                        C1["Consumer 1<br/>→ Part 0"]
+                        C2["Consumer 2<br/>→ Part 1"]
+                        C3["Consumer 3<br/>→ Part 2"]
+                        
+                        T --> P0
+                        T --> P1
+                        T --> P2
+                        
+                        CG --> C1
+                        CG --> C2
+                        CG --> C3
+                        
+                        C1 -.-> P0
+                        C2 -.-> P1
+                        C3 -.-> P2
+                        
+                        style T fill:#00a8e8,stroke:#0080b8,stroke-width:2px,color:#fff
+                        style CG fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+                        style C1 fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+                        style C2 fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+                        style C3 fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+                </div>
+            </div>
+
+            <div class="scaling-box">
+                <h3>¿Qué pasa si añado más consumidores?</h3>
+                <p style="margin-bottom: 16px;">Si tengo 4 consumidores y 3 particiones:</p>
+                <ul>
+                    <li>Consumer 1 → Partición 0 ✅</li>
+                    <li>Consumer 2 → Partición 1 ✅</li>
+                    <li>Consumer 3 → Partición 2 ✅</li>
+                    <li>Consumer 4 → <strong>Nada (idle)</strong> ❌</li>
+                </ul>
+                <p style="margin-top: 16px; font-size: 14px; color: var(--text2);">
+                    <strong>Lección:</strong> El paralelismo máximo es igual al número de particiones.
+                    No tiene sentido más consumidores que particiones (sin beneficio).
+                </p>
+            </div>
+        </div>
+    </section>
+
+    <!-- SECTION: PARTITION REBALANCING -->
+    <section class="section bg-alt">
+        <div class="container">
+            <h2>Rebalanceo de Particiones</h2>
+
+            <p class="intro-text">
+                Cuando un consumidor muere o se añade uno nuevo, Kafka automáticamente rebalancea quién lee qué.
+            </p>
+
+            <div class="rebalance-timeline">
+                <div class="timeline-state">
+                    <span class="state-label">Estado 1: Normal</span>
+                    <div class="state-content">
+                        <div class="consumer-assign">C1 → P0</div>
+                        <div class="consumer-assign">C2 → P1</div>
+                        <div class="consumer-assign">C3 → P2</div>
+                    </div>
+                </div>
+
+                <div class="timeline-arrow">⚠️ C2 crash</div>
+
+                <div class="timeline-state">
+                    <span class="state-label">Estado 2: Rebalance (pausa)</span>
+                    <div class="state-content">
+                        <p style="color: var(--danger); font-size: 12px;">🔴 Todos los consumidores pausados</p>
+                    </div>
+                </div>
+
+                <div class="timeline-arrow">⏱️ ~6s</div>
+
+                <div class="timeline-state">
+                    <span class="state-label">Estado 3: Nuevo balance</span>
+                    <div class="state-content">
+                        <div class="consumer-assign">C1 → P0</div>
+                        <div class="consumer-assign">C3 → P1, P2</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="concept-box" style="margin-top: 32px;">
+                <div class="concept-icon">⚡</div>
+                <div class="concept-content">
+                    <h3>Rebalance = STOP THE WORLD</h3>
+                    <p>Durante el rebalance (típicamente 6-10 segundos), <strong>todos los consumidores se detienen</strong>.
+                        No se procesan mensajes. Es el precio de recuperarse. En sistemas críticos, optimiza esto.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- NEXT -->
+    <section class="section">
+        <div class="container" style="text-align: center;">
+            <h2>¿Listo para Productor y Consumidor?</h2>
+            <p style="font-size: 18px; color: var(--text2); margin-bottom: 32px;">
+                Ahora que entiendes cómo se organizan los datos, aprende a producir y consumir.
+            </p>
+            <a href="productor-consumidor.html" class="btn btn-kafka">Productor/Consumidor →</a>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <p>📚 Apuntes de Apache Kafka para Big Data · Curso de Sistemas de Big Data</p>
+    </footer>
+
+    <script>
+        mermaid.initialize({ startOnLoad: true, theme: 'dark' });
+        mermaid.contentLoaded();
+
+        gsap.registerPlugin(ScrollTrigger);
+
+        // Key partitioning example - rendered as SVG
+        const keyPartitionSVG = document.getElementById('keyPartitionSVG');
+        if (keyPartitionSVG) {
+            gsap.from(keyPartitionSVG, {
+                scrollTrigger: {
+                    trigger: keyPartitionSVG,
+                    start: 'top 80%',
+                },
+                duration: 0.8,
+                opacity: 0,
+            });
+        }
+
+        // Offset visualization
+        // Offset visualization - rendered as SVG
+        const offsetSVG = document.getElementById('offsetSVG');
+        if (offsetSVG) {
+            gsap.from(offsetSVG, {
+                scrollTrigger: {
+                    trigger: offsetSVG,
+                    start: 'top 80%',
+                },
+                duration: 0.8,
+                opacity: 0,
+            });
+        }
+
+        // Navbar
+        const navbar = document.getElementById('navbar');
+        window.addEventListener('scroll', () => {
+            if (window.scrollY > 50) {
+                navbar.classList.add('scrolled');
+            } else {
+                navbar.classList.remove('scrolled');
+            }
+        });
+
+        const navToggle = document.getElementById('navToggle');
+        const navLinks = document.querySelector('.nav-links');
+        navToggle?.addEventListener('click', () => {
+            navLinks.classList.toggle('active');
+        });
+    </script>
+
+    <style>
+        .page-header {
+            padding: 60px 24px;
+            background: linear-gradient(135deg, rgba(0,168,232,0.1), rgba(16,185,129,0.05));
+            border-bottom: 2px solid var(--kafka);
+            text-align: center;
+            margin-top: 60px;
+        }
+
+        .page-header h1 {
+            font-size: 42px;
+            font-weight: 800;
+            margin-bottom: 8px;
+        }
+
+        .page-header p {
+            font-size: 18px;
+            color: var(--text2);
+        }
+
+        .distribution-steps {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+            margin: 32px 0;
+            align-items: center;
+        }
+
+        .dist-step {
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            padding: 16px;
+            text-align: center;
+        }
+
+        .step-number {
+            display: inline-block;
+            width: 40px;
+            height: 40px;
+            background: var(--kafka);
+            color: #fff;
+            border-radius: 50%;
+            line-height: 40px;
+            font-weight: 700;
+            font-size: 18px;
+            margin-bottom: 8px;
+        }
+
+        .dist-step h4 {
+            margin-bottom: 8px;
+        }
+
+        .dist-step p {
+            font-size: 12px;
+            color: var(--text2);
+        }
+
+        .dist-arrow {
+            text-align: center;
+            font-size: 18px;
+            color: var(--kafka);
+            font-weight: 700;
+        }
+
+        .ordering-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 24px;
+            margin: 32px 0;
+        }
+
+        .ordering-card {
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            padding: 24px;
+            text-align: center;
+        }
+
+        .ordering-icon {
+            font-size: 32px;
+            margin-bottom: 12px;
+        }
+
+        .offset-concepts {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin: 24px 0;
+        }
+
+        .offset-concept {
+            background: var(--surface2);
+            border-left: 4px solid var(--kafka);
+            padding: 16px;
+            border-radius: var(--radius);
+        }
+
+        .offset-concept h4 {
+            margin-bottom: 8px;
+            color: var(--kafka);
+        }
+
+        .offset-concept p {
+            font-size: 13px;
+            color: var(--text2);
+        }
+
+        .offset-strategies {
+            margin-top: 32px;
+        }
+
+        .strategy-card {
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            padding: 20px;
+            margin-bottom: 16px;
+        }
+
+        .strategy-card h4 {
+            margin-bottom: 8px;
+            color: var(--kafka);
+        }
+
+        .strategy-card p {
+            font-size: 13px;
+            margin-bottom: 12px;
+        }
+
+        .strategy-pros-cons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        .pros,
+        .cons {
+            font-size: 12px;
+            padding: 8px;
+            border-radius: var(--radius);
+        }
+
+        .pros {
+            background: rgba(16,185,129,0.1);
+            color: #10b981;
+        }
+
+        .cons {
+            background: rgba(239,68,68,0.1);
+            color: #ef4444;
+        }
+
+        .scaling-box {
+            background: rgba(0,168,232,0.05);
+            border: 1px solid var(--kafka);
+            border-radius: var(--radius-lg);
+            padding: 20px;
+            margin-top: 24px;
+        }
+
+        .scaling-box h3 {
+            margin-bottom: 12px;
+        }
+
+        .scaling-box ul {
+            margin-left: 20px;
+        }
+
+        .scaling-box li {
+            margin-bottom: 8px;
+            font-size: 13px;
+        }
+
+        .rebalance-timeline {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+            margin: 32px 0;
+            align-items: center;
+        }
+
+        .timeline-state {
+            background: var(--surface2);
+            border: 2px solid var(--kafka);
+            border-radius: var(--radius-lg);
+            padding: 20px;
+            text-align: center;
+        }
+
+        .state-label {
+            display: block;
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--kafka);
+            margin-bottom: 12px;
+        }
+
+        .state-content {
+            font-size: 12px;
+            color: var(--text2);
+        }
+
+        .consumer-assign {
+            background: rgba(139,92,246,0.2);
+            border: 1px solid #8b5cf6;
+            border-radius: var(--radius);
+            padding: 8px;
+            margin-bottom: 6px;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .timeline-arrow {
+            text-align: center;
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--accent);
+        }
+
+        .explanation-box {
+            background: rgba(0,168,232,0.05);
+            border-left: 4px solid var(--kafka);
+            border-radius: var(--radius-lg);
+            padding: 20px;
+            margin-top: 24px;
+        }
+
+        .explanation-box h4 {
+            margin-bottom: 12px;
+            color: var(--kafka);
+        }
+
+        .explanation-box ul {
+            margin-left: 20px;
+        }
+
+        .explanation-box li {
+            margin-bottom: 8px;
+            font-size: 13px;
+            color: var(--text2);
+        }
+
+        .concept-box {
+            background: rgba(0,168,232,0.05);
+            border-left: 4px solid var(--kafka);
+            border-radius: var(--radius-lg);
+            padding: 24px;
+            display: flex;
+            gap: 16px;
+            margin: 24px 0;
+        }
+
+        .concept-icon {
+            font-size: 32px;
+            min-width: 40px;
+        }
+
+        .concept-content h3 {
+            margin-bottom: 8px;
+        }
+
+        .concept-content p {
+            font-size: 14px;
+            color: var(--text2);
+            line-height: 1.6;
+        }
+
+        .intro-text {
+            font-size: 16px;
+            color: var(--text2);
+            margin-bottom: 24px;
+            line-height: 1.7;
+        }
+
+        @media (max-width: 768px) {
+            .distribution-steps {
+                grid-template-columns: 1fr;
+            }
+
+            .dist-arrow {
+                transform: rotate(90deg);
+            }
+
+            .rebalance-timeline {
+                grid-template-columns: 1fr;
+            }
+
+            .timeline-arrow {
+                transform: rotate(90deg);
+            }
+        }
+    </style>
+
+</body>
+
+</html>

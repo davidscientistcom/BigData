@@ -1,0 +1,703 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ejemplos Prácticos de Kafka</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js"></script>
+</head>
+
+<body>
+
+    <!-- NAVBAR -->
+    <nav class="navbar" id="navbar">
+        <div class="nav-inner">
+            <div class="nav-brand">
+                <span class="brand-icon">📨</span>
+                <span class="brand-text">Kafka Bootcamp</span>
+            </div>
+            <ul class="nav-links">
+                <li><a href="index.html">Inicio</a></li>
+                <li><a href="conceptos.html">Conceptos</a></li>
+                <li><a href="arquitectura.html">Arquitectura</a></li>
+                <li><a href="topics-particiones.html">Topics & Particiones</a></li>
+                <li><a href="productor-consumidor.html">Productor/Consumidor</a></li>
+                <li><a href="ejemplos-practicos.html" class="active">Ejemplos Prácticos</a></li>
+                <li><a href="docker-compose.html">Docker Compose</a></li>
+            </ul>
+            <button class="nav-mobile-btn" id="navToggle">☰</button>
+        </div>
+    </nav>
+
+    <!-- PAGE HEADER -->
+    <div class="page-header">
+        <div class="container">
+            <h1>Ejemplos Prácticos</h1>
+            <p>De lo simple a lo complejo: código que funciona</p>
+        </div>
+    </div>
+
+    <!-- SECTION: EJEMPLO 1 -->
+    <section class="section">
+        <div class="container">
+            <h2>Ejemplo 1: Hola Kafka 👋</h2>
+            <p class="intro-text">El ejemplo más simple: un productor envía 1 mensaje y un consumidor lo lee.</p>
+
+            <div class="example-box">
+                <h3>Productor Simple (Python)</h3>
+                <pre><code>#!/usr/bin/env python3
+from kafka import KafkaProducer
+import json
+
+# Conectar
+producer = KafkaProducer(
+    bootstrap_servers=['localhost:9092'],
+    value_serializer=lambda v: json.dumps(v).encode('utf-8')
+)
+
+# Enviar 1 mensaje
+event = {
+    'timestamp': '2024-01-15T10:30:00',
+    'user': 'alice',
+    'action': 'login'
+}
+
+future = producer.send('events', value=event)
+record_metadata = future.get(timeout=10)
+
+print(f"✅ Enviado a partition {record_metadata.partition} con offset {record_metadata.offset}")
+producer.close()
+</code></pre>
+            </div>
+
+            <div class="example-box">
+                <h3>Consumidor Simple (Python)</h3>
+                <pre><code>#!/usr/bin/env python3
+from kafka import KafkaConsumer
+import json
+
+# Conectar
+consumer = KafkaConsumer(
+    'events',
+    bootstrap_servers=['localhost:9092'],
+    auto_offset_reset='earliest',
+    value_deserializer=lambda m: json.loads(m.decode('utf-8'))
+)
+
+# Leer mensajes
+for message in consumer:
+    print(f"📨 Evento: {message.value}")
+    print(f"Offset: {message.offset}")
+</code></pre>
+            </div>
+
+            <div class="info-box">
+                <strong>Cómo ejecutar:</strong>
+                <ol style="margin-top: 8px; margin-left: 20px;">
+                    <li>Levanta Kafka con Docker (ver sección Docker Compose)</li>
+                    <li>Terminal 1: <code>python productor.py</code></li>
+                    <li>Terminal 2: <code>python consumidor.py</code></li>
+                    <li>Debería ver el evento en terminal 2</li>
+                </ol>
+            </div>
+        </div>
+    </section>
+
+    <!-- SECTION: EJEMPLO 2 -->
+    <section class="section bg-alt">
+        <div class="container">
+            <h2>Ejemplo 2: Múltiples Mensajes en Bucle 🔄</h2>
+            <p class="intro-text">El productor envía mensajes continuamente. El consumidor sigue leyendo.</p>
+
+            <div class="example-box">
+                <h3>Productor Continuo (Python)</h3>
+                <pre><code>#!/usr/bin/env python3
+from kafka import KafkaProducer
+import json
+import time
+import random
+
+producer = KafkaProducer(
+    bootstrap_servers=['localhost:9092'],
+    value_serializer=lambda v: json.dumps(v).encode('utf-8'),
+    acks='all',  # Esperar confirmación
+    retries=3
+)
+
+users = ['alice', 'bob', 'charlie', 'david']
+actions = ['login', 'purchase', 'logout', 'view_product']
+
+for i in range(100):  # Enviar 100 mensajes
+    event = {
+        'id': i,
+        'user': random.choice(users),
+        'action': random.choice(actions),
+        'timestamp': time.time()
+    }
+    
+    producer.send('events', 
+                  key=event['user'].encode(),  # Key = user (para particionamiento)
+                  value=event)
+    
+    print(f"📤 Enviado evento {i}: {event['user']} → {event['action']}")
+    time.sleep(1)
+
+producer.flush()
+producer.close()
+</code></pre>
+            </div>
+
+            <div class="example-box">
+                <h3>Consumidor Continuo (Python)</h3>
+                <pre><code>#!/usr/bin/env python3
+from kafka import KafkaConsumer
+import json
+
+consumer = KafkaConsumer(
+    'events',
+    bootstrap_servers=['localhost:9092'],
+    group_id='analytics-group',
+    auto_offset_reset='earliest',
+    value_deserializer=lambda m: json.loads(m.decode('utf-8')),
+    enable_auto_commit=True,
+    auto_commit_interval_ms=5000
+)
+
+print("Escuchando eventos...")
+count = 0
+
+for message in consumer:
+    count += 1
+    event = message.value
+    print(f"[{count}] 📨 {event['user']} → {event['action']} "
+          f"(offset: {message.offset}, partition: {message.partition})")
+</code></pre>
+            </div>
+
+            <div class="take-alook">
+                <strong>🔍 Observa:</strong>
+                <ul>
+                    <li><code>key=event['user'].encode()</code> → Todos los eventos del mismo usuario van a la misma partición</li>
+                    <li><code>acks='all'</code> → El productor espera confirmación. Más seguro.</li>
+                    <li><code>enable_auto_commit=True</code> → El consumidor guarda automaticamente su offset</li>
+                </ul>
+            </div>
+        </div>
+    </section>
+
+    <!-- SECTION: EJEMPLO 3 -->
+    <section class="section">
+        <div class="container">
+            <h2>Ejemplo 3: Múltiples Consumidores (Paralelismo) 🚀</h2>
+            <p class="intro-text">3 consumidores procesando el MISMO topic en paralelo. Kafka distribuye particiones automáticamente.</p>
+
+            <div class="concept-box">
+                <div class="concept-icon">💡</div>
+                <div class="concept-content">
+                    <h3>Setup:</h3>
+                    <p>Asume que ya creaste el topic con al menos 3 particiones (haz esto primero):</p>
+                    <pre style="margin-top: 8px;"><code>kafka-topics --create --topic events \
+  --partitions 3 \
+  --replication-factor 1 \
+  --bootstrap-server localhost:9092</code></pre>
+                </div>
+            </div>
+
+            <div class="example-box">
+                <h3>Productor (igual al anterior) 📤</h3>
+                <p style="font-size: 12px; color: var(--text2);">Usa el mismo `productor.py` del ejemplo 2</p>
+            </div>
+
+            <div class="example-box">
+                <h3>Consumidor 1 (Python) 👤</h3>
+                <pre><code>#!/usr/bin/env python3
+from kafka import KafkaConsumer
+import json
+
+consumer = KafkaConsumer(
+    'events',
+    bootstrap_servers=['localhost:9092'],
+    group_id='analytics-group',  # MISMO grupo en los 3 consumidores
+    auto_offset_reset='earliest',
+    value_deserializer=lambda m: json.loads(m.decode('utf-8'))
+)
+
+import socket
+hostname = socket.gethostname()
+
+for message in consumer:
+    event = message.value
+    print(f"[Worker {hostname}] {event['user']} → {event['action']} "
+          f"(partition: {message.partition})")
+</code></pre>
+            </div>
+
+            <div class="example-box">
+                <h3>Ejecutar los 3 consumidores 🔀</h3>
+                <pre><code># Terminal 1
+python consumidor.py
+
+# Terminal 2
+python consumidor.py
+
+# Terminal 3
+python consumidor.py
+
+# Terminal 4: Productor
+python productor.py
+</code></pre>
+            </div>
+
+            <div class="take-alook">
+                <strong>🔍 Observa:</strong>
+                <ul>
+                    <li>Todos tienen el mismo <code>group_id='analytics-group'</code></li>
+                    <li>Kafka automáticamente asigna: Worker 1 → Partition 0, Worker 2 → Partition 1, Worker 3 → Partition 2</li>
+                    <li>Cada worker procesa su partición en paralelo 🔥</li>
+                    <li>Si 1 worker crashea, Kafka rebalanceo y reasigna particiones</li>
+                </ul>
+            </div>
+        </div>
+    </section>
+
+    <!-- SECTION: EJEMPLO 4 -->
+    <section class="section bg-alt">
+        <div class="container">
+            <h2>Ejemplo 4: Filtrado en Tiempo Real & Guardar en BD 💾</h2>
+            <p class="intro-text">Consumidor que procesa eventos, filtra, y guarda en SQLite.</p>
+
+            <div class="example-box">
+                <h3>Consumidor Inteligente (Python)</h3>
+                <pre><code>#!/usr/bin/env python3
+from kafka import KafkaConsumer
+import json
+import sqlite3
+
+# Conexión BD
+conn = sqlite3.connect('events.db')
+cursor = conn.cursor()
+
+# Crear tabla
+cursor.execute('''
+    CREATE TABLE IF NOT EXISTS purchases (
+        id INTEGER PRIMARY KEY,
+        user TEXT,
+        timestamp REAL,
+        action TEXT
+    )
+''')
+conn.commit()
+
+# Consumidor
+consumer = KafkaConsumer(
+    'events',
+    bootstrap_servers=['localhost:9092'],
+    group_id='db-group',
+    auto_offset_reset='earliest',
+    value_deserializer=lambda m: json.loads(m.decode('utf-8')),
+    enable_auto_commit=False  # Manual commit
+)
+
+for message in consumer:
+    event = message.value
+    
+    # Filtrar: solo guardar "purchase"
+    if event['action'] == 'purchase':
+        try:
+            cursor.execute(
+                'INSERT INTO purchases (user, timestamp, action) VALUES (?, ?, ?)',
+                (event['user'], event['timestamp'], event['action'])
+            )
+            conn.commit()
+            print(f"✅ Guardado: {event['user']} compró")
+            
+            # Commit offset SOLO después de guardar
+            consumer.commit()
+            
+        except Exception as e:
+            print(f"❌ Error: {e}")
+            conn.rollback()
+
+conn.close()
+</code></pre>
+            </div>
+
+            <div class="take-alook">
+                <strong>🔍 Observa:</strong>
+                <ul>
+                    <li><code>enable_auto_commit=False</code> → Control manual. Garantiza exactly-once</li>
+                    <li>Solo guardamos si action=='purchase'. Filtrado en tiempo real.</li>
+                    <li>Hacemos <code>consumer.commit()</code> DESPUÉS de guardar en BD</li>
+                    <li>Si crashea entre guardar y commit, se reinicia desde el mismo mensaje (idempotente)</li>
+                </ul>
+            </div>
+        </div>
+    </section>
+
+    <!-- SECTION: EJEMPLO 5 -->
+    <section class="section">
+        <div class="container">
+            <h2>Ejemplo 5: Dead Letter Queue (Manejo de Errores) 💀</h2>
+            <p class="intro-text">Mensajes que fallan se envían a otro topic (DLQ).</p>
+
+            <div class="example-box">
+                <h3>Consumidor con DLQ (Python)</h3>
+                <pre><code>#!/usr/bin/env python3
+from kafka import KafkaConsumer, KafkaProducer
+import json
+
+# Productor para DLQ
+dlq_producer = KafkaProducer(
+    bootstrap_servers=['localhost:9092'],
+    value_serializer=lambda v: json.dumps(v).encode('utf-8')
+)
+
+# Consumidor
+consumer = KafkaConsumer(
+    'events',
+    bootstrap_servers=['localhost:9092'],
+    group_id='dlq-group',
+    auto_offset_reset='earliest',
+    value_deserializer=lambda m: json.loads(m.decode('utf-8'))
+)
+
+for message in consumer:
+    event = message.value
+    
+    try:
+        # Intentar procesar
+        if 'user' not in event:
+            raise ValueError("Missing 'user' field")
+        
+        # Procesar...
+        print(f"✅ Procesado: {event}")
+        
+    except Exception as e:
+        # Enviar a DLQ
+        error_event = {
+            'original_event': event,
+            'error': str(e),
+            'timestamp': message.timestamp,
+            'partition': message.partition,
+            'offset': message.offset
+        }
+        
+        dlq_producer.send('events-dlq', value=error_event)
+        print(f"❌ Erro en evento {message.offset}, enviado a DLQ")
+
+dlq_producer.close()
+</code></pre>
+            </div>
+
+            <div class="take-alook">
+                <strong>🔍 Usabilidad:</strong>
+                <ul>
+                    <li>Crea 2 topics: <code>events</code> y <code>events-dlq</code></li>
+                    <li>Si un evento falla, se envía a <code>events-dlq</code> con metadata del error</li>
+                    <li>Posteriormente, analiza DLQ para debugging 🐛</li>
+                </ul>
+            </div>
+        </div>
+    </section>
+
+    <!-- SECTION: COMPARISON -->
+    <section class="section bg-alt">
+        <div class="container">
+            <h2>Comparación de Ejemplos 📊</h2>
+
+            <table class="examples-table">
+                <thead>
+                    <tr>
+                        <th>Ejemplo</th>
+                        <th>Complejidad</th>
+                        <th>Caso de Uso</th>
+                        <th>Garantías</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>1: Hola Kafka</strong></td>
+                        <td>⭐ Básico</td>
+                        <td>Learning, PoC</td>
+                        <td>At-most-once</td>
+                    </tr>
+                    <tr>
+                        <td><strong>2: Múltiples</strong></td>
+                        <td>⭐⭐ Simple</td>
+                        <td>Logs, telemetría</td>
+                        <td>At-least-once</td>
+                    </tr>
+                    <tr>
+                        <td><strong>3: Paralelismo</strong></td>
+                        <td>⭐⭐⭐ Medio</td>
+                        <td>Procesamiento escalado</td>
+                        <td>At-least-once</td>
+                    </tr>
+                    <tr>
+                        <td><strong>4: BD + Filtrado</strong></td>
+                        <td>⭐⭐⭐⭐ Avanzado</td>
+                        <td>ETL, warehouse</td>
+                        <td>Exactly-once</td>
+                    </tr>
+                    <tr>
+                        <td><strong>5: DLQ</strong></td>
+                        <td>⭐⭐⭐⭐ Avanzado</td>
+                        <td>Producción, resiliencia</td>
+                        <td>Exactly-once + recovery</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <!-- NEXT -->
+    <section class="section">
+        <div class="container" style="text-align: center;">
+            <h2>¿Listo para Docker Compose?</h2>
+            <p style="font-size: 18px; color: var(--text2); margin-bottom: 32px;">
+                Levanta un cluster de Kafka en tu máquina local. Todo configurado. Ya.
+            </p>
+            <a href="docker-compose.html" class="btn btn-kafka">Docker Compose →</a>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <p>📚 Apuntes de Apache Kafka para Big Data · Curso de Sistemas de Big Data</p>
+    </footer>
+
+    <script>
+        mermaid.initialize({ startOnLoad: true, theme: 'dark' });
+
+        gsap.registerPlugin(ScrollTrigger);
+
+        // Navbar
+        const navbar = document.getElementById('navbar');
+        window.addEventListener('scroll', () => {
+            if (window.scrollY > 50) {
+                navbar.classList.add('scrolled');
+            } else {
+                navbar.classList.remove('scrolled');
+            }
+        });
+
+        const navToggle = document.getElementById('navToggle');
+        const navLinks = document.querySelector('.nav-links');
+        navToggle?.addEventListener('click', () => {
+            navLinks.classList.toggle('active');
+        });
+
+        // Animate on scroll
+        gsap.utils.toArray('.example-box').forEach((box) => {
+            gsap.from(box, {
+                scrollTrigger: {
+                    trigger: box,
+                    start: 'top 85%',
+                },
+                duration: 0.8,
+                opacity: 0,
+                y: 30,
+            });
+        });
+    </script>
+
+    <style>
+        .page-header {
+            padding: 60px 24px;
+            background: linear-gradient(135deg, rgba(0,168,232,0.1), rgba(16,185,129,0.05));
+            border-bottom: 2px solid var(--kafka);
+            text-align: center;
+            margin-top: 60px;
+        }
+
+        .page-header h1 {
+            font-size: 42px;
+            font-weight: 800;
+            margin-bottom: 8px;
+        }
+
+        .page-header p {
+            font-size: 18px;
+            color: var(--text2);
+        }
+
+        .intro-text {
+            font-size: 16px;
+            color: var(--text2);
+            margin-bottom: 24px;
+            line-height: 1.7;
+        }
+
+        .example-box {
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            padding: 24px;
+            margin-bottom: 24px;
+        }
+
+        .example-box h3 {
+            margin-bottom: 16px;
+            color: var(--kafka);
+        }
+
+        .example-box p {
+            font-size: 12px;
+            color: var(--text2);
+            margin-bottom: 12px;
+        }
+
+        pre {
+            background: rgba(10,15,30,0.5);
+            border: 1px solid var(--border);
+            padding: 16px;
+            border-radius: var(--radius);
+            overflow-x: auto;
+            margin: 16px 0;
+        }
+
+        code {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+            color: #c9d1d9;
+            line-height: 1.5;
+        }
+
+        .info-box {
+            background: rgba(0,168,232,0.05);
+            border: 1px solid var(--kafka);
+            border-radius: var(--radius-lg);
+            padding: 20px;
+            margin: 24px 0;
+        }
+
+        .info-box strong {
+            color: var(--kafka);
+        }
+
+        .info-box ol {
+            margin-top: 12px;
+            margin-left: 20px;
+        }
+
+        .info-box li {
+            margin-bottom: 8px;
+            font-size: 13px;
+            color: var(--text2);
+        }
+
+        .take-alook {
+            background: rgba(245,158,11,0.05);
+            border-left: 4px solid var(--accent);
+            border-radius: var(--radius-lg);
+            padding: 20px;
+            margin-top: 24px;
+        }
+
+        .take-alook strong {
+            color: var(--accent);
+        }
+
+        .take-alook ul {
+            margin-top: 12px;
+            margin-left: 20px;
+        }
+
+        .take-alook li {
+            margin-bottom: 8px;
+            font-size: 13px;
+            color: var(--text2);
+        }
+
+        .concept-box {
+            background: rgba(0,168,232,0.05);
+            border-left: 4px solid var(--kafka);
+            border-radius: var(--radius-lg);
+            padding: 24px;
+            display: flex;
+            gap: 16px;
+            margin: 24px 0;
+        }
+
+        .concept-icon {
+            font-size: 32px;
+            min-width: 40px;
+        }
+
+        .concept-content h3 {
+            margin-bottom: 8px;
+        }
+
+        .concept-content p {
+            font-size: 14px;
+            color: var(--text2);
+            line-height: 1.6;
+        }
+
+        .examples-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            overflow: hidden;
+            margin: 24px 0;
+        }
+
+        .examples-table thead {
+            background: rgba(0,168,232,0.2);
+        }
+
+        .examples-table th {
+            padding: 16px;
+            text-align: left;
+            font-weight: 600;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .examples-table td {
+            padding: 16px;
+            border-bottom: 1px solid var(--border);
+            font-size: 13px;
+        }
+
+        .examples-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .examples-table tr:hover {
+            background: rgba(0,168,232,0.05);
+        }
+
+        @media (max-width: 768px) {
+            .page-header h1 {
+                font-size: 32px;
+            }
+
+            pre {
+                font-size: 11px;
+                padding: 12px;
+            }
+
+            .examples-table {
+                font-size: 11px;
+            }
+
+            .examples-table th,
+            .examples-table td {
+                padding: 8px;
+            }
+        }
+    </style>
+
+</body>
+
+</html>

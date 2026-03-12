@@ -1,0 +1,728 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Productores y Consumidores de Kafka</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js"></script>
+</head>
+
+<body>
+
+    <!-- NAVBAR -->
+    <nav class="navbar" id="navbar">
+        <div class="nav-inner">
+            <div class="nav-brand">
+                <span class="brand-icon">📨</span>
+                <span class="brand-text">Kafka Bootcamp</span>
+            </div>
+            <ul class="nav-links">
+                <li><a href="index.html">Inicio</a></li>
+                <li><a href="conceptos.html">Conceptos</a></li>
+                <li><a href="arquitectura.html">Arquitectura</a></li>
+                <li><a href="topics-particiones.html">Topics & Particiones</a></li>
+                <li><a href="productor-consumidor.html" class="active">Productor/Consumidor</a></li>
+                <li><a href="ejemplos-practicos.html">Ejemplos Prácticos</a></li>
+                <li><a href="docker-compose.html">Docker Compose</a></li>
+            </ul>
+            <button class="nav-mobile-btn" id="navToggle">☰</button>
+        </div>
+    </nav>
+
+    <!-- PAGE HEADER -->
+    <div class="page-header">
+        <div class="container">
+            <h1>Productores y Consumidores</h1>
+            <p>Cómo publicar y leer mensajes en Kafka</p>
+        </div>
+    </div>
+
+    <!-- SECTION: PRODUCERS -->
+    <section class="section">
+        <div class="container">
+            <h2>📤 Productores: Publicar Mensajes</h2>
+
+            <p class="intro-text">
+                Un <span class="highlight">productor</span> es tu aplicación que <strong>envía mensajes</strong> a Kafka.
+                Puede ser un servidor web, un sensor IoT, un job de batch, lo que sea.
+            </p>
+
+            <div class="concept-box">
+                <div class="concept-icon">📤</div>
+                <div class="concept-content">
+                    <h3>Estructura de un Mensaje</h3>
+                    <p>Cada mensaje tiene:</p>
+                    <ul style="margin-top: 8px; margin-left: 20px;">
+                        <li><strong>Topic:</strong> Dónde va (ej: "compras")</li>
+                        <li><strong>Key (opcional):</strong> Para particionamiento (ej: user_id)</li>
+                        <li><strong>Value:</strong> Los datos (JSON, Avro, bytes, etc)</li>
+                        <li><strong>Headers (opcional):</strong> Metadata (timestamps, trace_id, etc)</li>
+                        <li><strong>Timestamp:</strong> Automático, generado por Kafka</li>
+                    </ul>
+                </div>
+            </div>
+
+            <h3 style="margin-top: 32px; margin-bottom: 24px;">Código del Productor (Python)</h3>
+            <pre><code># Básico
+from kafka import KafkaProducer
+import json
+
+producer = KafkaProducer(
+    bootstrap_servers=['localhost:9092'],
+    value_serializer=lambda v: json.dumps(v).encode('utf-8')
+)
+
+# Enviar mensaje
+future = producer.send('compras', value={
+    'user_id': 'user123',
+    'amount': 99.99,
+    'product': 'Laptop'
+})
+
+# Esperar confirmación
+try:
+    record_metadata = future.get(timeout=10)
+    print(f"Enviado a partition {record_metadata.partition} "
+          f"con offset {record_metadata.offset}")
+except Exception as e:
+    print(f"Error: {e}")
+</code></pre>
+
+            <div class="feature-boxes">
+                <div class="feature-box">
+                    <h4>🎯 Send Async</h4>
+                    <p>El productor envía y continúa sin esperar. Más rápido pero menos seguro.</p>
+                </div>
+                <div class="feature-box">
+                    <h4>⏱️ Send Sync</h4>
+                    <p>El productor espera confirmación. Más lento pero garantiza que llegó.</p>
+                </div>
+                <div class="feature-box">
+                    <h4>🔄 Send con Callback</h4>
+                    <p>El productor envía y llama una función cuando llega el ACK.</p>
+                </div>
+            </div>
+
+            <h3 style="margin-top: 32px; margin-bottom: 24px;">Configuración Importante del Productor</h3>
+
+            <div class="config-table">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Parámetro</th>
+                            <th>Efecto</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><code>acks</code></td>
+                            <td>0, 1, o "all" - Cuándo considerar el mensaje entregado</td>
+                        </tr>
+                        <tr>
+                            <td><code>retries</code></td>
+                            <td>Cuántas veces reintentar si falla</td>
+                        </tr>
+                        <tr>
+                            <td><code>batch.size</code></td>
+                            <td>Número de bytes para agrupar mensajes (optimiza throughput)</td>
+                        </tr>
+                        <tr>
+                            <td><code>linger.ms</code></td>
+                            <td>Esperar X ms antes de enviar un batch</td>
+                        </tr>
+                        <tr>
+                            <td><code>compression.type</code></td>
+                            <td>snappy, gzip, lz4 - Comprimir antes de enviar</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="concept-box">
+                <div class="concept-icon">💡</div>
+                <div class="concept-content">
+                    <h3>Throughput vs Latencia</h3>
+                    <p><strong>Mayor batch.size + linger.ms:</strong> Agrupa más mensajes, viaja menos veces a Kafka,
+                        pero cada mensaje tarda más en salir (mayor latencia).</p>
+                    <p><strong>Menor batch.size + linger.ms:</strong> Cada mensaje sale rápido,
+                        pero más viajes a Kafka (menor throughput).</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- SECTION: CONSUMERS -->
+    <section class="section bg-alt">
+        <div class="container">
+            <h2>📥 Consumidores: Leer Mensajes</h2>
+
+            <p class="intro-text">
+                Un <span class="highlight">consumidor</span> es tu aplicación que <strong>lee mensajes</strong> de Kafka.
+                Puede procesar, guardar, transformar, lo que necesites.
+            </p>
+
+            <h3 style="margin-bottom: 24px;">Código del Consumidor (Python)</h3>
+            <pre><code>from kafka import KafkaConsumer
+import json
+
+# Crear consumidor
+consumer = KafkaConsumer(
+    'compras',  # Topic
+    bootstrap_servers=['localhost:9092'],
+    group_id='analytics-group',  # ID del grupo
+    auto_offset_reset='earliest',  # Empezar desde el inicio
+    value_deserializer=lambda m: json.loads(m.decode('utf-8'))
+)
+
+# Leer mensajes
+for message in consumer:
+    print(f"Leído: {message.value}")
+    print(f"Topic: {message.topic}")
+    print(f"Partición: {message.partition}")
+    print(f"Offset: {message.offset}")
+    
+    # Procesar...
+    process(message.value)
+    
+    # Commit (guardar offset)
+    consumer.commit()
+</code></pre>
+
+            <div class="feature-boxes">
+                <div class="feature-box">
+                    <h4>👥 Grupo de Consumo</h4>
+                    <p>Todos los consumidores con el mismo group_id forman un grupo.
+                        Kafka automáticamente distribuye particiones entre ellos.</p>
+                </div>
+                <div class="feature-box">
+                    <h4>📍 Auto-Offset</h4>
+                    <p><code>auto_offset_reset</code> define qué pasa si no hay offset guardado:
+                        "earliest" (desde el inicio) o "latest" (solo nuevos).</p>
+                </div>
+                <div class="feature-box">
+                    <h4>🔄 Polling</h4>
+                    <p>El consumidor hace polling (pregunta) a Kafka periódicamente.
+                        Por defecto cada 100ms. Configurable con <code>heartbeat.interval.ms</code>.</p>
+                </div>
+            </div>
+
+            <h3 style="margin-top: 32px; margin-bottom: 24px;">Ciclo de Vida del Consumidor</h3>
+
+            <div class="mermaid-container">
+                <div class="mermaid">
+                    graph TB
+                        A["1. Consumer Inicia<br/>Se conecta a Kafka"]
+                        B["2. Subscribe<br/>Se suscribe a topic(s)"]
+                        C["3. Join Group<br/>Se une al grupo de consumidores"]
+                        D["4. Rebalance<br/>Kafka asigna particiones"]
+                        E["5. Poll Loop<br/>Lee mensajes en bucle"]
+                        F["6. Commit Offset<br/>Guarda progreso"]
+                        G["7. Rebalance<br/>Si otro consumer crashea"]
+                        
+                        A --> B
+                        B --> C
+                        C --> D
+                        D --> E
+                        E --> F
+                        F -->|"Loop"| E
+                        F -.->|"Si crash"| G
+                        G --> D
+                        
+                        style A fill:#4ecdc4,stroke:#3ba89e,stroke-width:2px,color:#fff
+                        style B fill:#4ecdc4,stroke:#3ba89e,stroke-width:2px,color:#fff
+                        style C fill:#4ecdc4,stroke:#3ba89e,stroke-width:2px,color:#fff
+                        style D fill:#ff6b6b,stroke:#cc5555,stroke-width:2px,color:#fff
+                        style E fill:#00a8e8,stroke:#0080b8,stroke-width:2px,color:#fff
+                        style F fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+                        style G fill:#ff6b6b,stroke:#cc5555,stroke-width:2px,color:#fff
+                </div>
+            </div>
+
+            <h3 style="margin-top: 32px; margin-bottom: 24px;">Configuración Importante del Consumidor</h3>
+
+            <div class="config-table">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Parámetro</th>
+                            <th>Efecto</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><code>group_id</code></td>
+                            <td>Identificador del grupo de consumidores</td>
+                        </tr>
+                        <tr>
+                            <td><code>auto_offset_reset</code></td>
+                            <td>"earliest" o "latest" - Qué pasa sin offset</td>
+                        </tr>
+                        <tr>
+                            <td><code>max_poll_records</code></td>
+                            <td>Máximo de mensajes por poll (default: 500)</td>
+                        </tr>
+                        <tr>
+                            <td><code>session.timeout.ms</code></td>
+                            <td>Si no responde en X ms, se considera muerto (default: 10s)</td>
+                        </tr>
+                        <tr>
+                            <td><code>enable_auto_commit</code></td>
+                            <td>Auto-commit de offset (default: true)</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+
+    <!-- SECTION: GUARANTEES -->
+    <section class="section">
+        <div class="container">
+            <h2>Garantías End-to-End</h2>
+
+            <p class="intro-text">
+                Combinar la configuración del productor y consumidor te da garantías globales:
+            </p>
+
+            <div class="guarantees-grid-large">
+                <div class="guarantee-card-large">
+                    <div class="gua-title">
+                        <span class="gua-icon">↕️</span>
+                        At-Most-Once
+                    </div>
+                    <hr style="opacity: 0.2; margin: 12px 0;">
+                    <p><strong>Productor:</strong> <code>acks=0</code></p>
+                    <p><strong>Consumidor:</strong> Auto-commit inmediato</p>
+                    <p style="margin-top: 12px; font-size: 12px; color: var(--danger);">
+                        ⚠️ RIESGO: Se pierden mensajes si algo falla
+                    </p>
+                    <p style="font-size: 12px; color: var(--text3); margin-top: 8px;">
+                        📍 Caso: Logs, telemetría no crítica
+                    </p>
+                </div>
+
+                <div class="guarantee-card-large">
+                    <div class="gua-title">
+                        <span class="gua-icon">✅</span>
+                        At-Least-Once
+                    </div>
+                    <hr style="opacity: 0.2; margin: 12px 0;">
+                    <p><strong>Productor:</strong> <code>acks=1 o all</code> + retries</p>
+                    <p><strong>Consumidor:</strong> Commit DESPUÉS de procesar</p>
+                    <p style="margin-top: 12px; font-size: 12px; color: var(--accent);">
+                        ⚠️ RIESGO: Se pueden duplicar mensajes
+                    </p>
+                    <p style="font-size: 12px; color: var(--text3); margin-top: 8px;">
+                        📍 Caso: Mayoría de usar (de-duplicate en tu lógica)
+                    </p>
+                </div>
+
+                <div class="guarantee-card-large">
+                    <div class="gua-title">
+                        <span class="gua-icon">💎</span>
+                        Exactly-Once
+                    </div>
+                    <hr style="opacity: 0.2; margin: 12px 0;">
+                    <p><strong>Productor:</strong> <code>acks=all</code> + idempotent=true</p>
+                    <p><strong>Consumidor:</strong> Transacciones atómicas (process + commit)</p>
+                    <p style="margin-top: 12px; font-size: 12px; color: var(--secondary);">
+                        ✅ SEGURO: Garantía total
+                    </p>
+                    <p style="font-size: 12px; color: var(--text3); margin-top: 8px;">
+                        📍 Caso: Finanzas, crítico
+                    </p>
+                </div>
+            </div>
+
+            <div class="concept-box" style="margin-top: 32px;">
+                <div class="concept-icon">🔧</div>
+                <div class="concept-content">
+                    <h3>Exactly-Once: Cómo Funciona</h3>
+                    <p>Kafka 0.11+ soporta transacciones atómicas:</p>
+                    <ol style="margin-top: 8px; margin-left: 20px;">
+                        <li>Productor envía con <code>enable.idempotence=true</code> (evita duplicados)</li>
+                        <li>Consumidor procesa Y commita atomicamente (todo o nada)</li>
+                        <li>Si crashea entre ambos, se reinicia desde antes de procesar</li>
+                        <li>Resultado: 0 duplicados, 0 pérdidas</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- SECTION: CONSUMER PATTERNS -->
+    <section class="section bg-alt">
+        <div class="container">
+            <h2>Patrones de Consumo</h2>
+
+            <h3 style="margin-bottom: 24px;">1️⃣ Patrón: Un Consumidor, Un Topic</h3>
+            <div class="pattern-box">
+                <p style="margin-bottom: 12px;">Caso simple: 1 aplicación lee completamente un topic.</p>
+                <canvas id="pattern1Canvas" width="800" height="150"></canvas>
+            </div>
+
+            <h3 style="margin: 32px 0 24px;">2️⃣ Patrón: Consumer Group</h3>
+            <div class="pattern-box">
+                <p style="margin-bottom: 12px;">3 instancias de la misma app, cada una procesa 1 partición en paralelo.</p>
+                <canvas id="pattern2Canvas" width="800" height="180"></canvas>
+            </div>
+
+            <h3 style="margin: 32px 0 24px;">3️⃣ Patrón: Fan-Out (Múltiples Consumidores)</h3>
+            <div class="pattern-box">
+                <p style="margin-bottom: 12px;">Varios grupos de consumo leyendo el MISMO topic.</p>
+                <div class="mermaid-container">
+                    <div class="mermaid">
+                        graph LR
+                            T["📨 Topic<br/>eventos"]
+                            
+                            G1["Group 1: Analytics<br/>user_id: 'analytics'"]
+                            G2["Group 2: Notificaciones<br/>group_id: 'notifications'"]
+                            G3["Group 3: Warehouse<br/>group_id: 'warehouse'"]
+                            
+                            C1["Consumer 1"]
+                            C2["Consumer 2"]
+                            C3["Consumer 3"]
+                            
+                            T --> G1
+                            T --> G2
+                            T --> G3
+                            
+                            G1 --> C1
+                            G2 --> C2
+                            G3 --> C3
+                            
+                            style T fill:#00a8e8,stroke:#0080b8,stroke-width:3px,color:#fff
+                            style G1 fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+                            style G2 fill:#f59e0b,stroke:#d97706,stroke-width:2px,color:#fff
+                            style G3 fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+                    </div>
+                </div>
+                <p style="margin-top: 16px; font-size: 12px; color: var(--text2);">
+                    Cada grupo mantiene su propio offset. Perfecto para arquitecturas de eventos.
+                </p>
+            </div>
+
+            <h3 style="margin: 32px 0 24px;">4️⃣ Patrón: Seek (Replay)</h3>
+            <div class="pattern-box">
+                <p style="margin-bottom: 12px;">Volver atrás en el log para reprocess.</p>
+                <pre><code># Ir al offset 100
+consumer.seek(partition, 100)
+
+# Ir al inicio
+consumer.seek(partition, 0)
+
+# Ir a hace 1 hora
+timestamp_1h_ago = int(time.time() * 1000) - (3600 * 1000)
+offset = consumer.offsets_for_times({partition: timestamp_1h_ago})
+consumer.seek(partition, offset[partition].offset)
+</code></pre>
+            </div>
+        </div>
+    </section>
+
+    <!-- NEXT -->
+    <section class="section">
+        <div class="container" style="text-align: center;">
+            <h2>¿Listo para Ejemplos Prácticos?</h2>
+            <p style="font-size: 18px; color: var(--text2); margin-bottom: 32px;">
+                Ahora que sabes cómo producir y consumir, veremos ejemplos reales: de simple a complejo.
+            </p>
+            <a href="ejemplos-practicos.html" class="btn btn-kafka">Ejemplos Prácticos →</a>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <p>📚 Apuntes de Apache Kafka para Big Data · Curso de Sistemas de Big Data</p>
+    </footer>
+
+    <script>
+        mermaid.initialize({ startOnLoad: true, theme: 'dark' });
+        mermaid.contentLoaded();
+
+        gsap.registerPlugin(ScrollTrigger);
+
+        // Pattern 1 visualization
+        const pattern1Canvas = document.getElementById('pattern1Canvas');
+        if (pattern1Canvas) {
+            const ctx = pattern1Canvas.getContext('2d');
+            ctx.fillStyle = '#00a8e8';
+            ctx.fillRect(250, 20, 300, 60);
+            ctx.fillStyle = '#fff';
+            ctx.font = 'bold 14px Inter';
+            ctx.textAlign = 'center';
+            ctx.fillText('Topic: eventos', 400, 55);
+
+            ctx.fillStyle = '#8b5cf6';
+            ctx.fillRect(150, 100, 500, 40);
+            ctx.fillStyle = '#fff';
+            ctx.font = '12px Inter';
+            ctx.fillText('Single Consumer (group_id: app1)', 400, 125);
+        }
+
+        // Pattern 2 visualization
+        const pattern2Canvas = document.getElementById('pattern2Canvas');
+        if (pattern2Canvas) {
+            const ctx = pattern2Canvas.getContext('2d');
+
+            // Topic
+            ctx.fillStyle = '#00a8e8';
+            ctx.fillRect(250, 10, 300, 50);
+            ctx.fillStyle = '#fff';
+            ctx.font = 'bold 13px Inter';
+            ctx.textAlign = 'center';
+            ctx.fillText('Topic: 3 Particiones', 400, 40);
+
+            // Partitions
+            const colors = ['#10b981', '#f59e0b', '#8b5cf6'];
+            for (let i = 0; i < 3; i++) {
+                ctx.fillStyle = colors[i];
+                ctx.fillRect(120 + i * 160, 70, 140, 50);
+                ctx.fillStyle = '#fff';
+                ctx.font = 'bold 11px Inter';
+                ctx.fillText(`Partition ${i}`, 190 + i * 160, 105);
+            }
+
+            // Consumers
+            const consumerColors = ['#10b981', '#f59e0b', '#8b5cf6'];
+            for (let i = 0; i < 3; i++) {
+                ctx.fillStyle = consumerColors[i];
+                ctx.fillRect(120 + i * 160, 130, 140, 40);
+                ctx.fillStyle = '#fff';
+                ctx.font = 'bold 12px Inter';
+                ctx.textAlign = 'center';
+                ctx.fillText(`Consumer ${i + 1}`, 190 + i * 160, 160);
+            }
+
+            // Arrows
+            ctx.strokeStyle = '#94a3b8';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            for (let i = 0; i < 3; i++) {
+                ctx.moveTo(190 + i * 160, 120);
+                ctx.lineTo(190 + i * 160, 130);
+            }
+            ctx.stroke();
+        }
+
+        // Navbar
+        const navbar = document.getElementById('navbar');
+        window.addEventListener('scroll', () => {
+            if (window.scrollY > 50) {
+                navbar.classList.add('scrolled');
+            } else {
+                navbar.classList.remove('scrolled');
+            }
+        });
+
+        const navToggle = document.getElementById('navToggle');
+        const navLinks = document.querySelector('.nav-links');
+        navToggle?.addEventListener('click', () => {
+            navLinks.classList.toggle('active');
+        });
+    </script>
+
+    <style>
+        .page-header {
+            padding: 60px 24px;
+            background: linear-gradient(135deg, rgba(0,168,232,0.1), rgba(16,185,129,0.05));
+            border-bottom: 2px solid var(--kafka);
+            text-align: center;
+            margin-top: 60px;
+        }
+
+        .page-header h1 {
+            font-size: 42px;
+            font-weight: 800;
+            margin-bottom: 8px;
+        }
+
+        .page-header p {
+            font-size: 18px;
+            color: var(--text2);
+        }
+
+        .intro-text {
+            font-size: 16px;
+            color: var(--text2);
+            margin-bottom: 24px;
+            line-height: 1.7;
+        }
+
+        .concept-box {
+            background: rgba(0,168,232,0.05);
+            border-left: 4px solid var(--kafka);
+            border-radius: var(--radius-lg);
+            padding: 24px;
+            display: flex;
+            gap: 16px;
+            margin: 24px 0;
+        }
+
+        .concept-icon {
+            font-size: 32px;
+            min-width: 40px;
+        }
+
+        .concept-content h3 {
+            margin-bottom: 8px;
+        }
+
+        .concept-content p,
+        .concept-content ul {
+            font-size: 14px;
+            color: var(--text2);
+            line-height: 1.6;
+        }
+
+        .concept-content ol {
+            margin-left: 20px;
+            font-size: 14px;
+            color: var(--text2);
+        }
+
+        pre {
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            padding: 16px;
+            border-radius: var(--radius);
+            overflow-x: auto;
+            margin: 16px 0;
+        }
+
+        code {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 13px;
+            color: #c9d1d9;
+        }
+
+        .config-table {
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            overflow: hidden;
+            margin: 24px 0;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        thead {
+            background: rgba(0,168,232,0.2);
+        }
+
+        th {
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+            border-bottom: 1px solid var(--border);
+        }
+
+        td {
+            padding: 12px;
+            border-bottom: 1px solid var(--border);
+            font-size: 13px;
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        .feature-boxes {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin: 24px 0;
+        }
+
+        .feature-box {
+            background: var(--surface2);
+            border-left: 4px solid var(--kafka);
+            padding: 20px;
+            border-radius: var(--radius);
+        }
+
+        .feature-box h4 {
+            margin-bottom: 8px;
+            color: var(--kafka);
+        }
+
+        .feature-box p {
+            font-size: 13px;
+            color: var(--text2);
+            line-height: 1.6;
+        }
+
+        .guarantees-grid-large {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 24px;
+            margin: 32px 0;
+        }
+
+        .guarantee-card-large {
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            padding: 24px;
+        }
+
+        .gua-title {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-weight: 700;
+            font-size: 16px;
+            color: var(--kafka);
+        }
+
+        .gua-icon {
+            font-size: 24px;
+        }
+
+        .guarantee-card-large p {
+            font-size: 12px;
+            margin-bottom: 8px;
+            color: var(--text2);
+        }
+
+        .pattern-box {
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            padding: 20px;
+            margin-bottom: 16px;
+        }
+
+        .pattern-box canvas {
+            border-radius: var(--radius);
+        }
+
+        @media (max-width: 768px) {
+            .page-header h1 {
+                font-size: 32px;
+            }
+
+            .concept-box {
+                flex-direction: column;
+            }
+
+            .guarantees-grid-large {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+
+</body>
+
+</html>
