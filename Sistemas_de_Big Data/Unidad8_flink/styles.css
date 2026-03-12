@@ -637,3 +637,36 @@ td strong { color: var(--text); font-weight: 600; }
   .section { padding: 4rem 1.5rem; }
   .content { padding: 3rem 1.5rem; }
 }
+
+/* ===== SIDEBAR INDEX ===== */
+.sidebar-index {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 1.5rem;
+}
+.sidebar-index h4 {
+  margin-top: 0;
+  margin-bottom: 1rem;
+  font-size: 1.1rem;
+  color: var(--text);
+}
+.sidebar-index ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+.sidebar-index a {
+  text-decoration: none;
+  color: var(--text2);
+  font-size: 0.95rem;
+  transition: color 0.2s;
+  border-bottom: none;
+}
+.sidebar-index a:hover {
+  color: var(--primary-light);
+  border-bottom: none;
+}

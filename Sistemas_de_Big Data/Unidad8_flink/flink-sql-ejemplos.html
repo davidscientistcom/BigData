@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ejemplos Progresivos de Flink SQL — Apache Flink Bootcamp</title>
+    <meta name="description"
+        content="Ejemplos prácticos de Apache Flink SQL, desde consultas simples de filtrado hasta agrupaciones por ventanas de tiempo complejas (Tumbling, Hopping) y joins en tiempo real.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+    <!-- Prism.js for syntax highlighting -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet" />
+</head>
+
+<body>
+
+    <!-- NAVBAR -->
+    <nav class="navbar" id="navbar">
+        <div class="nav-inner">
+            <div class="nav-brand">
+                <span class="brand-icon">⚡</span>
+                <span class="brand-text">Flink Bootcamp</span>
+            </div>
+            <ul class="nav-links">
+                <li><a href="index.html">Inicio</a></li>
+                <li><a href="conceptos.html">Conceptos</a></li>
+                <li><a href="arquitectura.html">Arquitectura</a></li>
+                <li><a href="streams.html">Streams &amp; Batch</a></li>
+                <li><a href="operadores-visual.html">Operadores</a></li>
+                <li><a href="casos-uso.html">Casos de Uso</a></li>
+                <li><a href="pyflink.html">PyFlink</a></li>
+                <li><a href="flink-sql.html">Flink SQL</a></li>
+                <li><a href="flink-sql-ejemplos.html" class="active">Ejemplos SQL</a></li>
+                <li><a href="sql-vs-datastream.html">SQL vs DataStream</a></li>
+            </ul>
+            <button class="nav-mobile-btn" id="navToggle">☰</button>
+        </div>
+    </nav>
+
+    <!-- HEADER / HERO -->
+    <header class="section section-dark" style="padding-top: 8rem; padding-bottom: 4rem;">
+        <div class="container">
+            <div class="hero-badge">
+                <span class="badge-dot" style="background-color: var(--primary);"></span>
+                Hands-on: De 0 a 100
+            </div>
+            <h1 class="hero-title" style="font-size: 3rem; margin-bottom: 1rem;">
+                Ejemplos <span class="gradient-text">Progresivos</span>
+            </h1>
+            <p class="hero-desc" style="max-width: 800px; text-align: left; margin: 0;">
+                Aprende <strong>Flink SQL</strong> paso a paso. Desde un simple <code>SELECT</code> hasta ventanas de
+                tiempo complejas (Tumbling, Hopping) y Joins en streaming continuo usando SQL estándar.
+            </p>
+        </div>
+    </header>
+
+    <div class="content">
+
+            <div class="info-box info" style="margin-bottom: 2rem;">
+                <span class="info-box-icon">💡</span>
+                <div class="info-box-text">
+                    <strong>Contexto para todos los ejemplos:</strong> Imagina que tenemos un e-commerce y nos entra un
+                    flujo infinito de datos desde Kafka en formato JSON que representa "Clicks" de usuarios en la web.
+                </div>
+            </div>
+
+            <!-- NIVEL 0: Preparación -->
+            <section class="content-section reveal" id="nivel-0">
+                <h2>Nivel 0: Preparación (DDL)</h2>
+                <p>Antes de hacer consultas continuas, Flink necesita saber cómo conectarse a la fuente de datos (Kafka)
+                    y qué esquema tienen los datos. Esto se hace con un comando DDL (Data Definition Language) estándar.
+                </p>
+
+                <div class="code-header">
+                    <span class="code-lang">SQL</span>
+                    <button class="copy-btn">Copiar</button>
+                </div>
+                <pre><code class="language-sql">CREATE TABLE clicks_stream (
+  usuario_id INT,
+  pais STRING,
+  producto_id INT,
+  precio DECIMAL(10,2),
+  tiempo_evento TIMESTAMP(3),
+  WATERMARK FOR tiempo_evento AS tiempo_evento - INTERVAL '5' SECOND
+) WITH (
+  'connector' = 'kafka',
+  'topic' = 'web-clicks',
+  'properties.bootstrap.servers' = 'localhost:9092',
+  'format' = 'json'
+);</code></pre>
+                <p style="font-size: 0.9rem; margin-top: 0.5rem; color: #64748b;"><em>Con esto, Flink ya puede consumir
+                        el topic de Kafka como si fuera una tabla mágica infinita.</em></p>
+            </section>
+
+            <!-- NIVEL 1: Filtrado y Transformación Simple -->
+            <section class="content-section reveal" id="nivel-1">
+                <h2>Nivel 1: Filtrado y Transformación (Append Only)</h2>
+                <p>Las operaciones más básicas no requieren mantener "estado". Flink lee un evento, lo evalúa y lo emite
+                    (o lo descarta) instantáneamente. Esto genera un flujo <strong>Append-Only</strong> (Solo
+                    inserciones).</p>
+
+                <h3>Ejemplo: Quedarnos solo con clicks de España mayores a 50€</h3>
+                <div class="code-header">
+                    <span class="code-lang">SQL</span>
+                    <button class="copy-btn">Copiar</button>
+                </div>
+                <pre><code class="language-sql">SELECT 
+  usuario_id, 
+  producto_id, 
+  precio, 
+  tiempo_evento 
+FROM clicks_stream
+WHERE pais = 'ES' AND precio > 50.00;</code></pre>
+
+                <div class="info-box success" style="margin-top: 1rem;">
+                    <strong>Comportamiento en Streaming:</strong> Si entra un click de Francia, Flink no hace nada. Si
+                    entra uno de España de 60€, Flink emite una nueva fila inmediatamente como resultado. La tabla
+                    resultante solo crece.
+                </div>
+            </section>
+
+            <!-- NIVEL 2: Agrupación Continua Global -->
+            <section class="content-section reveal" id="nivel-2">
+                <h2>Nivel 2: Agrupación Continua (Retract Stream)</h2>
+                <p>Si introducimos un <code>GROUP BY</code>, Flink debe guardar el "estado" de esa agrupación en memoria
+                    y actualizarlo cada vez que llegue un evento nuevo.</p>
+
+                <h3>Ejemplo: Total de ingresos acumulados por país</h3>
+                <div class="code-header">
+                    <span class="code-lang">SQL</span>
+                    <button class="copy-btn">Copiar</button>
+                </div>
+                <pre><code class="language-sql">SELECT 
+  pais, 
+  COUNT(*) AS total_clicks,
+  SUM(precio) AS ingresos_totales
+FROM clicks_stream
+GROUP BY pais;</code></pre>
+
+                <div class="info-box warning" style="margin-top: 1rem;">
+                    <strong>Retract Stream (Actualizaciones):</strong>
+                    <p style="margin-top: 0.5rem;">Entra: <code>{pais: 'ES', precio: 10}</code> → Flink emite:
+                        <code>+I(ES, 1, 10)</code></p>
+                    <p>Entra: <code>{pais: 'ES', precio: 5}</code> → Flink emite: <code>-U(ES, 1, 10)</code> (Borra
+                        anterior) y <code>+U(ES, 2, 15)</code> (Nueva suma)</p>
+                    <p style="margin-bottom: 0;"><em>Cuidado en producción con este tipo de queries porque guardan
+                            estado infinito (el "pais" nunca se borra de memoria).</em></p>
+                </div>
+            </section>
+
+            <!-- NIVEL 3: Ventanas de Tiempo Tumbling -->
+            <section class="content-section reveal" id="nivel-3">
+                <h2>Nivel 3: Tumbling Windows (Ventanas Fijas)</h2>
+                <p>Para no acumular estado infinito y poder analizar el flujo de datos segmentado por tiempo, usamos
+                    <strong>Funciones de Ventana (Window TVF)</strong> introducidas en Flink 1.13+.</p>
+                <p>Una ventana <strong>Tumbling</strong> divide el tiempo en bloques fijos y no superpuestos (e.g. cada
+                    1 minuto exacto).</p>
+
+                <h3>Ejemplo: Ingresos totales por país cada 1 minuto cerrado</h3>
+                <div class="code-header">
+                    <span class="code-lang">SQL</span>
+                    <button class="copy-btn">Copiar</button>
+                </div>
+                <pre><code class="language-sql">SELECT 
+  window_start, 
+  window_end, 
+  pais, 
+  SUM(precio) AS total_ventas
+FROM TABLE(
+  TUMBLE(TABLE clicks_stream, DESCRIPTOR(tiempo_evento), INTERVAL '1' MINUTE)
+)
+GROUP BY window_start, window_end, pais;</code></pre>
+
+                <p><strong>¿Qué pasa aquí?</strong> Cuando el tiempo de Flink superó el minuto <code>10:01:00</code>
+                    (basado en Event Time y watermarks), Flink emite el resultado final para la ventana
+                    <code>10:00:00 - 10:01:00</code>. Es un <strong>Append Only stream</strong> para el consumidor
+                    final, porque una vez pasada la ventana, el resultado "ya no cambia".</p>
+            </section>
+
+            <!-- NIVEL 4: Ventanas de Tiempo Sliding/Hopping -->
+            <section class="content-section reveal" id="nivel-4">
+                <h2>Nivel 4: Hopping Windows (Ventanas Deslizantes)</h2>
+                <p>Las ventanas <strong>Hopping / Sliding</strong> se solapan. Tienen un tamaño (size) y un avance
+                    (slide).</p>
+
+                <h3>Ejemplo: Dashboard en vivo. Cuenta de clicks de los "Últimos 10 minutos" actualizándose "Cada 1
+                    minuto"</h3>
+                <div class="code-header">
+                    <span class="code-lang">SQL</span>
+                    <button class="copy-btn">Copiar</button>
+                </div>
+                <pre><code class="language-sql">SELECT 
+  window_start, 
+  window_end, 
+  pais, 
+  COUNT(*) AS clicks_activos
+FROM TABLE(
+  HOP(TABLE clicks_stream, DESCRIPTOR(tiempo_evento), INTERVAL '1' MINUTE, INTERVAL '10' MINUTE)
+)
+GROUP BY window_start, window_end, pais;</code></pre>
+
+                <p>Un mismo click aparecerá sumado en 10 ventanas diferentes porque estás emitiendo un reporte cada
+                    minuto evaluando la última media hora.</p>
+            </section>
+
+            <!-- NIVEL 5: Joins en Streaming Continuo -->
+            <section class="content-section reveal" id="nivel-5">
+                <h2>Nivel 5: Time-windowed Joins</h2>
+                <p>¿Qué ocurre si queremos hacer un JOIN entre DOS colas de Kafka que entran en tiempo real? En Flink
+                    SQL es de lo más avanzado y potente.</p>
+                <p>Por ejemplo, si tienes una tabla dinámica de <code>pedidos_stream</code> y otra de
+                    <code>pagos_stream</code>. El pago debe llegar máximo 10 minutos <em>después</em> del pedido.</p>
+
+                <h3>Ejemplo: Interval Join</h3>
+                <div class="code-header">
+                    <span class="code-lang">SQL</span>
+                    <button class="copy-btn">Copiar</button>
+                </div>
+                <pre><code class="language-sql">SELECT
+  p.pedido_id,
+  p.usuario_id,
+  p.total,
+  g.metodo_pago
+FROM pedidos_stream p
+JOIN pagos_stream g 
+  ON p.pedido_id = g.pedido_id
+  AND g.tiempo_pago BETWEEN p.tiempo_pedido AND p.tiempo_pedido + INTERVAL '10' MINUTE;</code></pre>
+
+                <div class="info-box success" style="margin-top: 1rem;">
+                    <strong>Eficiencia de memoria:</strong> Como Flink sabe que el JOIN solo aplica a un margen de 10
+                    minutos (gracias a <code>BETWEEN</code>), no guarda los pedidos más antiguos en memoria. ¡Esto
+                    permite a los ingenieros mantener Joins de streams infinitos sin saturar la RAM!
+                </div>
+            </section>
+
+        </div>
+
+    <!-- FOOTER -->
+    <footer class="footer">
+        <div class="footer-inner">
+            <div class="footer-brand">
+                <div class="brand-logo">⚡ Flink Bootcamp</div>
+                <p>Apuntes de Apache Flink para proyectos Big Data. Teoría práctica con ejemplos reales.</p>
+            </div>
+            <div class="footer-links">
+                <h5>Secciones</h5>
+                <ul>
+                    <li><a href="index.html">Inicio</a></li>
+                    <li><a href="conceptos.html">Conceptos</a></li>
+                    <li><a href="arquitectura.html">Arquitectura</a></li>
+                    <li><a href="streams.html">Streams &amp; Batch</a></li>
+                    <li><a href="operadores-visual.html">Operadores</a></li>
+                    <li><a href="casos-uso.html">Casos de Uso</a></li>
+                    <li><a href="pyflink.html">PyFlink</a></li>
+                    <li><a href="flink-sql.html">Flink SQL</a></li>
+                    <li><a href="flink-sql-ejemplos.html">Ejemplos SQL</a></li>
+                <li><a href="sql-vs-datastream.html">SQL vs DataStream</a></li>
+                </ul>
+            </div>
+            <div class="footer-links">
+                <h5>Recursos</h5>
+                <ul>
+                    <li><a href="https://flink.apache.org/docs/" target="_blank">📘 Flink Docs</a></li>
+                </ul>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        const navbar = document.getElementById('navbar');
+        window.addEventListener('scroll', () => { navbar.classList.toggle('scrolled', window.scrollY > 50); });
+        document.getElementById('navToggle').addEventListener('click', () => { document.querySelector('.nav-links').classList.toggle('open'); });
+
+        const reveals = document.querySelectorAll('.reveal');
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('animate-in'); observer.unobserve(e.target); } });
+        }, { threshold: 0.1 });
+        reveals.forEach(el => observer.observe(el));
+
+        // Copy button script
+        document.querySelectorAll('.copy-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const codeBlock = btn.parentElement.nextElementSibling.querySelector('code');
+                navigator.clipboard.writeText(codeBlock.innerText).then(() => {
+                    const originalText = btn.innerText;
+                    btn.innerText = 'Copiado!';
+                    setTimeout(() => { btn.innerText = originalText; }, 2000);
+                });
+            });
+        });
+    </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-sql.min.js"></script>
+</body>
+
+</html>

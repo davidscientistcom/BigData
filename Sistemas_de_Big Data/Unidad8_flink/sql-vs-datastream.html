@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flink SQL vs DataStream — Apache Flink Bootcamp</title>
+    <meta name="description"
+        content="¿Cuándo usar Flink SQL y cuándo DataStream API? Análisis detallado con un caso de uso real de aviación (OpenSky Network) para procesar telemetría de vuelos en tiempo real.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+
+    <!-- NAVBAR -->
+    <nav class="navbar" id="navbar">
+        <div class="nav-inner">
+            <div class="nav-brand">
+                <span class="brand-icon">⚡</span>
+                <span class="brand-text">Flink Bootcamp</span>
+            </div>
+            <ul class="nav-links">
+                <li><a href="index.html">Inicio</a></li>
+                <li><a href="conceptos.html">Conceptos</a></li>
+                <li><a href="arquitectura.html">Arquitectura</a></li>
+                <li><a href="streams.html">Streams &amp; Batch</a></li>
+                <li><a href="operadores-visual.html">Operadores</a></li>
+                <li><a href="casos-uso.html">Casos de Uso</a></li>
+                <li><a href="pyflink.html">PyFlink</a></li>
+                <li><a href="flink-sql.html">Flink SQL</a></li>
+                <li><a href="flink-sql-ejemplos.html">Ejemplos SQL</a></li>
+                <li><a href="sql-vs-datastream.html" class="active">SQL vs DataStream</a></li>
+            </ul>
+            <button class="nav-mobile-btn" id="navToggle">☰</button>
+        </div>
+    </nav>
+
+    <!-- HEADER / HERO -->
+    <header class="section section-dark" style="padding-top: 8rem; padding-bottom: 4rem;">
+        <div class="container">
+            <div class="hero-badge">
+                <span class="badge-dot" style="background-color: var(--warning);"></span>
+                El Gran Dilema del Data Engineer
+            </div>
+            <h1 class="hero-title" style="font-size: 3rem; margin-bottom: 1rem;">
+                SQL <span style="font-weight: 300;">vs</span> <span class="gradient-text">DataStream API</span>
+            </h1>
+            <p class="hero-desc" style="max-width: 800px; text-align: left; margin: 0;">
+                ¿Qué API deberías elegir para tu proyecto? Desgranamos las diferencias clave y diseñamos una
+                arquitectura completa basada en un caso real: procesar <strong>telemetría de aviones en tiempo
+                    real</strong> usando la API de OpenSky.
+            </p>
+        </div>
+    </header>
+
+    <div class="content">
+
+            <section class="content-section reveal" id="comparativa">
+                <h2>1. Tabla Resumen: ¿Cuándo usar qué?</h2>
+                <p>La regla general en Flink es: <strong>Usa SQL siempre que puedas, y baja al DataStream API
+                        (Java/Python) cuando SQL no sea suficiente.</strong></p>
+
+                <div class="table-responsive">
+                    <table class="comparison-table">
+                        <thead>
+                            <tr>
+                                <th>Característica</th>
+                                <th>Flink SQL / Table API</th>
+                                <th>DataStream API (Java/Scala/Python)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><strong>Curva de Aprendizaje</strong></td>
+                                <td>Baja (Si sabes SQL, sabes Flink SQL)</td>
+                                <td>Alta (Requiere entender serialización, abstracciones funcionales, estado)</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Casos de Uso Ideales</strong></td>
+                                <td>Filtros, Agrupaciones temporales, ETLs simples, Joins estandar, Métricas BI.</td>
+                                <td>Lógica compleja de negocio, reglas dinámicas (Pattern Matching), llamadas a APIs
+                                    externas.</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Nivel de Control</strong></td>
+                                <td>Bajo (El motor Catalyst optimiza todo por debajo)</td>
+                                <td>Total (Controlas el estado interno de Flink al byte y los Timers)</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Gestión de Eventos Complejos</strong></td>
+                                <td>Limitado (Pattern Recognition básico con MATCH_RECOGNIZE)</td>
+                                <td>Excelente (Usando ProcessFunction o la librería CEP de Flink)</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Integraciones "Custom"</strong></td>
+                                <td>Difícil (Si el conector no existe, tienes que programarlo en Java)</td>
+                                <td>Muy Fácil (Puedes escribir tu propio código de lectura/escritura)</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <section class="content-section reveal" id="caso-opensky">
+                <h2>2. Caso Práctico: Rastreador de Vuelos (OpenSky)</h2>
+                <p>Supongamos que queremos construir un sistema que procese los datos de la <a
+                        href="https://opensky-network.org/" target="_blank">OpenSky Network API</a> (que da datos de
+                    vuelos en directo: altitud, velocidad, posición GPS, avión). Nuestro objetivo es detectar dos cosas:
+                </p>
+                <ol>
+                    <li>Métrica sencilla: <strong>Número total de aviones sobrevolando cada país (ventana de 5
+                            mins).</strong></li>
+                    <li>Regla compleja: <strong>Alerta si un avión cae más de 3000 metros de altitud en menos de 10
+                            segundos.</strong></li>
+                </ol>
+
+                <h3>Arquitectura General</h3>
+                <div class="pipeline" style="justify-content:center; gap:0.5rem; flex-wrap: wrap;">
+                    <div class="pipeline-step">
+                        <span class="ps-icon">📡</span>
+                        <span class="ps-label">OpenSky API</span>
+                        <span class="ps-sub">Polling origen</span>
+                    </div>
+                    <div class="pipeline-arrow">→</div>
+                    <div class="pipeline-step">
+                        <span class="ps-icon">🐍</span>
+                        <span class="ps-label">Python Script</span>
+                        <span class="ps-sub">Productor Kafka</span>
+                    </div>
+                    <div class="pipeline-arrow">→</div>
+                    <div class="pipeline-step">
+                        <span class="ps-icon">📨</span>
+                        <span class="ps-label">Kafka Topic</span>
+                        <span class="ps-sub">"vuelos-telemetria"</span>
+                    </div>
+                    <div class="pipeline-arrow">→</div>
+                    <div class="pipeline-step"
+                        style="background: rgba(232, 66, 26, 0.1); border-color: rgba(232, 66, 26, 0.3);">
+                        <span class="ps-icon">⚡</span>
+                        <span class="ps-label">Apache Flink</span>
+                        <span class="ps-sub">Procesamiento</span>
+                    </div>
+                    <div class="pipeline-arrow">→</div>
+                    <div class="pipeline-step">
+                        <span class="ps-icon">🔔</span>
+                        <span class="ps-label">Sinks</span>
+                        <span class="ps-sub">Grafana (SQL) / Alertas (DataStream)</span>
+                    </div>
+                </div>
+
+                <div class="info-box info" style="margin-top: 1.5rem;">
+                    <strong>Por qué Kafka en medio:</strong> Nunca conectes Flink <em>directamente</em> haciendo polling
+                    a una API HTTP externa como OpenSky en la pieza de origen, porque Flink se bloqueará esperando
+                    respuestas de red, rompiendo el procesamiento paralelo y el "exactly-once". <strong>Siempre usa
+                        Kafka como buffer intermedio de streaming constante.</strong>
+                </div>
+
+            </section>
+
+            <section class="content-section reveal" id="resolucion-sql">
+                <h2>3. Resolviendo el Reto #1 con Flink SQL (Métricas)</h2>
+                <p><strong>Objetivo:</strong> Número total de aviones sobrevolando cada país en ventanas de 5 minutos.
+                </p>
+
+                <p>Este es el <strong>escenario PERFECTO para Flink SQL</strong>. Las agrupaciones temporales y
+                    tabulaciones son el pan de cada día de las bases de datos relacionales. Implementar una "Tumbling
+                    Window" en DataStream API requiere unas 15 líneas de código Java. En Flink SQL son 5 líneas.</p>
+
+                <div class="code-header">
+                    <span class="code-lang">Escenario IDEAL para SQL</span>
+                    <button class="copy-btn"
+                        style="background: transparent; border: 1px solid rgba(255,255,255,0.2); color: white; padding: 4px 12px; border-radius: 4px; cursor: pointer;">Puro
+                        SQL</button>
+                </div>
+                <pre
+                    style="background: #1e293b; color: white; padding: 1.5rem; border-radius: 0 0 8px 8px; overflow-x: auto; margin-top: 0; margin-bottom: 2rem; font-family: 'JetBrains Mono', monospace;"><code class="language-sql">-- 1. Declaramos la entrada de datos desde Kafka
+CREATE TABLE vuelos (
+  icao24 STRING,           -- ID único del avión
+  callsign STRING,
+  pais_origen STRING,
+  logitud DOUBLE,
+  latitud DOUBLE,
+  altitud DOUBLE,
+  velocidad DOUBLE,
+  tiempo_lectura TIMESTAMP(3),
+  WATERMARK FOR tiempo_lectura AS tiempo_lectura - INTERVAL '5' SECOND
+) WITH (
+  'connector' = 'kafka',
+  'topic' = 'vuelos-telemetria',
+  'format' = 'json'
+);
+
+-- 2. Declaramos la salida hacia un Elasticsearch / Kibana (Grafana)
+CREATE TABLE metricas_espacio_aereo (
+  ventana_inicio TIMESTAMP(3),
+  pais STRING,
+  total_aviones BIGINT
+) WITH (
+  'connector' = 'elasticsearch-7',
+  'hosts' = 'http://localhost:9200',
+  'index' = 'vuelos-metricas'
+);
+
+-- 3. La consulta mágica que Flink ejecutará eternamente
+INSERT INTO metricas_espacio_aereo
+SELECT 
+  window_start,
+  pais_origen,
+  COUNT(DISTINCT icao24) AS total_aviones
+FROM TABLE(
+  TUMBLE(TABLE vuelos, DESCRIPTOR(tiempo_lectura), INTERVAL '5' MINUTE)
+)
+GROUP BY window_start, window_end, pais_origen;</code></pre>
+
+                <p><strong>Ventaja:</strong> Un analista de datos sin saber Java puede crear este dashboard en 10
+                    minutos. Flink manejará por debajo la memoria de las ventanas, gestionará eventos retrasados y
+                    escribirá en Elastic Search automáticamente. Es <strong>elegante, declarativo y optimizado</strong>.
+                </p>
+            </section>
+
+            <section class="content-section reveal" id="resolucion-datastream">
+                <h2>4. Resolviendo el Reto #2 con DataStream API (Reglas Complejas)</h2>
+                <p><strong>Objetivo:</strong> Alerta inmediata si un avión cae más de 3000 metros de altitud en menos de
+                    10 segundos.</p>
+
+                <p>¿Podemos hacer esto en SQL? <em>Casi</em> podríamos usando la cláusula <code>MATCH_RECOGNIZE</code>
+                    de SQL Avanzado, pero se vuelve una consulta horriblemente compleja y difícil de mantener o testear
+                    unitariamente.</p>
+
+                <p>Este es el <strong>escenario PERFECTO para DataStream API y KeyedProcessFunction</strong>. Aquí
+                    necesitamos mantener un "Estado" manual (State) para recordar la altitud anterior de cada avión, y
+                    programar "Timers" (Temporizadores) y disparar un evento de alarma de forma programática.</p>
+
+                <div class="code-header">
+                    <span class="code-lang">Escenario IDEAL para DataStream API</span>
+                    <button class="copy-btn"
+                        style="background: transparent; border: 1px solid rgba(255,255,255,0.2); color: white; padding: 4px 12px; border-radius: 4px; cursor: pointer;">Java
+                        / PyFlink</button>
+                </div>
+                <pre
+                    style="background: #1e293b; color: white; padding: 1.5rem; border-radius: 0 0 8px 8px; overflow-x: auto; margin-top: 0; margin-bottom: 2rem; font-family: 'JetBrains Mono', monospace;"><code class="language-java">// Creamos la pipeline desde Kafka
+DataStream&lt;Vuelo&gt; streamVuelos = env.addSource(new FlinkKafkaConsumer&lt;&gt;("vuelos", ...));
+
+// Agrupamos el stream por ID de avión. Flink garantiza que el mismo avión
+// siempre será procesado por el mismo nodo del cluster.
+DataStream&lt;AlertaCaida&gt; flotasEnPeligro = streamVuelos
+    .keyBy(vuelo -> vuelo.getIcao24()) 
+    .process(new DetectorCaidaLibre()); // <-- Aquí ocurre la magia de bajo nivel
+
+// --- LA FUNCIÓN DE NEGOCIO ---
+public class DetectorCaidaLibre extends KeyedProcessFunction&lt;String, Vuelo, AlertaCaida&gt; {
+    
+    // Flink guardará esta variable de forma segura y tolerante a fallos
+    private ValueState&lt;Double&gt; altitudMaximaReciente;
+
+    @Override
+    public void processElement(Vuelo vueloActual, Context ctx, Collector&lt;AlertaCaida&gt; out) {
+        
+        Double altitudAnterior = altitudMaximaReciente.value();
+        
+        if (altitudAnterior == null || vueloActual.getAltitud() > altitudAnterior) {
+            // El avión está subiendo de altitud o es la primera vez que lo vemos
+            altitudMaximaReciente.update(vueloActual.getAltitud());
+            
+            // Programamos un "Timer" (si pasan 10 segundos, borraremos el estado para no gastar RAM infinita)
+            ctx.timerService().registerEventTimeTimer(ctx.timestamp() + 10000);
+        } 
+        else {
+            // El avión ha bajado
+            double caida = altitudAnterior - vueloActual.getAltitud();
+            if (caida >= 3000.0) {
+                // DISPARAR ALERTA EN TIEMPO REAL
+                out.collect(new AlertaCaida(vueloActual.getIcao24(), caida));
+                // Reseteamos el estado para no mandar alertas duplicadas
+                altitudMaximaReciente.clear();
+            }
+        }
+    }
+    
+    // Cuando pasan 10 segundos, limpiamos la memoria de ese avión
+    @Override
+    public void onTimer(long timestamp, OnTimerContext ctx, Collector&lt;AlertaCaida&gt; out) {
+        altitudMaximaReciente.clear();
+    }
+}</code></pre>
+
+                <p><strong>Ventaja:</strong> Con DataStream API tienes el <strong>control absoluto del hardware y el
+                        flujo</strong>. Puedes leer y escribir variables en la memoria de disco gestionada por RocksDB
+                    (mediante <code>ValueState</code>), puedes programar temporizadores dinámicos (Timers), y reaccionar
+                    ante eventos a bajo nivel.</p>
+            </section>
+
+            <section class="content-section reveal">
+                <h2>Conclusión del Dilema</h2>
+                <div class="info-box success">
+                    <span class="info-box-icon">💡</span>
+                    <div class="info-box-text">
+                        En arquitecturas modernas (como la que usan Netflix, Uber o Airbnb), <strong>no se elige una u
+                            otra exclusivamente</strong>.<br><br>
+                        A menudo, un pipeline DataStream limpia, enriquece y modeliza el ruido en crudo y lo guarda en
+                        un topic de Kafka limpio. Sobre ese topic limpio de Kafka, los Analistas y Data Engineers lanzan
+                        decenas de consultas de <strong>Flink SQL</strong> para rellenar diferentes dashboards sin
+                        molestar a los ingenieros de backend.
+                    </div>
+                </div>
+            </section>
+
+        </div>
+
+    <!-- FOOTER -->
+    <footer class="footer">
+        <div class="footer-inner">
+            <div class="footer-brand">
+                <div class="brand-logo">⚡ Flink Bootcamp</div>
+                <p>Apuntes de Apache Flink para proyectos Big Data. Teoría práctica con ejemplos reales.</p>
+            </div>
+            <div class="footer-links">
+                <h5>Secciones</h5>
+                <ul>
+                    <li><a href="index.html">Inicio</a></li>
+                    <li><a href="conceptos.html">Conceptos</a></li>
+                    <li><a href="arquitectura.html">Arquitectura</a></li>
+                    <li><a href="streams.html">Streams &amp; Batch</a></li>
+                    <li><a href="operadores-visual.html">Operadores</a></li>
+                    <li><a href="casos-uso.html">Casos de Uso</a></li>
+                    <li><a href="pyflink.html">PyFlink</a></li>
+                    <li><a href="flink-sql.html">Flink SQL</a></li>
+                    <li><a href="flink-sql-ejemplos.html">Ejemplos SQL</a></li>
+                    <li><a href="sql-vs-datastream.html">SQL vs DataStream</a></li>
+                </ul>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        const navbar = document.getElementById('navbar');
+        window.addEventListener('scroll', () => { navbar.classList.toggle('scrolled', window.scrollY > 50); });
+        document.getElementById('navToggle').addEventListener('click', () => { document.querySelector('.nav-links').classList.toggle('open'); });
+
+        const reveals = document.querySelectorAll('.reveal');
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('animate-in'); observer.unobserve(e.target); } });
+        }, { threshold: 0.1 });
+        reveals.forEach(el => observer.observe(el));
+    </script>
+</body>
+
+</html>
