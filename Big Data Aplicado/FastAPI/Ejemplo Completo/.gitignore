@@ -1,0 +1,33 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtualenvs
+venv/
+.env
+.env.*
+
+# Conda
+.conda/
+__conda_env__
+
+# Pytest
+.pytest_cache/
+
+# Editor folders
+.vscode/
+.idea/
+
+# macOS
+.DS_Store
+
+# Logs
+*.log
+
+# Misc
+*.sqlite3
+*.db
+
+# User-specific files
+*.swp

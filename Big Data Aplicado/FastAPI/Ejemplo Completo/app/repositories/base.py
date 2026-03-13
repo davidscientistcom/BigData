@@ -139,3 +139,41 @@ class UserRepository(ABC):
             Lista de usuarios que cumplen todos los criterios.
         """
         ...
+
+
+class CocheRepository(ABC):
+    """Interfaz de repositorio para coches.
+
+    Define los métodos que deben implementar todos los repositorios de
+    coches (memoria, SQLite, MySQL, etc.).
+    """
+
+    @abstractmethod
+    def create(self, coche_data: CocheCreate) -> CocheResponse:
+        """Crea un coche y devuelve el objeto creado."""
+        ...
+
+    @abstractmethod
+    def get_by_id(self, coche_id: int) -> Optional[CocheResponse]:
+        """Busca un coche por su id."""
+        ...
+
+    @abstractmethod
+    def get_by_user_id(self, user_id: int) -> list[CocheResponse]:
+        """Devuelve todos los coches de un usuario."""
+        ...
+
+    @abstractmethod
+    def get_all(self) -> list[CocheResponse]:
+        """Devuelve todos los coches almacenados."""
+        ...
+
+    @abstractmethod
+    def update(self, coche_id: int, coche_data: CocheUpdate) -> Optional[CocheResponse]:
+        """Actualiza un coche existente."""
+        ...
+
+    @abstractmethod
+    def delete(self, coche_id: int) -> bool:
+        """Elimina un coche por su id."""
+        ...
