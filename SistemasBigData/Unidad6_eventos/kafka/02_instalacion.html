@@ -583,7 +583,45 @@ kafka-topics --bootstrap-server localhost:9092 \
             </div>
         </div>
 
-        <div class="section-title">📦 Opción 2: Confluent Cloud (sin instalar nada)</div>
+        <div class="section-title">🦖 Opción 2: Legacy Kafka (con Zookeeper)</div>
+        <div class="grid">
+            <div class="card grid-wide">
+                <div class="card-title">Para empresas con versiones antiguas (previas a 3.3)</div>
+                <p>Aunque KRaft es el estándar actual, es posible que en algunas empresas te encuentres con clusters <i>Legacy</i> que aún dependen de Zookeeper. En este caso, la arquitectura requiere <strong>dos contenedores obligatorios</strong>: uno para Zookeeper y otro para Kafka.</p>
+                
+                <p>Aquí tienes el <code>docker-compose.yml</code> equivalente para levantar la versión antigua:</p>
+                
+                <pre><span class="c"># docker-compose-zookeeper.yml</span>
+<span class="kw">version</span>: <span class="str">'3.8'</span>
+
+<span class="kw">services</span>:
+  <span class="c"># ──── ZOOKEEPER (Requisito Legacy) ────────────────────────</span>
+  <span class="fn">zookeeper</span>:
+    image: <span class="str">confluentinc/cp-zookeeper:7.3.0</span>
+    environment:
+      ZOOKEEPER_CLIENT_PORT: <span class="num">2181</span>
+      ZOOKEEPER_TICK_TIME: <span class="num">2000</span>
+    ports:
+      - <span class="str">"2181:2181"</span>
+
+  <span class="c"># ──── KAFKA BROKER ────────────────────────────────────────</span>
+  <span class="fn">kafka</span>:
+    image: <span class="str">confluentinc/cp-kafka:7.3.0</span>
+    depends_on:
+      - zookeeper
+    ports:
+      - <span class="str">"9092:9092"</span>
+    environment:
+      <span class="c"># Aquí le decimos a Kafka dónde está Zookeeper</span>
+      KAFKA_ZOOKEEPER_CONNECT: <span class="str">'zookeeper:2181'</span>
+      KAFKA_ADVERTISED_LISTENERS: <span class="str">'PLAINTEXT://localhost:9092'</span>
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: <span class="num">1</span></pre>
+                
+                <div class="hi r">⚠️ <strong>Nota importante:</strong> A nivel de código Python (Producer/Consumer), tu aplicación <strong>nunca habla con Zookeeper</strong>. Tu código siempre se conecta a Kafka por el puerto <code>9092</code> independientemente de si el cluster por detrás usa KRaft o Zookeeper.</div>
+            </div>
+        </div>
+
+        <div class="section-title">📦 Opción 3: Confluent Cloud (sin instalar nada)</div>
         <div class="grid">
             <div class="card grid-wide">
                 <div class="card-title">Para quien quiera Kafka gestionado en la nube</div>

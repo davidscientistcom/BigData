@@ -439,8 +439,6 @@ graph LR
                     <li>Cada broker guarda <em>algunas</em> particiones de cada topic</li>
                     <li>Si un broker cae, otro toma el relevo (réplicas)</li>
                     <li>Un broker es elegido <strong>líder</strong> de cada partición; los demás son followers</li>
-                    <li>Históricamente gestionados por Zookeeper; desde Kafka 3.3+ hay <strong>KRaft</strong> (sin
-                        Zookeeper)</li>
                 </ul>
                 <div class="mermaid">
 graph TD
@@ -450,6 +448,22 @@ graph TD
     B1 -. Si cae .-> B2
     B1 -. Si cae .-> B3
 </div>
+            </div>
+
+            <div class="card">
+                <div class="card-title" style="color: #ff6b35;">🐘 Zookeeper vs ⚡ KRaft</div>
+                <p>Históricamente, Kafka era solo un sistema de almacenamiento "tonto". Necesitaba un software externo llamado <strong>Apache Zookeeper</strong> para llevar el registro de qué broker estaba vivo, quién era el líder de cada partición y guardar la configuración del clúster.</p>
+                
+                <p><strong>El problema de Zookeeper:</strong></p>
+                <ul>
+                    <li>Era una pesadilla operativa: tenías que administrar, asegurar y monitorear <strong>dos</strong> sistemas distribuidos distintos (Kafka + Zookeeper).</li>
+                    <li>Zookeeper era el cuello de botella: no escalaba bien cuando tenías cientos de miles de particiones. Las elecciones de líder al caer un broker tomaban minutos.</li>
+                </ul>
+
+                <p><strong>La solución: KRaft (Kafka Raft Metadata mode)</strong></p>
+                <p>Desde la versión 3.3+, Kafka eliminó la necesidad de Zookeeper. Implementaron su propio protocolo de consenso interno (KRaft). Ahora, los metadatos se guardan en un topic interno especial de Kafka en los propios brokers (o en unos nodos dedicados llamados <em>Controllers</em>).</p>
+                
+                <div class="hi g">✅ <strong>Beneficios de KRaft:</strong> Un solo software que instalar y mantener, reinicios del clúster y elecciones de líder en milisegundos en lugar de minutos, y soporte para millones de particiones en un solo clúster. <strong>Hoy en día, todas las instalaciones nuevas deben usar KRaft sin Zookeeper.</strong></div>
             </div>
 
             <div class="card">
@@ -708,6 +722,84 @@ graph TD
             </div>
         </div>
 
+    </div>
+
+    <div class="content">
+        <div class="section-title">⚙️ Profundizando en el Ecosistema Core</div>
+        <div class="grid">
+            
+            <div class="card grid-wide">
+                <div class="card-title" style="color: #ff6b35;">1. Schema Registry (Confluent)</div>
+                <p>Imagina que tienes una base de datos relacional sin esquema donde cualquiera puede insertar datos en cualquier formato. Sería un desastre a la hora de leerlos. Kafka, por defecto, guarda bytes en crudo (<i>arrays de bytes</i>). <strong>Schema Registry</strong> es un servidor independiente que actúa como contrato o "director del colegio" para forzar una estructura obligatoria.</p>
+                
+                <p><strong>¿Cómo funciona?</strong></p>
+                <ul>
+                    <li><strong>1. Pides permiso:</strong> Antes de que el <em>Producer</em> envíe el mensaje a Kafka, le envía la estructura (el Schema, escrito en Avro, Protobuf o JSON Schema) al Schema Registry.</li>
+                    <li><strong>2. El Registry valida:</strong> Si la estructura es correcta y respeta la evolución de schemas permitida, le devuelve un ID único.</li>
+                    <li><strong>3. Se envía a Kafka:</strong> El producer envía a Kafka el mensaje serializado de forma súper compacta (solo los valores binarios y el ID del Schema, sin repetir nombres de campos u otros metadatos).</li>
+                    <li><strong>4. Lectura segura:</strong> El <em>Consumer</em> lee el mensaje binario, extrae el ID, se lo pide al Registry y lo deserializa para su uso en la app de manera transparente y tipada.</li>
+                </ul>
+
+                <pre><span class="c">// Ejemplo de Schema en formato Avro definiendo cómo DEBE ser un usuario</span>
+{
+  "type": "record",
+  "name": "Usuario",
+  "fields": [
+    {"name": "id", "type": "int"},
+    {"name": "nombre", "type": "string"},
+    {"name": "email", "type": "string"}
+  ]
+}</pre>
+                <div class="hi g">💡 <strong>Ejemplo real:</strong> Tienes 50 microservicios escribiendo logs de actividad en un topic. Si mañana un equipo cambia en su app el campo <code>email</code> a <code>correo_electronico</code> y rompe los <i>consumers</i> porque nadie avisó, el Schema Registry bloqueará esa escritura al instante devolviendo un error de "Evolución de schema incompatible" antes de que la basura entre siquiera a Kafka.</div>
+            </div>
+
+            <div class="card grid-wide">
+                <div class="card-title" style="color: #ff6b35;">2. Kafka Connect (Apache)</div>
+                <p>Escribir Producers y Consumers a mano (en Python, Java, etc.) está bien para procesar tu lógica de negocio principal. Pero es una pérdida de tiempo si solo quieres mover datos de un sistema estándar a otro. <strong>Kafka Connect</strong> es un framework nativo que permite mover flujos de datos enormes <strong>sin programar una sola línea de código</strong>.</p>
+                
+                <p><strong>¿Cómo funciona?</strong></p>
+                <p>Funciona mediante "plugins" pre-creados o <strong>Conectores</strong> configurados vía archivos JSON. Hay de dos tipos principales:</p>
+                <ul>
+                    <li><strong>Source Connectors (Fuentes):</strong> Vigilan o leen de sistemas externos (Bases de datos SQL, MongoDB, Twitter, Colas AMQP, carpetas FTP) y los meten continuamente en un topic de Kafka de forma automatizada.</li>
+                    <li><strong>Sink Connectors (Sumideros):</strong> Leen de los topics de Kafka que tú les digas y los insertan o transforman automáticamente en sistemas receptores (ElasticSearch, AWS S3, Snowflake, PostgreSQL, InfluxDB, etc.).</li>
+                </ul>
+                <pre><span class="c"># Ejemplo: Archivo de configuración para un conector Sink de S3 (AWS)</span>
+{
+  "name": "my-s3-sink-conector",
+  "config": {
+    "connector.class": "io.confluent.connect.s3.S3SinkConnector",
+    "tasks.max": "3", <span class="c"># Levantar 3 hilos paralelos (consumers) en background</span>
+    "topics": "eventos_clicks, pagos_completados",
+    "s3.bucket.name": "mi-datalake-empresa",
+    "format.class": "io.confluent.connect.s3.format.parquet.ParquetFormat"
+  }
+}</pre>
+                <div class="hi b">💡 <strong>Ejemplo real:</strong> Tienes una base de datos MySQL transaccional y quieres copiar todas las compras a tu Data Warehouse en tiempo real sin saturar la DB principal haciendo selects cada segundo. Usas un conector Source (ej: <strong>Debezium</strong>) que lee el log binario de transacciones (CDC) de MySQL por detrás e inyecta cada <code>INSERT/UPDATE/DELETE</code> a Kafka de manera nativa sin impacto en el host. Luego conectas un Sink connector que saque lo de Kafka a tu almacenamiento analítico. Cero líneas de código tuyas.</div>
+            </div>
+
+            <div class="card grid-wide">
+                <div class="card-title" style="color: #ff6b35;">3. ksqlDB (Confluent)</div>
+                <p>Los datos en crudo que pasan por Kafka casi siempre necesitan ser filtrados, agrupados, enriquecidos o cruzados con otros topics antes de consumirlos finitamente. Programar esto en un lenguaje general es útil, pero requiere manejar estados, reconexiones en caídas de red, caché iterativa... <strong>ksqlDB</strong> te permite crear aplicaciones de stream processing sólidas y con estado utilizando consultas (como SQL) directo sobre los flujos en milisegundos.</p>
+                
+                <p><strong>¿Cómo funciona?</strong></p>
+                <ul>
+                    <li>Te conectas a la terminal CLI de ksqlDB (o usas su API) que está enchufada al cluster de Kafka de fondo.</li>
+                    <li>Declaras un "Stream" apuntando a un topic crudo que ya exista en Kafka. ksqlDB puede saber la estructura automáticamente si el topic usa Schema Registry.</li>
+                    <li>Escribes una query "infinita" tipo <code>CREATE STREAM AS SELECT ...</code>. Es una petición latente que evalúa en continuo.</li>
+                    <li>Cada vez que entra un susodicho mensaje al topic original, ksqlDB lo evalúa al vuelo, filtra/transforma, y escupe el resultado procesado en un nuevo topic de salida.</li>
+                </ul>
+
+                <pre><span class="c">-- Ejemplo: Topic crudo de transacciones financieras globales. </span>
+<span class="c">-- Queremos derivar posibles fraudes (> $5000) a un topic independiente de alertas</span>
+<span class="kw">CREATE STREAM</span> alertas_fraude <span class="kw">AS</span>
+  <span class="kw">SELECT</span> usuario_id, cantidad, pais, TIMESTAMPTOSTRING(rowtime, 'yyyy-MM-dd') <span class="kw">AS</span> fecha
+  <span class="kw">FROM</span> topic_transacciones
+  <span class="kw">WHERE</span> cantidad > <span class="num">5000</span> <span class="kw">AND</span> pais != <span class="str">'US'</span>
+  <span class="kw">EMIT CHANGES</span>;</pre>
+                <div class="hi p">💡 <strong>Ejemplo real:</strong> Necesitas actualizar en tiempo real un ranking de los 10 productos más vendidos en las últimas 4 horas, para publicarlo en la web e ir deslizando ese tiempo progresivamente. En vez de programar una app que traiga todo ese estado gigante a su RAM interna, tiras una consulta simple a ksqlDB agrupando por <code>producto_id</code> con un aventanamiento semántico de tiempo (<code>WINDOW TUMBLING (SIZE 4 HOURS)</code>) y le dices a tu Frontend que lea únicamente el topic resultante hiper-reducido.</div>
+            </div>
+            
+        </div>
     </div>
 
     <div class="nav-footer">
