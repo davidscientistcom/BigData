@@ -1,0 +1,717 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <title>03 · Producer y Consumer en Python — Kafka Bootcamp</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', system-ui, sans-serif;
+            background: #0d1117;
+            color: #e6edf3;
+        }
+
+        .topbar {
+            background: #161b22;
+            border-bottom: 1px solid #30363d;
+            padding: 12px 24px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 0.82em;
+        }
+
+        .topbar a {
+            color: #3fb950;
+            text-decoration: none;
+        }
+
+        .topbar a:hover {
+            color: #7ee787;
+        }
+
+        .topbar .sep {
+            color: #484f58;
+        }
+
+        .topbar .cur {
+            color: #e6edf3;
+            font-weight: 600;
+        }
+
+        .hero {
+            background: linear-gradient(135deg, #0d2a1022, #0d1117);
+            border-bottom: 1px solid #30363d;
+            padding: 36px 24px;
+            text-align: center;
+        }
+
+        .badge {
+            display: inline-block;
+            background: #0d2a10;
+            color: #3fb950;
+            font-size: 0.7em;
+            font-weight: 700;
+            padding: 3px 12px;
+            border-radius: 20px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            margin-bottom: 14px;
+        }
+
+        .hero h1 {
+            font-size: 1.9em;
+            font-weight: 900;
+            margin-bottom: 8px;
+        }
+
+        .hero p {
+            color: #8b949e;
+            font-size: 0.88em;
+            max-width: 640px;
+            margin: 0 auto;
+            line-height: 1.6;
+        }
+
+        .content {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 32px 24px;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .grid-wide {
+            grid-column: 1 / -1;
+        }
+
+        .card {
+            background: #161b22;
+            border-radius: 12px;
+            border: 1px solid #30363d;
+            padding: 20px;
+            transition: border-color 0.18s;
+        }
+
+        .card:hover {
+            border-color: #3fb95044;
+        }
+
+        .card-title {
+            font-weight: 700;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.95em;
+        }
+
+        p {
+            color: #8b949e;
+            line-height: 1.65;
+            margin-bottom: 8px;
+            font-size: 0.85em;
+        }
+
+        pre {
+            background: #010409;
+            border: 1px solid #21262d;
+            border-radius: 8px;
+            padding: 14px 16px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.76em;
+            overflow-x: auto; white-space: pre;
+            line-height: 1.7;
+            margin: 8px 0;
+            white-space: pre;
+        }
+
+        code {
+            font-family: monospace;
+            background: #21262d;
+            padding: 1px 5px;
+            border-radius: 4px;
+            font-size: 0.88em;
+            color: #a5d6ff;
+        }
+
+        .c {
+            color: #6e7681;
+        }
+
+        .kw {
+            color: #ff7b72;
+        }
+
+        .str {
+            color: #a5d6ff;
+        }
+
+        .num {
+            color: #79c0ff;
+        }
+
+        .nm {
+            color: #d2a8ff;
+        }
+
+        .fn {
+            color: #e3b341;
+        }
+
+        .gr {
+            color: #3fb950;
+        }
+
+        .cy {
+            color: #39d0d8;
+        }
+
+        .or {
+            color: #ff6b35;
+        }
+
+        ul,
+        ol {
+            padding-left: 20px;
+            margin: 6px 0 10px;
+        }
+
+        li {
+            color: #8b949e;
+            margin-bottom: 4px;
+            font-size: 0.85em;
+            line-height: 1.5;
+        }
+
+        li::marker {
+            color: #3fb950;
+        }
+
+        .hi {
+            margin: 10px 0;
+            background: #0d2a1033;
+            border: 1px solid #3fb95044;
+            border-radius: 8px;
+            padding: 10px 14px;
+            font-size: 0.82em;
+            color: #7ee787;
+        }
+
+        .hi.b {
+            background: #1f3a5f33;
+            border-color: #79c0ff44;
+            color: #a5d6ff;
+        }
+
+        .hi.r {
+            background: #3a1a1a33;
+            border-color: #f7816644;
+            color: #ffa198;
+        }
+
+        .hi.o {
+            background: #1a0d0533;
+            border-color: #ff6b3544;
+            color: #ff8c5a;
+        }
+
+        .hi.p {
+            background: #2a1a3a33;
+            border-color: #d2a8ff44;
+            color: #d2a8ff;
+        }
+
+        .section-title {
+            font-size: 1.1em;
+            font-weight: 700;
+            color: #3fb950;
+            margin: 32px 0 16px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #21262d;
+        }
+
+        .diagram {
+            background: #010409;
+            border: 1px solid #0d2a10;
+            border-radius: 10px;
+            padding: 16px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.76em;
+            line-height: 1.8;
+            margin: 12px 0;
+            overflow-x: auto; white-space: pre;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.8em;
+            margin: 8px 0;
+        }
+
+        th {
+            background: #1b1f24;
+            color: #8b949e;
+            text-align: left;
+            padding: 7px 10px;
+            font-weight: 600;
+        }
+
+        td {
+            padding: 6px 10px;
+            border-bottom: 1px solid #21262d;
+            color: #8b949e;
+            vertical-align: top;
+        }
+
+        tr:hover td {
+            background: #21262d44;
+        }
+
+        .nav-footer {
+            border-top: 1px solid #30363d;
+            padding: 20px 24px;
+            display: flex;
+            justify-content: space-between;
+            margin-top: 20px;
+        }
+
+        .nav-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            padding: 10px 18px;
+            text-decoration: none;
+            color: #e6edf3;
+            font-size: 0.83em;
+            font-weight: 600;
+            transition: all 0.18s;
+        }
+
+        .nav-btn:hover {
+            border-color: #3fb950;
+            color: #3fb950;
+        }
+    </style>
+
+    <script type="module">
+        import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+        mermaid.initialize({ startOnLoad: true, theme: 'dark' });
+    </script>
+</head>
+
+<body>
+    <div class="topbar">
+        <a href="index.html">🏠 Kafka Bootcamp</a><span class="sep">›</span>
+        <span class="cur">03 · Producer y Consumer en Python</span>
+    </div>
+
+    <div class="hero">
+        <div class="badge">Sección 03 · Python</div>
+        <h1>🐍 Producer y Consumer en Python</h1>
+        <p>Tu primer producer y consumer con <code>confluent-kafka</code>. Configuración correcta, manejo de errores,
+            offset management y patrones para producción. Código listo para ejecutar.</p>
+    </div>
+
+    <div class="content">
+
+        <div class="section-title">📦 Instalación</div>
+        <div class="grid">
+            <div class="card grid-wide">
+                <div class="card-title">Librerías disponibles — cuál elegir</div>
+                <pre><span class="c"># ⭐ Opción recomendada: confluent-kafka (wrapper de librdkafka)</span>
+<span class="c"># Más rápida, más features, soporte oficial de Confluent</span>
+pip install confluent-kafka
+
+<span class="c"># Con soporte de Avro/Schema Registry:</span>
+pip install confluent-kafka[avro]
+
+<span class="c"># Alternativa pura Python (más sencilla, algo más lenta):</span>
+pip install kafka-python
+
+<span class="c"># Para async/await:</span>
+pip install aiokafka</pre>
+                <div class="hi b">💡 <code>confluent-kafka</code> usa <code>librdkafka</code> en C, lo que la hace
+                    órdenes de magnitud
+                    más rápida que <code>kafka-python</code>. Para producción, <strong>siempre confluent-kafka</strong>.
+                </div>
+            </div>
+        </div>
+
+        <div class="section-title">🏭 Producer — Escribir mensajes</div>
+        <div class="grid">
+
+            <div class="card grid-wide">
+                <div class="card-title">Producer mínimo — funcional pero incompleto</div>
+                <pre><span class="kw">from</span> confluent_kafka <span class="kw">import</span> Producer
+
+<span class="c"># Configuración básica</span>
+conf = {<span class="str">'bootstrap.servers'</span>: <span class="str">'localhost:9094'</span>}
+producer = Producer(conf)
+
+<span class="c"># Callback: llamado cuando el mensaje llega al broker (o falla)</span>
+<span class="kw">def</span> <span class="fn">delivery_report</span>(err, msg):
+    <span class="kw">if</span> err <span class="kw">is not</span> <span class="nm">None</span>:
+        <span class="fn">print</span>(<span class="str">f'❌ Error: {err}'</span>)
+    <span class="kw">else</span>:
+        <span class="fn">print</span>(<span class="str">f'✅ Entregado → topic={msg.topic()} partition={msg.partition()} offset={msg.offset()}'</span>)
+
+<span class="c"># Publicar mensajes</span>
+<span class="kw">for</span> i <span class="kw">in</span> <span class="fn">range</span>(<span class="num">10</span>):
+    producer.produce(
+        topic=<span class="str">'mi-topic'</span>,
+        key=<span class="str">f'user_{i % 3}'</span>,       <span class="c"># clave → determina la partición</span>
+        value=<span class="str">f'mensaje número {i}'</span>,
+        callback=delivery_report
+    )
+    producer.poll(<span class="num">0</span>)  <span class="c"># dispara callbacks pendientes sin bloquear</span>
+
+<span class="c"># IMPORTANTE: flush espera a que todos los mensajes sean enviados</span>
+producer.flush()
+<span class="fn">print</span>(<span class="str">'Todos los mensajes enviados'</span>)</pre>
+                <div class="hi o">⚠️ <strong>poll(0)</strong> y <strong>flush()</strong> son críticos. Sin
+                    <code>flush()</code>, el programa puede terminar
+                    antes de enviar los mensajes. <code>poll()</code> dispara callbacks de entrega.</div>
+            </div>
+
+            <div class="card grid-wide">
+                <div class="card-title">Producer de producción — con JSON, métricas y configuración robusta</div>
+                <pre><span class="kw">from</span> confluent_kafka <span class="kw">import</span> Producer
+<span class="kw">import</span> json, logging, time
+<span class="kw">from</span> datetime <span class="kw">import</span> datetime
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(<span class="str">'kafka-producer'</span>)
+
+<span class="c"># ─── Configuración de producción ───────────────────────────────────────────</span>
+conf = {
+    <span class="str">'bootstrap.servers'</span>: <span class="str">'localhost:9094'</span>,
+    <span class="str">'acks'</span>: <span class="str">'all'</span>,           <span class="c"># esperar confirmación de TODAS las réplicas in-sync</span>
+    <span class="str">'enable.idempotence'</span>: <span class="nm">True</span>, <span class="c"># garantiza exactly-once desde el producer</span>
+    <span class="str">'max.in.flight.requests.per.connection'</span>: <span class="num">5</span>,
+    <span class="str">'retries'</span>: <span class="num">2147483647</span>,   <span class="c"># reintentos máximos</span>
+    <span class="str">'retry.backoff.ms'</span>: <span class="num">100</span>,
+    <span class="str">'linger.ms'</span>: <span class="num">5</span>,          <span class="c"># esperar 5ms para batching (más throughput)</span>
+    <span class="str">'batch.size'</span>: <span class="num">65536</span>,     <span class="c"># 64KB por batch</span>
+    <span class="str">'compression.type'</span>: <span class="str">'snappy'</span>, <span class="c"># compresión (snappy, lz4, gzip, zstd)</span>
+}
+
+producer = Producer(conf)
+
+<span class="c"># ─── Esquema de mensaje de evento ──────────────────────────────────────────</span>
+<span class="kw">def</span> <span class="fn">crear_evento_pedido</span>(usuario_id: str, items: list, total: float) -> dict:
+    <span class="kw">return</span> {
+        <span class="str">"event_type"</span>: <span class="str">"pedido_creado"</span>,
+        <span class="str">"schema_version"</span>: <span class="str">"1.0"</span>,
+        <span class="str">"timestamp"</span>: datetime.utcnow().isoformat() + <span class="str">"Z"</span>,
+        <span class="str">"usuario_id"</span>: usuario_id,
+        <span class="str">"items"</span>: items,
+        <span class="str">"total"</span>: total,
+    }
+
+<span class="c"># ─── Callback con logging completo ─────────────────────────────────────────</span>
+<span class="kw">def</span> <span class="fn">delivery_report</span>(err, msg):
+    <span class="kw">if</span> err:
+        logger.error(<span class="str">f"❌ Fallo entrega: {err} → topic={msg.topic()} key={msg.key()}"</span>)
+    <span class="kw">else</span>:
+        logger.info(
+            <span class="str">f"✅ t={msg.topic()} p={msg.partition()} "
+             f"off={msg.offset()} key={msg.key().decode()}"</span>
+        )
+
+<span class="c"># ─── Función de alto nivel para publicar eventos ────────────────────────────</span>
+<span class="kw">def</span> <span class="fn">publicar_evento</span>(usuario_id: str, items: list, total: float):
+    evento = crear_evento_pedido(usuario_id, items, total)
+    <span class="kw">try</span>:
+        producer.produce(
+            topic=<span class="str">"pedidos"</span>,
+            key=usuario_id.encode(),          <span class="c"># str → bytes (obligatorio)</span>
+            value=json.dumps(evento).encode(), <span class="c"># dict → JSON → bytes</span>
+            callback=delivery_report,
+        )
+        producer.poll(<span class="num">0</span>)
+    <span class="kw">except</span> BufferError:
+        <span class="c"># Cola interna llena → esperar y reintentar</span>
+        logger.warning(<span class="str">"Producer buffer lleno, esperando..."</span>)
+        producer.flush()
+        producer.produce(...)  <span class="c"># reintentar</span>
+
+<span class="c"># Uso:</span>
+publicar_evento(<span class="str">"user_123"</span>, [{<span class="str">"sku"</span>: <span class="str">"A001"</span>, <span class="str">"qty"</span>: <span class="num">2</span>}], <span class="num">59.99</span>)
+publicar_evento(<span class="str">"user_456"</span>, [{<span class="str">"sku"</span>: <span class="str">"B002"</span>, <span class="str">"qty"</span>: <span class="num">1</span>}], <span class="num">29.99</span>)
+producer.flush()  <span class="c"># siempre al final</span></pre>
+            </div>
+
+        </div>
+
+        <div class="section-title">📡 Consumer — Leer mensajes</div>
+        <div class="grid">
+
+            <div class="card grid-wide">
+                <div class="card-title">Consumer básico con auto-commit</div>
+                <pre><span class="kw">from</span> confluent_kafka <span class="kw">import</span> Consumer, KafkaError, KafkaException
+
+conf = {
+    <span class="str">'bootstrap.servers'</span>: <span class="str">'localhost:9094'</span>,
+    <span class="str">'group.id'</span>: <span class="str">'mi-consumer-group'</span>,  <span class="c"># ← obligatorio</span>
+    <span class="str">'auto.offset.reset'</span>: <span class="str">'earliest'</span>,    <span class="c"># 'earliest' o 'latest'</span>
+    <span class="str">'enable.auto.commit'</span>: <span class="nm">True</span>,          <span class="c"># commit automático cada 5s</span>
+}
+
+consumer = Consumer(conf)
+consumer.subscribe([<span class="str">'pedidos'</span>])
+
+<span class="kw">try</span>:
+    <span class="kw">while</span> <span class="nm">True</span>:
+        msg = consumer.poll(timeout=<span class="num">1.0</span>)  <span class="c"># esperar max 1s por mensaje</span>
+
+        <span class="kw">if</span> msg <span class="kw">is</span> <span class="nm">None</span>:
+            <span class="kw">continue</span>  <span class="c"># timeout, volver a intentar</span>
+
+        <span class="kw">if</span> msg.error():
+            <span class="kw">if</span> msg.error().code() == KafkaError._PARTITION_EOF:
+                <span class="c"># Llegamos al final de la partición — normal</span>
+                <span class="fn">print</span>(<span class="str">f'Fin de partición {msg.partition()} offset {msg.offset()}'</span>)
+            <span class="kw">else</span>:
+                <span class="kw">raise</span> KafkaException(msg.error())
+            <span class="kw">continue</span>
+
+        <span class="c"># Procesar el mensaje</span>
+        key = msg.key().decode(<span class="str">'utf-8'</span>) <span class="kw">if</span> msg.key() <span class="kw">else</span> <span class="nm">None</span>
+        value = json.loads(msg.value().decode(<span class="str">'utf-8'</span>))
+
+        <span class="fn">print</span>(<span class="str">f'topic={msg.topic()} partition={msg.partition()} '
+              f'offset={msg.offset()} key={key}'</span>)
+        <span class="fn">print</span>(<span class="str">f'Evento: {value}'</span>)
+
+<span class="kw">finally</span>:
+    consumer.close()  <span class="c"># ← siempre cerrar para liberar el group membership</span></pre>
+            </div>
+
+            <div class="card grid-wide">
+                <div class="card-title">Consumer de producción — commit manual + gestión de errores</div>
+                <pre><span class="kw">from</span> confluent_kafka <span class="kw">import</span> Consumer, KafkaError
+<span class="kw">import</span> json, logging, signal
+
+logger = logging.getLogger(<span class="str">'kafka-consumer'</span>)
+running = <span class="nm">True</span>
+
+<span class="c"># Graceful shutdown con Ctrl+C / SIGTERM</span>
+<span class="kw">def</span> <span class="fn">shutdown</span>(signum, frame):
+    <span class="kw">global</span> running
+    running = <span class="nm">False</span>
+
+signal.signal(signal.SIGINT, shutdown)
+signal.signal(signal.SIGTERM, shutdown)
+
+conf = {
+    <span class="str">'bootstrap.servers'</span>: <span class="str">'localhost:9094'</span>,
+    <span class="str">'group.id'</span>: <span class="str">'pedidos-processor'</span>,
+    <span class="str">'auto.offset.reset'</span>: <span class="str">'earliest'</span>,
+    <span class="str">'enable.auto.commit'</span>: <span class="nm">False</span>,    <span class="c"># ← COMMIT MANUAL (más control)</span>
+    <span class="str">'max.poll.interval.ms'</span>: <span class="num">300000</span>, <span class="c"># 5min antes de considerar consumer muerto</span>
+    <span class="str">'session.timeout.ms'</span>: <span class="num">45000</span>,    <span class="c"># 45s heartbeat timeout</span>
+}
+
+<span class="c"># Callbacks de rebalanceo</span>
+<span class="kw">def</span> <span class="fn">on_assign</span>(consumer, partitions):
+    logger.info(<span class="str">f'Particiones asignadas: {[p.partition for p in partitions]}'</span>)
+
+<span class="kw">def</span> <span class="fn">on_revoke</span>(consumer, partitions):
+    logger.info(<span class="str">f'Particiones revocadas: {[p.partition for p in partitions]}'</span>)
+    <span class="c"># ← aquí comittear offsets antes del rebalanceo</span>
+    consumer.commit(asynchronous=<span class="nm">False</span>)
+
+consumer = Consumer(conf)
+consumer.subscribe([<span class="str">'pedidos'</span>], on_assign=on_assign, on_revoke=on_revoke)
+
+<span class="kw">def</span> <span class="fn">procesar_pedido</span>(evento: dict) -> <span class="nm">bool</span>:
+    <span class="str">"""Devuelve True si el procesamiento fue exitoso."""</span>
+    <span class="kw">try</span>:
+        <span class="c"># Tu lógica de negocio aquí</span>
+        logger.info(<span class="str">f"Procesando pedido de {evento['usuario_id']}: {evento['total']}€"</span>)
+        <span class="kw">return</span> <span class="nm">True</span>
+    <span class="kw">except</span> <span class="nm">Exception</span> <span class="kw">as</span> e:
+        logger.error(<span class="str">f"Error procesando: {e}"</span>)
+        <span class="kw">return</span> <span class="nm">False</span>
+
+<span class="kw">try</span>:
+    <span class="kw">while</span> running:
+        msg = consumer.poll(timeout=<span class="num">1.0</span>)
+        <span class="kw">if</span> msg <span class="kw">is</span> <span class="nm">None</span> <span class="kw">or</span> msg.error():
+            <span class="kw">continue</span>
+
+        evento = json.loads(msg.value())
+
+        <span class="c"># Procesar ANTES de commitear el offset</span>
+        exito = procesar_pedido(evento)
+
+        <span class="kw">if</span> exito:
+            <span class="c"># Solo commiteamos si el procesamiento fue exitoso</span>
+            <span class="c"># Esto garantiza at-least-once: si falla, releeremos</span>
+            consumer.commit(asynchronous=<span class="nm">False</span>)
+        <span class="kw">else</span>:
+            <span class="c"># En caso de error: loguear y decidir (DLQ, skip, etc.)</span>
+            logger.error(<span class="str">f"Mensaje sin procesar: offset={msg.offset()}"</span>)
+
+<span class="kw">finally</span>:
+    consumer.close()
+    logger.info(<span class="str">"Consumer cerrado correctamente"</span>)</pre>
+                <div class="hi">🎯 <strong>La regla de oro:</strong> Commitear el offset DESPUÉS de procesar, nunca
+                    antes.
+                    Si commiteamos antes y el procesamiento falla, el mensaje se pierde para siempre.
+                    Si commiteamos después, en caso de crash releeremos pero procesaremos de nuevo (at-least-once).
+                </div>
+            </div>
+
+        </div>
+
+        <div class="section-title">⚡ Consumer Asíncrono con aiokafka</div>
+        <div class="grid">
+            <div class="card grid-wide">
+                <div class="card-title">Cuando necesitas integrar Kafka con asyncio</div>
+                <pre><span class="kw">from</span> aiokafka <span class="kw">import</span> AIOKafkaConsumer, AIOKafkaProducer
+<span class="kw">import</span> asyncio, json
+
+<span class="c"># Consumer async — perfecto para FastAPI o código async existente</span>
+<span class="kw">async def</span> <span class="fn">consumir_async</span>():
+    consumer = AIOKafkaConsumer(
+        <span class="str">"pedidos"</span>,
+        bootstrap_servers=<span class="str">"localhost:9094"</span>,
+        group_id=<span class="str">"async-processor"</span>,
+        auto_offset_reset=<span class="str">"earliest"</span>,
+        enable_auto_commit=<span class="nm">False</span>,
+        value_deserializer=<span class="kw">lambda</span> v: json.loads(v.decode()),
+    )
+    await consumer.start()
+    <span class="kw">try</span>:
+        <span class="kw">async for</span> msg <span class="kw">in</span> consumer:
+            <span class="fn">print</span>(<span class="str">f'offset={msg.offset} key={msg.key} value={msg.value}'</span>)
+            await procesar_asincrono(msg.value)
+            await consumer.commit()
+    <span class="kw">finally</span>:
+        await consumer.stop()
+
+<span class="c"># Producer async</span>
+<span class="kw">async def</span> <span class="fn">producir_async</span>():
+    producer = AIOKafkaProducer(
+        bootstrap_servers=<span class="str">"localhost:9094"</span>,
+        value_serializer=<span class="kw">lambda</span> v: json.dumps(v).encode(),
+    )
+    await producer.start()
+    <span class="kw">try</span>:
+        await producer.send_and_wait(
+            <span class="str">"pedidos"</span>,
+            key=<span class="str">b"user_123"</span>,
+            value={<span class="str">"pedido"</span>: <span class="num">1</span>, <span class="str">"total"</span>: <span class="num">99.9</span>}
+        )
+    <span class="kw">finally</span>:
+        await producer.stop()
+
+asyncio.run(consumir_async())</pre>
+                <div class="hi b">💡 <code>aiokafka</code> es ideal para integrarlo en aplicaciones FastAPI donde ya
+                    tienes un event loop.
+                    El consumer se puede ejecutar como background task al arrancar la aplicación.</div>
+            </div>
+        </div>
+
+        <div class="section-title">📊 Configuración clave del Producer y Consumer</div>
+        <div class="grid">
+            <div class="card">
+                <div class="card-title">Parámetros Producer importantes</div>
+                <table>
+                    <tr>
+                        <th>Parámetro</th>
+                        <th>Valor recomendado</th>
+                        <th>Por qué</th>
+                    </tr>
+                    <tr>
+                        <td><code>acks</code></td>
+                        <td><code>'all'</code></td>
+                        <td>Máxima durabilidad</td>
+                    </tr>
+                    <tr>
+                        <td><code>enable.idempotence</code></td>
+                        <td><code>True</code></td>
+                        <td>Evita duplicados</td>
+                    </tr>
+                    <tr>
+                        <td><code>linger.ms</code></td>
+                        <td>5-10</td>
+                        <td>Mejor batching</td>
+                    </tr>
+                    <tr>
+                        <td><code>compression.type</code></td>
+                        <td><code>snappy</code></td>
+                        <td>Velocidad+compresión</td>
+                    </tr>
+                    <tr>
+                        <td><code>retries</code></td>
+                        <td>alto (2^31)</td>
+                        <td>Auto-recuperación</td>
+                    </tr>
+                </table>
+            </div>
+            <div class="card">
+                <div class="card-title">Parámetros Consumer importantes</div>
+                <table>
+                    <tr>
+                        <th>Parámetro</th>
+                        <th>Valor recomendado</th>
+                        <th>Por qué</th>
+                    </tr>
+                    <tr>
+                        <td><code>enable.auto.commit</code></td>
+                        <td><code>False</code></td>
+                        <td>Control manual del offset</td>
+                    </tr>
+                    <tr>
+                        <td><code>auto.offset.reset</code></td>
+                        <td><code>earliest</code></td>
+                        <td>Procesar desde el inicio</td>
+                    </tr>
+                    <tr>
+                        <td><code>max.poll.records</code></td>
+                        <td>500</td>
+                        <td>Batch size por poll</td>
+                    </tr>
+                    <tr>
+                        <td><code>fetch.min.bytes</code></td>
+                        <td>1024</td>
+                        <td>Menos peticiones vacías</td>
+                    </tr>
+                    <tr>
+                        <td><code>session.timeout.ms</code></td>
+                        <td>45000</td>
+                        <td>Balance latencia/estabilidad</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="nav-footer">
+        <a href="02_instalacion.html" class="nav-btn">← 02 · Instalación</a>
+        <a href="04_particiones_grupos.html" class="nav-btn">04 · Particiones y Consumer Groups →</a>
+    </div>
+</body>
+
+</html>

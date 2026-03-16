@@ -1,0 +1,719 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <title>01 · Kafka desde cero — Kafka Bootcamp</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', system-ui, sans-serif;
+            background: #0d1117;
+            color: #e6edf3;
+        }
+
+        .topbar {
+            background: #161b22;
+            border-bottom: 1px solid #30363d;
+            padding: 12px 24px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 0.82em;
+        }
+
+        .topbar a {
+            color: #ff6b35;
+            text-decoration: none;
+        }
+
+        .topbar a:hover {
+            color: #ff8c5a;
+        }
+
+        .topbar .sep {
+            color: #484f58;
+        }
+
+        .topbar .cur {
+            color: #e6edf3;
+            font-weight: 600;
+        }
+
+        .hero {
+            background: linear-gradient(135deg, #1a0d0522, #0d1117);
+            border-bottom: 1px solid #30363d;
+            padding: 36px 24px;
+            text-align: center;
+        }
+
+        .badge {
+            display: inline-block;
+            background: #1a0d05;
+            color: #ff6b35;
+            font-size: 0.7em;
+            font-weight: 700;
+            padding: 3px 12px;
+            border-radius: 20px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            margin-bottom: 14px;
+        }
+
+        .hero h1 {
+            font-size: 1.9em;
+            font-weight: 900;
+            margin-bottom: 8px;
+        }
+
+        .hero p {
+            color: #8b949e;
+            font-size: 0.88em;
+            max-width: 640px;
+            margin: 0 auto;
+            line-height: 1.6;
+        }
+
+        .content {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 32px 24px;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .grid-wide {
+            grid-column: 1 / -1;
+        }
+
+        .card {
+            background: #161b22;
+            border-radius: 12px;
+            border: 1px solid #30363d;
+            padding: 20px;
+            transition: border-color 0.18s;
+        }
+
+        .card:hover {
+            border-color: #ff6b3544;
+        }
+
+        .card-title {
+            font-weight: 700;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.95em;
+        }
+
+        p {
+            color: #8b949e;
+            line-height: 1.65;
+            margin-bottom: 8px;
+            font-size: 0.85em;
+        }
+
+        pre {
+            background: #010409;
+            border: 1px solid #21262d;
+            border-radius: 8px;
+            padding: 14px 16px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.76em;
+            overflow-x: auto; white-space: pre;
+            line-height: 1.7;
+            margin: 8px 0;
+            white-space: pre;
+        }
+
+        code {
+            font-family: monospace;
+            background: #21262d;
+            padding: 1px 5px;
+            border-radius: 4px;
+            font-size: 0.88em;
+            color: #a5d6ff;
+        }
+
+        .c {
+            color: #6e7681;
+        }
+
+        .kw {
+            color: #ff7b72;
+        }
+
+        .str {
+            color: #a5d6ff;
+        }
+
+        .num {
+            color: #79c0ff;
+        }
+
+        .nm {
+            color: #d2a8ff;
+        }
+
+        .fn {
+            color: #e3b341;
+        }
+
+        .gr {
+            color: #3fb950;
+        }
+
+        .cy {
+            color: #39d0d8;
+        }
+
+        .or {
+            color: #ff6b35;
+        }
+
+        ul,
+        ol {
+            padding-left: 20px;
+            margin: 6px 0 10px;
+        }
+
+        li {
+            color: #8b949e;
+            margin-bottom: 4px;
+            font-size: 0.85em;
+            line-height: 1.5;
+        }
+
+        li::marker {
+            color: #ff6b35;
+        }
+
+        .hi {
+            margin: 10px 0;
+            background: #1a0d0533;
+            border: 1px solid #ff6b3544;
+            border-radius: 8px;
+            padding: 10px 14px;
+            font-size: 0.82em;
+            color: #ff8c5a;
+        }
+
+        .hi.g {
+            background: #1a3a2a33;
+            border-color: #3fb95044;
+            color: #7ee787;
+        }
+
+        .hi.b {
+            background: #1f3a5f33;
+            border-color: #79c0ff44;
+            color: #a5d6ff;
+        }
+
+        .hi.r {
+            background: #3a1a1a33;
+            border-color: #f7816644;
+            color: #ffa198;
+        }
+
+        .hi.p {
+            background: #2a1a3a33;
+            border-color: #d2a8ff44;
+            color: #d2a8ff;
+        }
+
+        .section-title {
+            font-size: 1.1em;
+            font-weight: 700;
+            color: #ff6b35;
+            margin: 32px 0 16px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #21262d;
+        }
+
+        .diagram {
+            background: #010409;
+            border: 1px solid #1a0d05;
+            border-radius: 10px;
+            padding: 16px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.76em;
+            line-height: 1.8;
+            margin: 12px 0;
+            overflow-x: auto; white-space: pre;
+        }
+
+        .flow {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin: 10px 0;
+            align-items: center;
+            font-size: 0.8em;
+        }
+
+        .fb {
+            background: #21262d;
+            border: 1px solid #30363d;
+            border-radius: 6px;
+            padding: 4px 10px;
+        }
+
+        .fb.k {
+            background: #1a0d0544;
+            border-color: #ff6b3544;
+            color: #ff6b35;
+        }
+
+        .fa {
+            color: #ff6b35;
+            font-weight: 700;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.8em;
+            margin: 8px 0;
+        }
+
+        th {
+            background: #1b1f24;
+            color: #8b949e;
+            text-align: left;
+            padding: 7px 10px;
+            font-weight: 600;
+        }
+
+        td {
+            padding: 6px 10px;
+            border-bottom: 1px solid #21262d;
+            color: #8b949e;
+            vertical-align: top;
+        }
+
+        tr:hover td {
+            background: #21262d44;
+        }
+
+        .nav-footer {
+            border-top: 1px solid #30363d;
+            padding: 20px 24px;
+            display: flex;
+            justify-content: space-between;
+            margin-top: 20px;
+        }
+
+        .nav-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            padding: 10px 18px;
+            text-decoration: none;
+            color: #e6edf3;
+            font-size: 0.83em;
+            font-weight: 600;
+            transition: all 0.18s;
+        }
+
+        .nav-btn:hover {
+            border-color: #ff6b35;
+            color: #ff6b35;
+        }
+    </style>
+
+    <script type="module">
+        import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+        mermaid.initialize({ startOnLoad: true, theme: 'dark' });
+    </script>
+</head>
+
+<body>
+    <div class="topbar">
+        <a href="index.html">🏠 Kafka Bootcamp</a><span class="sep">›</span>
+        <span class="cur">01 · Kafka desde cero</span>
+    </div>
+
+    <div class="hero">
+        <div class="badge">Sección 01 · Fundamentos</div>
+        <h1>⚡ Apache Kafka desde Cero</h1>
+        <p>¿Por qué Kafka domina el mundo del Big Data? Brokers, topics, particiones, offsets, producers, consumers.
+            La arquitectura que procesa millones de mensajes por segundo.</p>
+    </div>
+
+    <div class="content">
+
+        <div class="section-title">🤔 El problema que resuelve Kafka</div>
+        <div class="grid">
+
+            <div class="card grid-wide">
+                <div class="card-title">El caos de la integración punto a punto</div>
+                <p>Imagina una empresa con 10 servicios (pagos, usuarios, pedidos, notificaciones...). Sin Kafka,
+                    cada servicio habla directamente con los demás: <strong>10 × 9 / 2 = 45 conexiones</strong>.
+                    Si añades un servicio más, son 55. Si cambias el formato de un mensaje, tienes que tocar todos los
+                    consumidores.</p>
+
+                <div class="mermaid">
+graph LR
+    subgraph Sin Kafka
+        u1(usuarios) <--> p1(pagos) <--> pe1(pedidos) <--> n1(notificaciones)
+        p1 <--> e1(envios)
+        a1(analytics) <--> i1(inventario)
+        n1 <--> a1
+    end
+    subgraph Con Kafka: Hub centralizado
+        u2(usuarios) --> K[KAFKA CLUSTER]
+        p2(pagos) --> K
+        pe2(pedidos) --> K
+        i2(inventario) --> K
+        K --> a2(analytics)
+        K --> n2(notificaciones)
+        K --> r2(reportes)
+        K --> m2(mobile)
+        K --> s2(sms)
+    end
+</div>
+                <div class="hi b">💡 Kafka es un <strong>distributed event streaming platform</strong>: actúa como un
+                    log inmutable,
+                    ordenado y persistente de eventos. Es el "sistema nervioso central" de tu arquitectura de datos.
+                </div>
+            </div>
+
+        </div>
+
+        <div class="section-title">🏗️ La arquitectura de Kafka</div>
+        <div class="grid">
+
+            <div class="card grid-wide">
+                <div class="card-title">Los 6 conceptos fundamentales — en orden</div>
+                <div class="mermaid">
+graph LR
+    subgraph KAFKA CLUSTER
+        subgraph TOPIC: pedidos
+            direction TB
+            P0[Partition 0: offset 0 | offset 1 | offset 2 | ...]
+            P1[Partition 1: offset 0 | offset 1 | offset 2 | ...]
+            P2[Partition 2: offset 0 | offset 1 | ...]
+        end
+    end
+    PRODUCER --> P0
+    PRODUCER --> P1
+    PRODUCER --> P2
+    P0 --> CONSUMER
+    P1 --> CONSUMER
+    P2 --> CONSUMER
+</div>
+
+                <div class="flow">
+                    <div class="fb k">🏭 Producer</div>
+                    <div class="fa">──escribe──►</div>
+                    <div class="fb k">📋 Topic (particionado)</div>
+                    <div class="fa">──lee──►</div>
+                    <div class="fb k">📡 Consumer Group</div>
+                    <div class="fa">──procesa──►</div>
+                    <div class="fb">📊 Tu app</div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-title">📌 Broker — el servidor de Kafka</div>
+                <p>Un <strong>broker</strong> es un servidor Kafka. Un cluster tiene normalmente 3, 5 o más brokers
+                    para alta disponibilidad.</p>
+                <ul>
+                    <li>Cada broker guarda <em>algunas</em> particiones de cada topic</li>
+                    <li>Si un broker cae, otro toma el relevo (réplicas)</li>
+                    <li>Un broker es elegido <strong>líder</strong> de cada partición; los demás son followers</li>
+                    <li>Históricamente gestionados por Zookeeper; desde Kafka 3.3+ hay <strong>KRaft</strong> (sin
+                        Zookeeper)</li>
+                </ul>
+                <div class="mermaid">
+graph TD
+    B1[Broker 1: líder P0 <br/> follower P1, P2]
+    B2[Broker 2: líder P1 <br/> follower P0, P2]
+    B3[Broker 3: líder P2 <br/> follower P0, P1]
+    B1 -. Si cae .-> B2
+    B1 -. Si cae .-> B3
+</div>
+            </div>
+
+            <div class="card">
+                <div class="card-title">📋 Topic — el canal de datos</div>
+                <p>Un <strong>topic</strong> es un canal con nombre donde los producers escriben y los consumers leen.
+                    Es el equivalente de una "tabla" o "cola" en Kafka.</p>
+                <ul>
+                    <li>Los topics se dividen en <strong>particiones</strong> (paralecismo)</li>
+                    <li>Los mensajes en una partición están <em>ordenados</em> por offset</li>
+                    <li>Los mensajes entre particiones distintas no tienen orden garantizado</li>
+                    <li>La retención es configurable: por tiempo (<code>retention.ms</code>) o tamaño
+                        (<code>retention.bytes</code>)</li>
+                    <li>Topic compactado: solo guarda el último mensaje por clave (útil para estado)</li>
+                </ul>
+            </div>
+
+            <div class="card">
+                <div class="card-title">🔑 Clave (Key) — el router</div>
+                <p>Cada mensaje puede tener una <strong>clave</strong>. La clave determina en qué partición va el
+                    mensaje
+                    mediante <code>hash(key) % num_partitions</code>.</p>
+                <p>Esto garantiza que todos los mensajes del mismo usuario, pedido o entidad vayan <em>siempre a la
+                        misma partición</em>,
+                    lo que preserva el orden por entidad.</p>
+                <pre><span class="c"># Producer con clave:</span>
+<span class="c"># key="user_123" → siempre va a partition X</span>
+<span class="c"># key="user_456" → siempre va a partition Y</span>
+<span class="c"># Sin clave → round-robin o sticky</span>
+producer.produce(
+    topic=<span class="str">"pedidos"</span>,
+    key=<span class="str">"user_123"</span>,   <span class="c"># ← preserva orden por usuario</span>
+    value=<span class="str">"pedido_data"</span>
+)</pre>
+            </div>
+
+            <div class="card grid-wide">
+                <div class="card-title">📍 Offset — tu marcapáginas en el log</div>
+                <p>El <strong>offset</strong> es un número entero (0, 1, 2...), que identifica unívocamente la posición de cada mensaje dentro de una partición. Imagina un libro sin fin: el offset es el número de página por donde vas leyendo.</p>
+                
+                <p>A diferencia de las colas tradicionales de mensajería (donde el broker borra el mensaje tras ser leído), en Kafka los mensajes se retienen en el disco según la política configurada. Lo único que cambia es el "offset" que el broker guarda apuntando por dónde va leyendo tu aplicación.</p>
+                
+                <table>
+                    <tr>
+                        <th>Concepto</th>
+                        <th>Descripción detallada</th>
+                    </tr>
+                    <tr>
+                        <td><strong>Log end offset</strong></td>
+                        <td>Es el offset del <em>próximo</em> mensaje que se escribirá. Representa el "extremo final" o la cabeza de la partición actualmente.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Consumer offset</strong></td>
+                        <td>El último offset que tu consumer ha procesado con éxito y ha confirmado (<em>commiteado</em>) explícitamente a Kafka.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Consumer lag (Retraso)</strong></td>
+                        <td>Diferencia: <code>Log end offset - Consumer offset</code>. Número de mensajes pendientes de ser procesados por tu consumer en esa partición.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Commit</strong></td>
+                        <td>Acción por la cual tu consumer notifica a Kafka: "Ya procesé hasta el offset X". Kafka guarda este dato en un topic interno (<code>__consumer_offsets</code>).</td>
+                    </tr>
+                </table>
+                <div class="hi g">💡 <strong>El Lag es la métrica reina.</strong> Si el lag tiende a 0, estás al día. Si crece de manera constante, tu consumer procesa más lento de lo que el producer inyecta datos. La solución: optimizar el procesamiento o escalar añadiendo más instancias a tu consumer group.</div>
+            </div>
+
+            <div class="card grid-wide">
+                <div class="card-title">👥 Consumer Group — escalado horizontal y resiliencia</div>
+                <p>Un <strong>consumer group</strong> es un conjunto de procesos (instancias de tu app) que trabajan cooperativamente para leer mensajes de uno o varios topics. Comparten el mismo <code>group.id</code> en su configuración.</p>
+                
+                <div class="hi b">❓ <strong>¿Por qué querría tener un consumer group?</strong><br>
+                Porque procesar datos (guardar en base de datos, llamar a APIs, procesar imágenes) suele ser más lento que ingerirlos. Si un solo script no da abasto para leer medio millón de eventos por segundo, puedes lanzar 20 copias de ese script con el mismo group id. Kafka repartirá el trabajo de forma segura entre todos ellos.</div>
+
+                <div class="section-title" style="font-size: 0.9em; margin: 15px 0 10px; border: none;">1. Particiones y Paralelismo</div>
+                <ul>
+                    <li><strong>Regla de oro:</strong> Una partición solo puede ser procesada por <strong>un consumer del grupo a la vez</strong>. Esto mantiene el estricto orden y evita condiciones de carrera.</li>
+                    <li>Un consumer puede estar asignado a <em>múltiples</em> particiones.</li>
+                    <li>El paralelismo máximo está limitado por las particiones: si hay un topic con 10 particiones y levantas 12 consumers en el grupo, 2 se quedarán ociosos (idle).</li>
+                </ul>
+
+                <div class="mermaid">
+graph LR
+    subgraph Topic: pedidos (4 particiones)
+        P0[P0]
+        P1[P1]
+        P2[P2]
+        P3[P3]
+    end
+    subgraph Group: mi-app (3 consumers)
+        C1[Consumer 1]
+        C2[Consumer 2]
+        C3[Consumer 3]
+    end
+    P0 --> C1
+    P1 --> C1
+    P2 --> C2
+    P3 --> C3
+</div>
+
+                <div class="section-title" style="font-size: 0.9em; margin: 15px 0 10px; border: none;">2. ¿Qué pasa si un consumer se cae? (Rebalanceos)</div>
+                <p>Kafka monitoriza la salud de los consumers esperando señales periódicas (<em>heartbeats</em>). Si el proceso de un consumer muere, la red cae, o se bloquea procesando, <strong>Kafka lo detecta y dispara un Rebalanceo</strong>: recupera las particiones asignadas al consumer "muerto" y las reparte equitativamente entre los consumer vivos restantes.</p>
+                
+                <div class="hi r">🔴 <strong>Stop-the-world (Eager Rebalancing):</strong> En versiones antiguas, el rebalanceo obligaba a <em>todos</em> los consumers del grupo a detenerse, soltar sus particiones, y reasignarlas desde cero. Si tenías 50 consumers, los 50 paraban durante segundos.</div>
+                <div class="hi g">🟢 <strong>Cooperative Rebalancing (Kafka 2.4+):</strong> Es el estándar moderno (Rebalanceo incremental). Los consumers vivos <em>no se detienen</em>. Simplemente siguen procesando sus particiones asignadas, y de manera cooperativa se reasignan únicamente las particiones que se han quedado "huérfanas" al caerse un consumer. Esto elimina las paradas abruptas de la aplicación.</div>
+                
+                <div class="section-title" style="font-size: 0.9em; margin: 15px 0 10px; border: none;">3. ¿Y si el Broker es el que se cae? (El rol de las Réplicas)</div>
+                <p>Las réplicas son independientes de los consumers. Los consumers <em>siempre</em> se conectan al Broker que actúa como "Lead Replica" (Líder) de su partición asignada. Si el Broker líder falla repentinamente, Kafka promueve otra réplica como Líder en milisegundos. Tu consumer experimentará una micro-desconexión, contactará al cluster preguntando "quién es el nuevo líder" y reanudará la lectura sin que tu código tenga que hacer nada especial.</p>
+                
+                <div class="section-title" style="font-size: 0.9em; margin: 15px 0 10px; border: none;">4. Políticas de Commit (Semánticas de entrega)</div>
+                <p>Dependiendo de cuándo hagas el commit del offset, tendrás distintas garantías si ocurren caídas:</p>
+                <ul>
+                    <li><strong>At most once (A lo sumo una vez):</strong> Consumer lee el mensaje → <em>hace commit del offset inmediatamente</em> → procesa en tu DB. Si falla el insert a BD, como ya hiciste el commit, ese mensaje lo das por perdido. </li>
+                    <li><strong>At least once (Al menos una vez):</strong> Consumer lee → procesa en BBDD → <em>hace commit del offset al final</em> (por defecto). Si crashea tras escribir en base de datos pero antes del commit, al reiniciar volverá a leer el mensaje. Tu lógica debe soportar ser ejecutada dos veces (idempotencia) porque pueden haber duplicados.</li>
+                </ul>
+            </div>
+
+        </div>
+
+        <div class="section-title">📊 Kafka vs otras tecnologías</div>
+        <div class="grid">
+            <div class="card grid-wide">
+                <div class="card-title">¿Por qué no usar RabbitMQ, SQS o Redis Pub/Sub?</div>
+                <table>
+                    <tr>
+                        <th>Característica</th>
+                        <th>Kafka</th>
+                        <th>RabbitMQ/SQS</th>
+                        <th>Redis Pub/Sub</th>
+                    </tr>
+                    <tr>
+                        <td>Retención de mensajes</td>
+                        <td>✅ Configurable (días/semanas)</td>
+                        <td>❌ Se borran al consumir</td>
+                        <td>❌ Se borran al publicar</td>
+                    </tr>
+                    <tr>
+                        <td>Replay de mensajes</td>
+                        <td>✅ Siempre</td>
+                        <td>❌ Imposible</td>
+                        <td>❌ Imposible</td>
+                    </tr>
+                    <tr>
+                        <td>Throughput</td>
+                        <td>✅ Millones/s</td>
+                        <td>🟡 Miles/s</td>
+                        <td>🟡 Miles/s</td>
+                    </tr>
+                    <tr>
+                        <td>Ordering</td>
+                        <td>✅ Por partición</td>
+                        <td>🟡 FIFO limitado</td>
+                        <td>❌ No garantizado</td>
+                    </tr>
+                    <tr>
+                        <td>Consumer groups</td>
+                        <td>✅ Múltiples independientes</td>
+                        <td>🟡 Competitivo</td>
+                        <td>🟡 Fan-out</td>
+                    </tr>
+                    <tr>
+                        <td>Exactly-once</td>
+                        <td>✅ Con transacciones</td>
+                        <td>🟡 At-least-once</td>
+                        <td>❌ No</td>
+                    </tr>
+                    <tr>
+                        <td>Ideal para</td>
+                        <td>Streaming, audit logs, pipelines</td>
+                        <td>Task queues simples</td>
+                        <td>Cache, pub/sub simple</td>
+                    </tr>
+                </table>
+                <div class="hi g">✅ <strong>Usa Kafka cuando:</strong> necesitas retener eventos, tienes múltiples
+                    consumers independientes,
+                    requieres alto throughput, o necesitas replay de mensajes históricos. Es el estándar de la industria
+                    para pipelines de datos.</div>
+            </div>
+            
+            <div class="card grid-wide" style="border-color: #f7816644;">
+                <div class="card-title" style="color: #ffa198;">⚠️ Advertencia técnica: Alterar particiones</div>
+                <p>Una vez creas un topic con, por ejemplo, 3 particiones, <strong>puedes incrementar</strong> ese número a 6 más tarde, pero <strong>NUNCA puedes reducirlo</strong> a 1.</p>
+                <p><strong>¿Por qué?</strong> Kafka enruta los mensajes en base a un hash de su clave (<code>hash("user_123") % num_partitions</code>). Si cambias arbitrariamente el número hacia abajo, el hash apuntará a particiones distintas (lo que antes iba a la partición 2, ahora podría ir a la cero). Todo el orden de tus datos históricos se pervertiría y arruinaría tu lógica de procesamiento.</p>
+                <p><strong>La solución real:</strong> Si te equivocaste de diseño y tienes "demasiadas particiones" que consumen RAM del servidor inútilmente, debes crear un nuevo topic desde cero (v2) con el número correcto de particiones, usar una herramienta que copie los mensajes del viejo al nuevo, y apuntar a tus consumers allí.</p>
+            </div>
+        </div>
+
+        <div class="section-title">🗺️ Mapa del ecosistema Kafka</div>
+        <div class="grid">
+            <div class="card grid-wide">
+                <div class="card-title">El ecosistema completo en una vista</div>
+                <div class="mermaid">
+graph TD
+    subgraph Kafka Ecosystem
+        K[Apache Kafka <br> brokers, topics, particiones]
+        
+        subgraph Confluent Platform
+            SR[Schema Registry]
+            KC[Kafka Connect]
+            KSQL[ksqlDB]
+        end
+        K --- SR
+        K --- KC
+        K --- KSQL
+        
+        KS[Kafka Streams]
+        F[Faust]
+        K --- KS
+        K --- F
+        
+        subgraph Integración 
+            SP[Apache Spark]
+            FL[Apache Flink]
+            AF[Apache Airflow]
+        end
+        K --- SP
+        K --- FL
+        K --- AF
+        
+        subgraph Librerías Python
+            CK[confluent-kafka]
+            KP[kafka-python]
+            AIO[aiokafka]
+        end
+        K --- CK
+        K --- KP
+        K --- AIO
+    end
+</div>
+                
+                <h3 style="margin: 24px 0 10px; font-size: 1.05em; color: #ff6b35;">1. Herramientas del ecosistema Core (Confluent / Apache)</h3>
+                <p>Kafka por sí solo ("Vanilla Kafka") es solo almacenamiento. Para crear arquitecturas de Big Data reales se usa todo el ecosistema:</p>
+                <ul style="margin-bottom: 20px;">
+                    <li><strong>Schema Registry:</strong> El "director del colegio". Un servidor central donde guardas la estructura (schemas) de tus mensajes (en Avro, Protobuf o JSON Schema). Garantiza que ningún <em>producer</em> envíe basura mal formateada a un topic. Obligatorio en arquitecturas serias.</li>
+                    <li><strong>Kafka Connect:</strong> El sistema de integración <em>sin código</em> de Kafka. ¿Quieres que cada vez que se inserte algo en Postgres vaya directo a Kafka (Debezium/CDC)? Usas Connect. ¿Quieres que todo lo de un topic se guarde en S3 de AWS? Usas Connect.</li>
+                    <li><strong>ksqlDB:</strong> Una base de datos sobre Kafka que te permite escribir sintaxis de SQL normal (<code>SELECT * FROM topics WHERE valor > 50</code>) para procesar millones de mensajes al vuelo en streaming.</li>
+                </ul>
+
+                <h3 style="margin: 24px 0 10px; font-size: 1.05em; color: #ff6b35;">2. Stream Processing (Procesamiento continuo)</h3>
+                <ul style="margin-bottom: 20px;">
+                    <li><strong>Kafka Streams:</strong> Librería exclusiva de Java para montar aplicaciones complejas que analizan ventanas de tiempo continuo, filtran, agrupan y devuelven eventos a Kafka súper optimizados.</li>
+                    <li><strong>Faust:</strong> El equivalente a Kafka Streams, pero construido 100% en Python usando <code>asyncio</code>.</li>
+                </ul>
+
+                <h3 style="margin: 24px 0 10px; font-size: 1.05em; color: #ff6b35;">3. Motores Analíticos de Big Data</h3>
+                <ul style="margin-bottom: 20px;">
+                    <li><strong>Apache Flink / Spark Streaming:</strong> Los titanes del Big Data. Cuando KsqlDB o Faust se quedan cortos para un clúster masivo que tiene que cruzar mil tablas de estado y hacer machine learning en vivo, las empresas conectan Kafka a Flink o Spark.</li>
+                </ul>
+
+                <h3 style="margin: 24px 0 10px; font-size: 1.05em; color: #ff6b35;">4. Clientes de Python</h3>
+                <ul>
+                    <li><strong><code>confluent-kafka</code>:</strong> Es el estándar de la industria. Es un envoltorio (wrapper) en Python sobre la hiper-optimizada librería nativa <code>librdkafka</code> en C. Es la que aprenderemos a usar.</li>
+                    <li><strong><code>kafka-python</code>:</strong> Una implementación de Kafka hecha puramente en Python. Más antigua y lenta, tiende a caer en desuso en alta exigencia.</li>
+                    <li><strong><code>aiokafka</code>:</strong> Derivada de la anterior pero construida específicamente puramente asíncrona (con <code>asyncio</code>). Muy empleada junto a servidores como FastAPI.</li>
+                </ul>
+
+            </div>
+        </div>
+
+    </div>
+
+    <div class="nav-footer">
+        <a href="index.html" class="nav-btn">← Índice</a>
+        <a href="02_instalacion.html" class="nav-btn">02 · Instalación con Docker →</a>
+    </div>
+</body>
+
+</html>

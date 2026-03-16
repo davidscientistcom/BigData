@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Lab 05 · Práctica Protobuf — Kafka Bootcamp</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Inter', system-ui, sans-serif; background: #0d1117; color: #e6edf3; line-height: 1.6; }
+        .topbar { background: #161b22; border-bottom: 1px solid #30363d; padding: 12px 24px; display: flex; align-items: center; gap: 12px; font-size: 0.82em; }
+        .topbar a { color: #e3b341; text-decoration: none; }
+        .topbar a:hover { color: #ffd166; }
+        .topbar .sep { color: #484f58; }
+        .topbar .cur { color: #e6edf3; font-weight: 600; }
+        .hero { background: linear-gradient(135deg, #3a2a0a22, #0d1117); border-bottom: 1px solid #30363d; padding: 40px 24px; text-align: center; }
+        .badge { display: inline-block; background: #3a2a0a; color: #e3b341; font-size: 0.7em; font-weight: 700; padding: 4px 14px; border-radius: 20px; letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 16px; }
+        .hero h1 { font-size: 2.4em; font-weight: 900; margin-bottom: 12px; color: #ffffff; }
+        .hero p { color: #8b949e; font-size: 1.05em; max-width: 760px; margin: 0 auto; }
+        .content { max-width: 1000px; margin: 40px auto; padding: 0 24px; }
+        h2 { font-size: 1.5em; color: #e3b341; margin: 48px 0 20px; padding-bottom: 10px; border-bottom: 1px solid #30363d; }
+        h3 { font-size: 1.2em; color: #e6edf3; margin: 32px 0 16px; }
+        p { margin-bottom: 18px; font-size: 0.95em; }
+        ul, ol { margin-left: 24px; margin-bottom: 18px; font-size: 0.95em; color: #c9d1d9; }
+        li { margin-bottom: 8px; }
+        .card { background: #161b22; border: 1px solid #30363d; border-radius: 12px; padding: 24px; margin-bottom: 24px; }
+        .terminal { background: #010409; border: 1px solid #21262d; border-radius: 8px; padding: 16px; font-family: 'Courier New', monospace; font-size: 0.85em; overflow-x: auto; margin: 16px 0; color: #e6edf3; border-left: 3px solid #e3b341; }
+        .code-container { position: relative; margin: 20px 0; }
+        .code-header { background: #161b22; padding: 8px 16px; font-family: monospace; font-size: 0.8em; color: #8b949e; border: 1px solid #30363d; border-bottom: none; border-radius: 8px 8px 0 0; display: flex; justify-content: space-between; align-items: center; }
+        .code-block { background: #0d1117; padding: 16px; font-family: 'Courier New', monospace; font-size: 0.85em; color: #c9d1d9; border: 1px solid #30363d; border-radius: 0 0 8px 8px; overflow-x: auto; line-height: 1.5; }
+        .token.comment { color: #8b949e; font-style: italic; }
+        .token.keyword { color: #ff7b72; }
+        .token.string { color: #a5d6ff; }
+        .token.function { color: #d2a8ff; }
+        .hi { padding: 16px 20px; border-radius: 8px; margin: 24px 0; font-size: 0.95em; border-left: 4px solid; background: #161b22; }
+        .hi.info { border-color: #e3b341; background: #3a2a0a33; }
+        .hi.warn { border-color: #ffb95e; background: #3a2a0a33; }
+        .nav-footer { border-top: 1px solid #30363d; padding: 30px 24px; display: flex; justify-content: space-between; margin-top: 60px; max-width: 1000px; margin-left: auto; margin-right: auto; }
+        .nav-btn { display: inline-flex; align-items: center; gap: 10px; background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 12px 24px; text-decoration: none; color: #e6edf3; font-weight: 600; transition: all 0.2s; }
+        .nav-btn:hover { border-color: #e3b341; color: #e3b341; }
+    </style>
+</head>
+
+<body>
+    <div class="topbar">
+        <a href="index.html">🏠 Menú Principal</a><span class="sep">›</span>
+        <span class="cur">Lab 05 · Código Protobuf</span>
+    </div>
+
+    <div class="hero">
+        <div class="badge">Laboratorio 05 — Python</div>
+        <h1>Práctica Compilación: Protocol Buffers</h1>
+        <p>Demostración práctica de la filosofía de Google. Usando <code>protoc</code> para autogenerar Clases Python desde un contrato estático y produciendo bytes directos en Kafka.</p>
+    </div>
+
+    <div class="content">
+
+        <h2>1. Preparación y Compilador</h2>
+        <p>En el mundo de Protobuf original (sin meter Confluent de por medio), <strong>no necesitamos un Schema Registry escuchando en la red</strong>. Todo el trato se cierra estáticamente compilando (o "transpirando") el archivo.</p>
+        
+        <div class="terminal">
+            <span class="token comment"># 1. Instalar el compilador oficial de Google y la librería protobuf para Python</span><br>
+            <span class="token comment"># (En Mac):</span> brew install protobuf<br>
+            <span class="token comment"># (En Ubuntu):</span> sudo apt install protobuf-compiler<br><br>
+            pip install protobuf kafka-python
+        </div>
+
+        <h2>2. El Contrato: El Archivo `.proto`</h2>
+        <p>Crea el siguiente documento en la raíz. Presta atención a que asignamos números estrictamente matemáticos (Los Tags) a cada variable.</p>
+
+        <div class="code-container">
+            <div class="code-header"><span>sensor_data.proto</span><span>Proto3</span></div>
+            <pre class="code-block">
+<span class="token keyword">syntax</span> = <span class="token string">"proto3"</span>;
+
+<span class="token keyword">package</span> bootcampprotobuf;
+
+<span class="token keyword">message</span> SensorTelemetria {
+  <span class="token keyword">string</span> sensor_id = <span class="token string">1</span>;
+  <span class="token keyword">double</span> temperatura = <span class="token string">2</span>;
+  <span class="token keyword">bool</span> alerta_roja = <span class="token string">3</span>;
+}
+            </pre>
+        </div>
+
+        <h2>3. Paso Crítico: La Autogeneración (protoc)</h2>
+        <p>No escribas un diccionario a mano. Dile al compilador de Google que lea el `.proto` y te genere una clase mágica de Python llamada <code>sensor_data_pb2.py</code>.</p>
+        
+        <div class="terminal">
+            protoc -I=. --python_out=. ./sensor_data.proto
+        </div>
+        <p>Ahora, si miras tu explorador de archivos, tendrás un script gigante que no debes tocar (<code>sensor_data_pb2.py</code>). Has traído el tipado fuerte y la clase compilada directo a Python.</p>
+
+        <h2>4. El Productor Nativo</h2>
+        <p>Nuestro Productor no usará librerías de Confluent ni Avro Serializer. Importará la clase de Google, inyectará las variables como si fuera Programación Orientada a Objetos, llamará a un método interno <code>SerializeToString()</code> y lanzará ese puré binario directamente al Kafka de toda la vida.</p>
+
+        <div class="code-container">
+            <div class="code-header"><span>producer_protobuf.py</span><span>Python</span></div>
+            <pre class="code-block">
+<span class="token keyword">from</span> kafka <span class="token keyword">import</span> KafkaProducer
+<span class="token keyword">import</span> sensor_data_pb2  <span class="token comment"># El fichero auto-generado por el milagro de protoc</span>
+
+<span class="token comment"># 1. Kafka clásico absoluto. Sin schema registry.</span>
+producer = KafkaProducer(bootstrap_servers=<span class="token string">'localhost:9092'</span>)
+
+<span class="token comment"># 2. Instanciamos la clase fuerte que Google nos generó</span>
+telemetria = sensor_data_pb2.SensorTelemetria()
+telemetria.sensor_id = <span class="token string">"MOTOR_NUCLEO_1"</span>
+telemetria.temperatura = 94.6
+telemetria.alerta_roja = <span class="token keyword">True</span>
+
+<span class="token comment"># 3. La Serialización ocurre en la RAM de tu código local</span>
+payload_binario = telemetria.SerializeToString()
+
+<span class="token comment"># 4. Enviar los bytes crudos</span>
+producer.send(<span class="token string">'telemetria_topic'</span>, value=payload_binario)
+producer.flush()
+
+<span class="token function">print</span>(<span class="token string">"🔥 Protobuf disparado con éxito."</span>)
+            </pre>
+        </div>
+
+        <div class="hi info">
+            <strong>¿Ves la Diferencia Arquitectónica?</strong> En la práctica 4 de Avro dependías de un servidor externo (Schema Registry en `localhost:8081`) intercediendo en cada arranque. Aquí, dependes de que tu Equipo Data Science haya ejecutado físicamente el comando Bash <code>protoc</code> antes de arrancar.
+        </div>
+
+        <h2>5. El Consumidor (La Transmutación Inversa)</h2>
+        <p>El consumidor simplemente se conecta al topic de Kafka, recibe 15 bytes ininteligibles y le pide a la clase auto-generada local de Google que actúe de decodificador (usando los Tags numéricos como piedra roseta).</p>
+
+        <div class="code-container">
+            <div class="code-header"><span>consumer_protobuf.py</span><span>Python</span></div>
+            <pre class="code-block">
+<span class="token keyword">from</span> kafka <span class="token keyword">import</span> KafkaConsumer
+<span class="token keyword">import</span> sensor_data_pb2
+
+consumer = KafkaConsumer(
+    <span class="token string">'telemetria_topic'</span>,
+    bootstrap_servers=<span class="token string">'localhost:9092'</span>,
+    group_id=<span class="token string">'monitor_g1'</span>,
+    auto_offset_reset=<span class="token string">'earliest'</span>
+)
+
+<span class="token function">print</span>(<span class="token string">"🎧 Descodificando bytes en vivo vía Google Protobuf..."</span>)
+
+<span class="token keyword">for</span> message <span class="token keyword">in</span> consumer:
+    <span class="token comment"># Recibimos basura binaria cruda de la red</span>
+    bytes_raw = message.value 
+    
+    <span class="token comment"># Creamos una clase vacía y le ordenamos devorar los bytes</span>
+    datos_recibidos = sensor_data_pb2.SensorTelemetria()
+    datos_recibidos.ParseFromString(bytes_raw)
+    
+    <span class="token comment"># Ahora recuperamos el tipado natural (str, double, bool)</span>
+    <span class="token function">print</span>(f<span class="token string">"[ALERTA: {datos_recibidos.alerta_roja}] Sensor {datos_recibidos.sensor_id} reporta {datos_recibidos.temperatura} ºC"</span>)
+            </pre>
+        </div>
+
+    </div>
+
+    <div class="nav-footer">
+        <a href="14_formato_protobuf.html" class="nav-btn">← Teoría: Masterclass Protobuf</a>
+        <a href="18_practica_parquet.html" class="nav-btn">Siguiente: Lab Parquet →</a>
+    </div>
+</body>
+
+</html>

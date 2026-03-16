@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <title>14 · Masterclass: Protocol Buffers — Kafka Bootcamp</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', system-ui, sans-serif;
+            background: #0d1117;
+            color: #e6edf3;
+            line-height: 1.6;
+        }
+
+        .topbar {
+            background: #161b22;
+            border-bottom: 1px solid #30363d;
+            padding: 12px 24px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 0.82em;
+        }
+
+        .topbar a {
+            color: #e3b341;
+            text-decoration: none;
+        }
+
+        .topbar a:hover {
+            color: #ffd166;
+        }
+
+        .topbar .sep {
+            color: #484f58;
+        }
+
+        .topbar .cur {
+            color: #e6edf3;
+            font-weight: 600;
+        }
+
+        .hero {
+            background: linear-gradient(135deg, #3a2a0a22, #0d1117);
+            border-bottom: 1px solid #30363d;
+            padding: 40px 24px;
+            text-align: center;
+        }
+
+        .badge {
+            display: inline-block;
+            background: #3a2a0a;
+            color: #e3b341;
+            font-size: 0.7em;
+            font-weight: 700;
+            padding: 4px 14px;
+            border-radius: 20px;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            margin-bottom: 16px;
+        }
+
+        .hero h1 {
+            font-size: 2.4em;
+            font-weight: 900;
+            margin-bottom: 12px;
+            color: #ffffff;
+        }
+
+        .hero p {
+            color: #8b949e;
+            font-size: 1.05em;
+            max-width: 760px;
+            margin: 0 auto;
+        }
+
+        .content {
+            max-width: 1000px;
+            margin: 40px auto;
+            padding: 0 24px;
+        }
+
+        h2 {
+            font-size: 1.6em;
+            color: #e3b341;
+            margin: 48px 0 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #30363d;
+        }
+
+        h3 {
+            font-size: 1.2em;
+            color: #e6edf3;
+            margin: 32px 0 16px;
+        }
+
+        p {
+            margin-bottom: 18px;
+            font-size: 0.95em;
+        }
+
+        .card {
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 24px;
+        }
+
+        pre {
+            background: #010409;
+            border: 1px solid #21262d;
+            border-radius: 8px;
+            padding: 16px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85em;
+            overflow-x: auto;
+            margin: 16px 0;
+            color: #e6edf3;
+        }
+
+        code {
+            font-family: monospace;
+            background: #21262d;
+            padding: 2px 6px;
+            border-radius: 4px;
+            color: #ffd166;
+            font-size: 0.9em;
+        }
+
+        .hi {
+            padding: 16px 20px;
+            border-radius: 8px;
+            margin: 24px 0;
+            font-size: 0.95em;
+            border-left: 4px solid;
+            background: #161b22;
+        }
+
+        .hi.warn {
+            border-color: #ff7b72;
+            background: #3a1a1a33;
+            color: #ffa198;
+        }
+
+        .hi.info {
+            border-color: #e3b341;
+            background: #3a2a0a33;
+            color: #ffd166;
+        }
+
+        .diagram-box {
+            background: #010409;
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            padding: 24px;
+            margin: 24px 0;
+            font-family: monospace;
+            text-align: center;
+        }
+
+        .binary-byte {
+            display: inline-block;
+            background: #21262d;
+            color: #e3b341;
+            padding: 8px 12px;
+            border-radius: 6px;
+            margin: 0 4px;
+            border: 1px solid #ffb95e44;
+            font-weight: bold;
+        }
+
+        .binary-meta {
+            color: #8b949e;
+            font-size: 0.8em;
+            display: block;
+            margin-top: 6px;
+        }
+
+        .nav-footer {
+            border-top: 1px solid #30363d;
+            padding: 30px 24px;
+            display: flex;
+            justify-content: space-between;
+            margin-top: 60px;
+            max-width: 1000px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .nav-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            padding: 12px 24px;
+            text-decoration: none;
+            color: #e6edf3;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        .nav-btn:hover {
+            border-color: #e3b341;
+            color: #e3b341;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="topbar">
+        <a href="index.html">🏠 Menú Principal</a><span class="sep">›</span>
+        <span class="cur">14 · Masterclass: Protobuf</span>
+    </div>
+
+    <div class="hero">
+        <div class="badge">Ecosistema Data — Deep Dive</div>
+        <h1>📠 Protocol Buffers (Protobuf)</h1>
+        <p>El estándar de Google. La filosofía de "La Ley de los Tags", la serialización sin Schema Registry y su reinado absoluto en gRPC y Microservicios interconectados.</p>
+    </div>
+
+    <div class="content">
+
+        <h2>1. El Ecosistema: Protobuf vs Avro</h2>
+        <p>A diferencia de Avro, que nació en el seno del ecosistema de Big Data (Hadoop) y fue adoptado por Kafka de la mano de Confluent, <strong>Protocol Buffers</strong> fue inventado por Google para interconectar de forma ultra-ligera y ultra-rápida miles de microservicios internos.</p>
+        
+        <div class="card">
+            <h3>La principal diferencia arquitectónica</h3>
+            <ul>
+                <li><strong>Avro:</strong> Resuelve el esquema <strong>dinámicamente</strong> en tiempo de ejecución. El Consumer pide el JSON del esquema al Registry por HTTP, lo engrana en memoria y de-serializa los bytes. (Muy "late-binding", excelente para lenguajes dinámicos como Python).</li>
+                <li><strong>Protobuf:</strong> Resuelve el esquema <strong>estáticamente</strong> a nivel de compilador. El desarrollador escribe el archivo de contrato <code>.proto</code>, ejecuta el comando <code>protoc</code> y este escupe <strong>Clases pre-generadas fuertemente tipadas en Java/Go/Python</strong>. </li>
+            </ul>
+            <p>Por eso, usar Protobuf "crudo" no requería inicialmente un Schema Registry a nivel red: Tanto el Productor como el Consumidor tenían que haber sido compilados localmente con el mismo archivo <code>.proto</code> en fase de Desarrollo.</p>
+        </div>
+
+        <h2>2. La Ley de los Tags (Numbered Fields)</h2>
+        <p>El concepto más sagrado e inviolable de Protobuf son los identificadores numéricos, coloquialmente llamados <strong>Tags</strong>.</p>
+        
+        <pre><span style="color: #63a9ff;">syntax</span> = "proto3";
+
+<span style="color: #e3b341;">message</span> Persona {
+  string nombre = <span style="color: #ff7b72;">1</span>;
+  int32  edad = <span style="color: #ff7b72;">2</span>;
+  string pais = <span style="color: #ff7b72;">3</span>;
+}</pre>
+
+        <p>Ese <code>= 1</code> o <code>= 2</code> no es una asignación de variable. <strong>Es su ID estático a nivel byte.</strong> Al igual que Avro, la clave String ("nombre") es aniquilada antes de cruzar la red.</p>
+        
+        <div class="diagram-box">
+            <h4 style="color: #8b949e; margin-bottom: 20px;">Cómo viaja un Protobuf Payload: <code>[Tag+Type | Data]</code></h4>
+            <div>
+                <div style="display: inline-block; text-align: center;">
+                    <span class="binary-byte" style="border-color: #ff7b72; color: #ff7b72;">0x0A</span>
+                    <span class="binary-meta">Etiqueta 1 es String</span>
+                </div>
+                <div style="display: inline-block; text-align: center; margin: 0 10px;">
+                    <span class="binary-byte">[ Ana ]</span>
+                    <span class="binary-meta">Valor crudo</span>
+                </div>
+                <div style="display: inline-block; text-align: center; margin: 0 10px;">
+                    <span class="binary-byte" style="border-color: #ff7b72; color: #ff7b72;">0x10</span>
+                    <span class="binary-meta">Etiqueta 2 es Int</span>
+                </div>
+                <div style="display: inline-block; text-align: center;">
+                    <span class="binary-byte">[ 0x19 ]</span>
+                    <span class="binary-meta">Valor (25)</span>
+                </div>
+            </div>
+            <p style="margin-top: 15px; color: #8b949e; font-size: 0.85em;">A diferencia de Avro, que depende del Schema Registry para saber qué dato es el primero y no los etiqueta, Protobuf sí etiqueta matemáticamente que el Byte que vino corresponde a "la Entidad número 2".</p>
+        </div>
+
+        <h3>El Desastre Evolutivo Frecuente</h3>
+        <p>Imagínate que meses después, Negocio te pide que borres el campo 'edad' porque es ilegal guardar la edad, y pongas un campo 'email' nuevo.</p>
+
+        <div class="hi warn">
+            <strong>🔥 LA REGLA DE ORO DE PROTOBUF:</strong> JAMÁS recicles un número. Si borras <code>edad = 2</code>, está terminantemente prohibido hacer <code>email = 2</code>.
+        </div>
+        
+        <p><strong>¿Qué pasa si reciclas el = 2?</strong></p>
+        <p>El Consumer viejo que todavía no actualizaste, seguirá creyendo que el Tag 2 es un entero 'edad'. El Producer nuevo le empezará a mandar en el Tag 2 una cadena de texto de un Email. El Consumer intentará decodificar el array de bits de texto como si fuera el número binario de los Años, y causará una Corrupción de Memoria crítica provocando un Crash en el sistema o parseando números ilegibles.</p>
+
+        <pre>// CORRECTA FORMA DE EVOLUCIONAR (Marcar como reservado o ignorar):
+message Persona {
+  string nombre = 1;
+  <span style="color: #63a9ff;">// int32 edad = 2; (Opcional documentarlo, pero ya no existe)</span>
+  <span style="color: #8b949e;">reserved 2;</span> <span style="color: #8b949e;">// <- El compilador impedirá que alguien use el 2 por error</span>
+  string pais = 3;
+  
+  <span style="color: #ff7b72;">string email = 4;</span> <span style="color: #8b949e;">// <- Usar el siguiente Tag libre</span>
+}</pre>
+
+        <h2>3. Kafka vs gRPC</h2>
+        <p>En el terreno del Big Data, Avro reina supremo en Kafka simplemente porque las herramientas de Data Science integran Avro muy bien con Python de forma dinámica sin necesidad de que el científico pre-compile librerías C++ o Java de los esquemas Protobuf.</p>
+        <p>Sin embargo, para construir el "Sistema Nervioso" de tu Backend, usar <strong>gRPC con Protobuf</strong> es mil veces superior a Kafka en tareas que requieran <em>Request-Response</em> síncrono ultra-veloz. Kafka emite al vacío asíncronamente; gRPC establece un tubo HTTP/2 y emite llamadas a funciones binarias directas a otro ordenador.</p>
+        <div class="hi info">
+            <strong>Resumen Práctico:</strong> 
+            <ul>
+                <li>Si quieres guardar o transmitir "Estados/Eventos" desconectados (A -> Kafka -> B|C|D): <strong>Usa Kafka con Avro.</strong></li>
+                <li>Si tienes un Microservicio de "Carrito" que necesita consultar <i>inmediatamente</i> el saldo en el Microservicio "Banco" para denegar o aprobar la compra al usuario (A <-> B): <strong>Usa endpoints gRPC (Protobuf).</strong></li>
+            </ul>
+        </div>
+
+    </div>
+
+    <div class="nav-footer">
+        <a href="13_formato_avro.html" class="nav-btn">← Avro en Profundidad</a>
+        <a href="15_formato_parquet.html" class="nav-btn">Siguiente: Parquet Data Lake →</a>
+    </div>
+</body>
+
+</html>

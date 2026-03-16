@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Lab 04 · Práctica Avro — Kafka Bootcamp</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Inter', system-ui, sans-serif; background: #0d1117; color: #e6edf3; line-height: 1.6; }
+        .topbar { background: #161b22; border-bottom: 1px solid #30363d; padding: 12px 24px; display: flex; align-items: center; gap: 12px; font-size: 0.82em; }
+        .topbar a { color: #58a6ff; text-decoration: none; }
+        .topbar a:hover { color: #79c0ff; }
+        .topbar .sep { color: #484f58; }
+        .topbar .cur { color: #e6edf3; font-weight: 600; }
+        .hero { background: linear-gradient(135deg, #0d1a3a22, #0d1117); border-bottom: 1px solid #30363d; padding: 40px 24px; text-align: center; }
+        .badge { display: inline-block; background: #0d1a3a; color: #58a6ff; font-size: 0.7em; font-weight: 700; padding: 4px 14px; border-radius: 20px; letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 16px; }
+        .hero h1 { font-size: 2.4em; font-weight: 900; margin-bottom: 12px; color: #ffffff; }
+        .hero p { color: #8b949e; font-size: 1.05em; max-width: 760px; margin: 0 auto; }
+        .content { max-width: 1000px; margin: 40px auto; padding: 0 24px; }
+        h2 { font-size: 1.5em; color: #58a6ff; margin: 48px 0 20px; padding-bottom: 10px; border-bottom: 1px solid #30363d; }
+        h3 { font-size: 1.2em; color: #e6edf3; margin: 32px 0 16px; }
+        p { margin-bottom: 18px; font-size: 0.95em; }
+        ul, ol { margin-left: 24px; margin-bottom: 18px; font-size: 0.95em; color: #c9d1d9; }
+        li { margin-bottom: 8px; }
+        .card { background: #161b22; border: 1px solid #30363d; border-radius: 12px; padding: 24px; margin-bottom: 24px; }
+        .terminal { background: #010409; border: 1px solid #21262d; border-radius: 8px; padding: 16px; font-family: 'Courier New', monospace; font-size: 0.85em; overflow-x: auto; margin: 16px 0; color: #e6edf3; border-left: 3px solid #58a6ff; }
+        .code-container { position: relative; margin: 20px 0; }
+        .code-header { background: #161b22; padding: 8px 16px; font-family: monospace; font-size: 0.8em; color: #8b949e; border: 1px solid #30363d; border-bottom: none; border-radius: 8px 8px 0 0; display: flex; justify-content: space-between; align-items: center; }
+        .code-block { background: #0d1117; padding: 16px; font-family: 'Courier New', monospace; font-size: 0.85em; color: #c9d1d9; border: 1px solid #30363d; border-radius: 0 0 8px 8px; overflow-x: auto; line-height: 1.5; }
+        .token.comment { color: #8b949e; font-style: italic; }
+        .token.keyword { color: #ff7b72; }
+        .token.string { color: #a5d6ff; }
+        .token.function { color: #d2a8ff; }
+        .hi { padding: 16px 20px; border-radius: 8px; margin: 24px 0; font-size: 0.95em; border-left: 4px solid; background: #161b22; }
+        .hi.info { border-color: #58a6ff; background: #0d1a3a33; }
+        .hi.warn { border-color: #ffb95e; background: #3a2a0a33; }
+        .nav-footer { border-top: 1px solid #30363d; padding: 30px 24px; display: flex; justify-content: space-between; margin-top: 60px; max-width: 1000px; margin-left: auto; margin-right: auto; }
+        .nav-btn { display: inline-flex; align-items: center; gap: 10px; background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 12px 24px; text-decoration: none; color: #e6edf3; font-weight: 600; transition: all 0.2s; }
+        .nav-btn:hover { border-color: #58a6ff; color: #58a6ff; }
+    </style>
+</head>
+
+<body>
+    <div class="topbar">
+        <a href="index.html">🏠 Menú Principal</a><span class="sep">›</span>
+        <span class="cur">Lab 04 · Código Avro</span>
+    </div>
+
+    <div class="hero">
+        <div class="badge">Laboratorio 04 — Python</div>
+        <h1>Práctica Binarización: Confluent Avro</h1>
+        <p>Implementación desde cero de un Producer y Consumer utilizando el Schema Registry de Confluent para inyectar payloads binarios ultra densos.</p>
+    </div>
+
+    <div class="content">
+
+        <h2>1. Preparación del Entorno</h2>
+        <p>A diferencia del JSON simple que viene integrado en todos los lenguajes, utilizar Avro requiere comunicarse con el <strong>Schema Registry</strong> por HTTP, compilar el esquema y serializar bytes.</p>
+        
+        <div class="terminal">
+            <span class="token comment"># 1. Asegúrate de tener levantado el entorno Docker con el Registry (puerto 8081)</span><br>
+            docker-compose up -d<br><br>
+            <span class="token comment"># 2. Instala la librería de Confluent con el extra [avro]</span><br>
+            pip install "confluent-kafka[avro]"
+        </div>
+
+        <h2>2. Definir el Contrato: El Archivo `.avsc`</h2>
+        <p>Debemos crear un archivo físico en nuestro proyecto que defina estrictamente cómo son los datos. Crea un archivo llamado <code>user_click.avsc</code> en la raíz de tu proyecto.</p>
+
+        <div class="code-container">
+            <div class="code-header"><span>user_click.avsc</span><span>JSON</span></div>
+            <pre class="code-block">
+{
+  "namespace": "com.bootcamp.avro",
+  "type": "record",
+  "name": "UserClick",
+  "fields": [
+    {"name": "user_id", "type": "int"},
+    {"name": "button_id", "type": "string"},
+    {"name": "timestamp_ms", "type": "long", "logicalType": "timestamp-millis"}
+  ]
+}
+            </pre>
+        </div>
+
+        <h2>3. El Productor (AvroProducer)</h2>
+        <p>El Productor en Python seguirá utilizando un diccionario normal (tipo Pydantic/JSON), pero usará la clase <code>AvroSerializer</code>. Esta clase interceptará el diccionario, lo validará contra el <code>.avsc</code>, contactará al Schema Registry para registrar el ID, y finalmente lo aplastará a bytes antes de inyectarlo en Kafka.</p>
+
+        <div class="code-container">
+            <div class="code-header"><span>producer_avro.py</span><span>Python</span></div>
+            <pre class="code-block">
+<span class="token keyword">import</span> time
+<span class="token keyword">from</span> confluent_kafka <span class="token keyword">import</span> SerializingProducer
+<span class="token keyword">from</span> confluent_kafka.schema_registry <span class="token keyword">import</span> SchemaRegistryClient
+<span class="token keyword">from</span> confluent_kafka.schema_registry.avro <span class="token keyword">import</span> AvroSerializer
+
+<span class="token comment"># 1. Leer el archivo local del esquema</span>
+<span class="token keyword">with open</span>(<span class="token string">"user_click.avsc"</span>, <span class="token string">"r"</span>) <span class="token keyword">as</span> f:
+    schema_str = f.read()
+
+<span class="token comment"># 2. Conectar al Schema Registry (Levantado por tu Docker)</span>
+schema_registry_conf = {<span class="token string">'url'</span>: <span class="token string">'http://localhost:8081'</span>}
+schema_registry_client = SchemaRegistryClient(schema_registry_conf)
+
+<span class="token comment"># 3. Crear el serializador inyector</span>
+avro_serializer = AvroSerializer(schema_registry_client, schema_str)
+
+<span class="token comment"># 4. Configurar el Productor (¡Ojo! Usamos SerializingProducer)</span>
+producer_conf = {
+    <span class="token string">'bootstrap.servers'</span>: <span class="token string">'localhost:9092'</span>,
+    <span class="token string">'value.serializer'</span>: avro_serializer  <span class="token comment"># Magia Ocurre Aquí</span>
+}
+producer = SerializingProducer(producer_conf)
+
+<span class="token comment"># 5. Producir el evento (Parece un Dict, pero viajará en Binario)</span>
+event = {
+    <span class="token string">"user_id"</span>: 104,
+    <span class="token string">"button_id"</span>: <span class="token string">"COMPRAR_AHORA"</span>,
+    <span class="token string">"timestamp_ms"</span>: <span class="token function">int</span>(time.time() * 1000)
+}
+
+producer.produce(topic=<span class="token string">'clicks_avro'</span>, value=event)
+producer.flush()
+
+<span class="token function">print</span>(<span class="token string">"✅ Mensaje Avro enviado exitosamente con Magic Byte 0x00"</span>)
+            </pre>
+        </div>
+
+        <div class="hi info">
+            <strong>¿Qué pasó por debajo?</strong> El <code>AvroSerializer</code> contactó a <code>http://localhost:8081</code>. El Registry le dijo: "Este esquema es el ID 1". El Productor cogió el número 104, el string "COMPRAR_AHORA" y el tiempo, purgó las claves ("user_id", etc.), concatenó el Magic Byte <code>[0x00 | ID 1 | Bytes Puros]</code> y lo disparó a la red.
+        </div>
+
+        <h2>4. El Consumidor (AvroConsumer)</h2>
+        <p>El consumidor no necesita tener el fichero <code>.avsc</code> en su disco. Automáticamente leerá el ID 1 del paquete binario y le pedirá la estructura al Registry en tiempo real.</p>
+
+        <div class="code-container">
+            <div class="code-header"><span>consumer_avro.py</span><span>Python</span></div>
+            <pre class="code-block">
+<span class="token keyword">from</span> confluent_kafka <span class="token keyword">import</span> DeserializingConsumer
+<span class="token keyword">from</span> confluent_kafka.schema_registry <span class="token keyword">import</span> SchemaRegistryClient
+<span class="token keyword">from</span> confluent_kafka.schema_registry.avro <span class="token keyword">import</span> AvroDeserializer
+
+<span class="token comment"># 1. Cliente Schema Registry</span>
+sr_client = SchemaRegistryClient({<span class="token string">'url'</span>: <span class="token string">'http://localhost:8081'</span>})
+
+<span class="token comment"># 2. Deserializador (Se bajará la estructura automáticamente)</span>
+avro_deserializer = AvroDeserializer(sr_client)
+
+<span class="token comment"># 3. Configurar Consumer (DeserializingConsumer)</span>
+consumer_conf = {
+    <span class="token string">'bootstrap.servers'</span>: <span class="token string">'localhost:9092'</span>,
+    <span class="token string">'group.id'</span>: <span class="token string">'analytics_group'</span>,
+    <span class="token string">'auto.offset.reset'</span>: <span class="token string">'earliest'</span>,
+    <span class="token string">'value.deserializer'</span>: avro_deserializer <span class="token comment"># Magia Inversa</span>
+}
+consumer = DeserializingConsumer(consumer_conf)
+consumer.subscribe([<span class="token string">'clicks_avro'</span>])
+
+<span class="token function">print</span>(<span class="token string">"🎧 Escuchando mensajes binarios..."</span>)
+
+<span class="token keyword">while True</span>:
+    <span class="token keyword">try</span>:
+        msg = consumer.poll(1.0)
+        <span class="token keyword">if</span> msg <span class="token keyword">is None</span>:
+            <span class="token keyword">continue</span>
+        
+        <span class="token comment"># El Deserializer ya convirtió los bytes de nuevo a Dict de Python</span>
+        evento_json = msg.value() 
+        <span class="token function">print</span>(f<span class="token string">"Recibido Click de Usuario: {evento_json['user_id']} en {evento_json['button_id']}"</span>)
+        
+    <span class="token keyword">except KeyboardInterrupt</span>:
+        <span class="token keyword">break</span>
+
+consumer.close()
+            </pre>
+        </div>
+
+        <div class="hi warn">
+            <strong>Fallo Común de Producción: Tolerancia a Caídas.</strong><br>
+            A simple vista parece que el Consumer fallará si el contenedor de Docker del <code>Schema Registry</code> se cae. En realidad, el <code>AvroDeserializer</code> guarda los esquemas cacheados en la memoria RAM del contenedor de Python. Si el Registry se cae 10 minutos, los Productor y los Consumidores seguirán funcionando sin inmutarse siempre y cuando no se registre un "Schema Nuevo".
+        </div>
+
+    </div>
+
+    <div class="nav-footer">
+        <a href="13_formato_avro.html" class="nav-btn">← Tería: Masterclass Avro</a>
+        <a href="17_practica_protobuf.html" class="nav-btn">Siguiente: Lab Protobuf →</a>
+    </div>
+</body>
+
+</html>

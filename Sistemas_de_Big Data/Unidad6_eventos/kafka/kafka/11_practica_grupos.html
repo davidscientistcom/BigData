@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Lab 02 · Escalabilidad y Grupos — Kafka Bootcamp</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', system-ui, sans-serif;
+            background: #0d1117;
+            color: #e6edf3;
+        }
+
+        .topbar {
+            background: #161b22;
+            border-bottom: 1px solid #30363d;
+            padding: 12px 24px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 0.82em;
+        }
+
+        .topbar a {
+            color: #79c0ff;
+            text-decoration: none;
+        }
+
+        .topbar a:hover {
+            color: #a5d6ff;
+        }
+
+        .topbar .sep {
+            color: #484f58;
+        }
+
+        .topbar .cur {
+            color: #e6edf3;
+            font-weight: 600;
+        }
+
+        .hero {
+            background: linear-gradient(135deg, #0d1a3a22, #0d1117);
+            border-bottom: 1px solid #30363d;
+            padding: 36px 24px;
+            text-align: center;
+        }
+
+        .badge {
+            display: inline-block;
+            background: #0d1a3a;
+            color: #79c0ff;
+            font-size: 0.7em;
+            font-weight: 700;
+            padding: 3px 12px;
+            border-radius: 20px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            margin-bottom: 14px;
+        }
+
+        .hero h1 {
+            font-size: 1.9em;
+            font-weight: 900;
+            margin-bottom: 8px;
+        }
+
+        .hero p {
+            color: #8b949e;
+            font-size: 0.88em;
+            max-width: 640px;
+            margin: 0 auto;
+            line-height: 1.6;
+        }
+
+        .content {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 32px 24px;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .grid-wide {
+            grid-column: 1 / -1;
+        }
+
+        .card {
+            background: #161b22;
+            border-radius: 12px;
+            border: 1px solid #30363d;
+            padding: 20px;
+            transition: border-color 0.18s;
+        }
+
+        .card:hover {
+            border-color: #79c0ff44;
+        }
+
+        .card-title {
+            font-weight: 700;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.95em;
+        }
+
+        p {
+            color: #8b949e;
+            line-height: 1.65;
+            margin-bottom: 8px;
+            font-size: 0.85em;
+        }
+
+        pre {
+            background: #010409;
+            border: 1px solid #21262d;
+            border-radius: 8px;
+            padding: 14px 16px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.76em;
+            overflow-x: auto;
+            white-space: pre;
+            line-height: 1.7;
+            margin: 8px 0;
+        }
+
+        code {
+            font-family: monospace;
+            background: #21262d;
+            padding: 1px 5px;
+            border-radius: 4px;
+            font-size: 0.88em;
+            color: #a5d6ff;
+        }
+
+        .hi {
+            margin: 10px 0;
+            background: #0d1a3a33;
+            border: 1px solid #79c0ff44;
+            border-radius: 8px;
+            padding: 10px 14px;
+            font-size: 0.82em;
+            color: #aad8ff;
+        }
+
+        .hi.g {
+            background: #1a3a2a33;
+            border-color: #3fb95044;
+            color: #7ee787;
+        }
+
+        .section-title {
+            font-size: 1.1em;
+            font-weight: 700;
+            color: #79c0ff;
+            margin: 32px 0 16px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #21262d;
+        }
+
+        .nav-footer {
+            border-top: 1px solid #30363d;
+            padding: 20px 24px;
+            display: flex;
+            justify-content: space-between;
+            margin-top: 20px;
+        }
+
+        .nav-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            padding: 10px 18px;
+            text-decoration: none;
+            color: #e6edf3;
+            font-size: 0.83em;
+            font-weight: 600;
+            transition: all 0.18s;
+        }
+
+        .nav-btn:hover {
+            border-color: #79c0ff;
+            color: #79c0ff;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="topbar">
+        <a href="index.html">🏠 Kafka Bootcamp</a><span class="sep">›</span>
+        <span class="cur">Lab 02 · Grupos</span>
+    </div>
+    <div class="hero">
+        <div class="badge">Laboratorio 02</div>
+        <h1>⚖️ Práctica: Escalabilidad y Grupos</h1>
+        <p>Divide y vencerás. Vamos a ver en código cómo funciona el <strong>Hash-routing por llave</strong> en 3 particiones y un <strong>Consumer Group de 3 procesos</strong> leyendo en paralelo.</p>
+    </div>
+
+    <div class="content">
+
+        <div class="section-title">Terminal: Preparando el Topic a gran escala</div>
+        <div class="grid">
+            <div class="card grid-wide">
+                <div class="card-title">Paso 1: Crear el topic con N particiones</div>
+                <p>Para paralelizar el procesamiento entre 3 maquinitas (Consumers) y garantizar que la información se esparza uniformemente, necesitamos al menos 3 carriles lógicos en Kafka.</p>
+                <pre># Desde dentro del contenedor kafka
+kafka-topics --bootstrap-server localhost:9092 \
+             --create \
+             --topic transacciones \
+             --partitions 3 \
+             --replication-factor 1</pre>
+                <div class="hi g">✅ Tienes 3 contenedores lógicos <code>[Partición-0, Partición-1, Partición-2]</code>. Listo para repartir la carga.</div>
+            </div>
+        </div>
+
+        <div class="section-title">Enrutamiento Hash en el Producer</div>
+        <div class="grid">
+            <div class="card grid-wide">
+                <div class="card-title">Paso 2: Enviar con `KEY` para respetar el orden</div>
+                <p>Las <em>Keys</em> son vitales en sistemas paralelos. Si mandas eventos de "Juan" sin llave, Kafka los lanza a particiones aleatorias (Round-Robin). Si le pones una llave, todos los eventos de "Juan" irán <strong>siempre</strong> a la misma partición y sus eventos jamás se desordenarán.</p>
+
+                <div style="display: flex; gap: 15px; margin-top: 15px;">
+                    <div style="flex: 1;">
+                        <h4 style="color: #ffb95e; margin-bottom: 8px;">🐍 Python (Producer con Key)</h4>
+                        <pre>from confluent_kafka import Producer
+import json
+import time
+
+producer = Producer({'bootstrap.servers': 'localhost:9094'})
+
+eventos = [
+    {"user": "u_1", "monto": 50},  # Juan
+    {"user": "u_2", "monto": 10},  # Elena
+    {"user": "u_1", "monto": 25}   # Juan de nuevo
+]
+
+for ev in eventos:
+    # LA CLAVE! El hash-routing garantiza que u_1 va siempre 
+    # a la misma partición
+    llave = ev["user"].encode('utf-8')
+    valor = json.dumps(ev).encode('utf-8')
+
+    producer.produce('transacciones', key=llave, value=valor)
+    time.sleep(0.5)
+
+producer.flush()</pre>
+                    </div>
+
+                    <div style="flex: 1;">
+                        <h4 style="color: #ffb95e; margin-bottom: 8px;">☕ Java (KafkaProducer con Key)</h4>
+                        <pre>import org.apache.kafka.clients.producer.*;
+import java.util.Properties;
+
+Properties p = new Properties();
+p.put("bootstrap.servers", "localhost:9094");
+p.put("key.serializer", "org.apache.kafka.common.serialization.StringSerializer");
+p.put("value.serializer", "org.apache.kafka.common.serialization.StringSerializer");
+
+KafkaProducer&lt;String, String&gt; producer = new KafkaProducer<>(p);
+
+// Nota cómo al ProducerRecord le inyectamos 3 parámetros en vez de 2
+// ("topic", "key", "value")
+producer.send(new ProducerRecord&lt;&gt;("transacciones", "u_1", "{\"monto\": 50}"));
+producer.send(new ProducerRecord&lt;&gt;("transacciones", "u_2", "{\"monto\": 10}"));
+producer.send(new ProducerRecord&lt;&gt;("transacciones", "u_1", "{\"monto\": 25}"));
+
+producer.close();</pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="section-title">Consumer Group: El Reparto Automático</div>
+        <div class="grid">
+            <div class="card grid-wide">
+                <div class="card-title">Paso 3: Un Grupo, múltiples workers</div>
+                <p>El poder de Kafka radica en su orquestador de Grupos. Abre <strong>3 consolas distintas</strong> y ejecuta el mismo código exacto en las tres al mismo tiempo. Al leer que los tres tienen el mismo <code>group.id="grupo_transacciones"</code>, el clúster les asignará a cada uno una partición exclusiva <code>(1 Consumer -> 1 Partición)</code>. ¡Paralelismo automático sin usar websockets ni balanceadores de carga!</p>
+
+                <div style="display: flex; gap: 15px; margin-top: 15px;">
+                    <div style="flex: 1;">
+                        <h4 style="color: #79c0ff; margin-bottom: 8px;">🐍 Python (Workers)</h4>
+                        <pre>from confluent_kafka import Consumer
+
+# Ejecuta este script 3 veces en 3 terminales distintas
+conf = {
+    'bootstrap.servers': 'localhost:9094',
+    'group.id': 'grupo_transacciones', # <- El secreto
+    'auto.offset.reset': 'earliest'
+}
+consumer = Consumer(conf)
+consumer.subscribe(['transacciones'])
+
+while True:
+    msg = consumer.poll(1.0)
+    if not msg or msg.error():
+        continue
+    # Mostramos qué partición le tocó a este Worker (0, 1 o 2)
+    p = msg.partition()
+    print(f"[Worker P-{p}] Leyó llave: {msg.key()} -> {msg.value()}")</pre>
+                    </div>
+
+                    <div style="flex: 1;">
+                        <h4 style="color: #79c0ff; margin-bottom: 8px;">☕ Java (Workers)</h4>
+                        <pre>import org.apache.kafka.clients.consumer.*;
+import java.time.Duration;
+import java.util.*;
+
+Properties p = new Properties();
+p.put("bootstrap.servers", "localhost:9094");
+p.put("group.id", "grupo_transacciones"); // <- El secreto
+// Deserializadores...
+
+KafkaConsumer&lt;String, String&gt; worker = new KafkaConsumer<>(p);
+worker.subscribe(Arrays.asList("transacciones"));
+
+while (true) {
+    ConsumerRecords&lt;String, String&gt; recs = worker.poll(Duration.ofMillis(100));
+    for (ConsumerRecord&lt;String, String&gt; r : recs) {
+        System.out.printf("[Worker P-%d] Leyó llave: %s -> %s%n", 
+            r.partition(), r.key(), r.value());
+    }
+}</pre>
+                    </div>
+                </div>
+
+                <div class="hi">
+                    <strong>💥 Prueba de Rebalanceo Cooperativo:</strong> 
+                    Con los 3 procesos (Workers) encendidos, cancela abruptamente uno apretando <code>Ctrl+C</code>. 
+                    <br><br>
+                    Mágicamente verás cómo Kafka detecta que ese integrante murió, y en cosa de un segundo los otros 2 procesos que siguen vivos adoptarán la Partición huérfana para que los mensajes sigan siendo procesados. ¡Alta resiliencia gratuita!
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="nav-footer">
+        <a href="10_practica_basica.html" class="nav-btn">← Lab 01 · Básicos</a>
+        <a href="12_practica_avanzada.html" class="nav-btn">Lab 03 · Prod (Avz) →</a>
+    </div>
+</body>
+
+</html>

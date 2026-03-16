@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <title>02 · Instalación con Docker — Kafka Bootcamp</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', system-ui, sans-serif;
+            background: #0d1117;
+            color: #e6edf3;
+        }
+
+        .topbar {
+            background: #161b22;
+            border-bottom: 1px solid #30363d;
+            padding: 12px 24px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 0.82em;
+        }
+
+        .topbar a {
+            color: #f7c59f;
+            text-decoration: none;
+        }
+
+        .topbar a:hover {
+            color: #ffd9b3;
+        }
+
+        .topbar .sep {
+            color: #484f58;
+        }
+
+        .topbar .cur {
+            color: #e6edf3;
+            font-weight: 600;
+        }
+
+        .hero {
+            background: linear-gradient(135deg, #1a120522, #0d1117);
+            border-bottom: 1px solid #30363d;
+            padding: 36px 24px;
+            text-align: center;
+        }
+
+        .badge {
+            display: inline-block;
+            background: #1a1205;
+            color: #f7c59f;
+            font-size: 0.7em;
+            font-weight: 700;
+            padding: 3px 12px;
+            border-radius: 20px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            margin-bottom: 14px;
+        }
+
+        .hero h1 {
+            font-size: 1.9em;
+            font-weight: 900;
+            margin-bottom: 8px;
+        }
+
+        .hero p {
+            color: #8b949e;
+            font-size: 0.88em;
+            max-width: 640px;
+            margin: 0 auto;
+            line-height: 1.6;
+        }
+
+        .content {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 32px 24px;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .grid-wide {
+            grid-column: 1 / -1;
+        }
+
+        .card {
+            background: #161b22;
+            border-radius: 12px;
+            border: 1px solid #30363d;
+            padding: 20px;
+            transition: border-color 0.18s;
+        }
+
+        .card:hover {
+            border-color: #f7c59f44;
+        }
+
+        .card-title {
+            font-weight: 700;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.95em;
+        }
+
+        p {
+            color: #8b949e;
+            line-height: 1.65;
+            margin-bottom: 8px;
+            font-size: 0.85em;
+        }
+
+        pre {
+            background: #010409;
+            border: 1px solid #21262d;
+            border-radius: 8px;
+            padding: 14px 16px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.76em;
+            overflow-x: auto; white-space: pre;
+            line-height: 1.7;
+            margin: 8px 0;
+            white-space: pre;
+        }
+
+        code {
+            font-family: monospace;
+            background: #21262d;
+            padding: 1px 5px;
+            border-radius: 4px;
+            font-size: 0.88em;
+            color: #a5d6ff;
+        }
+
+        .c {
+            color: #6e7681;
+        }
+
+        .kw {
+            color: #ff7b72;
+        }
+
+        .str {
+            color: #a5d6ff;
+        }
+
+        .num {
+            color: #79c0ff;
+        }
+
+        .nm {
+            color: #d2a8ff;
+        }
+
+        .fn {
+            color: #e3b341;
+        }
+
+        .gr {
+            color: #3fb950;
+        }
+
+        .cy {
+            color: #39d0d8;
+        }
+
+        .or {
+            color: #ff6b35;
+        }
+
+        .yel {
+            color: #f7c59f;
+        }
+
+        ul,
+        ol {
+            padding-left: 20px;
+            margin: 6px 0 10px;
+        }
+
+        li {
+            color: #8b949e;
+            margin-bottom: 4px;
+            font-size: 0.85em;
+            line-height: 1.5;
+        }
+
+        li::marker {
+            color: #f7c59f;
+        }
+
+        .hi {
+            margin: 10px 0;
+            background: #1a120533;
+            border: 1px solid #f7c59f44;
+            border-radius: 8px;
+            padding: 10px 14px;
+            font-size: 0.82em;
+            color: #f7c59f;
+        }
+
+        .hi.g {
+            background: #1a3a2a33;
+            border-color: #3fb95044;
+            color: #7ee787;
+        }
+
+        .hi.b {
+            background: #1f3a5f33;
+            border-color: #79c0ff44;
+            color: #a5d6ff;
+        }
+
+        .hi.r {
+            background: #3a1a1a33;
+            border-color: #f7816644;
+            color: #ffa198;
+        }
+
+        .hi.o {
+            background: #1a0d0533;
+            border-color: #ff6b3544;
+            color: #ff8c5a;
+        }
+
+        .section-title {
+            font-size: 1.1em;
+            font-weight: 700;
+            color: #f7c59f;
+            margin: 32px 0 16px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #21262d;
+        }
+
+        .diagram {
+            background: #010409;
+            border: 1px solid #1a1205;
+            border-radius: 10px;
+            padding: 16px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.76em;
+            line-height: 1.8;
+            margin: 12px 0;
+            overflow-x: auto; white-space: pre;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.8em;
+            margin: 8px 0;
+        }
+
+        th {
+            background: #1b1f24;
+            color: #8b949e;
+            text-align: left;
+            padding: 7px 10px;
+            font-weight: 600;
+        }
+
+        td {
+            padding: 6px 10px;
+            border-bottom: 1px solid #21262d;
+            color: #8b949e;
+            vertical-align: top;
+        }
+
+        tr:hover td {
+            background: #21262d44;
+        }
+
+        .nav-footer {
+            border-top: 1px solid #30363d;
+            padding: 20px 24px;
+            display: flex;
+            justify-content: space-between;
+            margin-top: 20px;
+        }
+
+        .nav-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            padding: 10px 18px;
+            text-decoration: none;
+            color: #e6edf3;
+            font-size: 0.83em;
+            font-weight: 600;
+            transition: all 0.18s;
+        }
+
+        .nav-btn:hover {
+            border-color: #f7c59f;
+            color: #f7c59f;
+        }
+
+        .step-badge {
+            display: inline-block;
+            background: #1a1205;
+            color: #f7c59f;
+            border: 1px solid #f7c59f33;
+            font-size: 0.65em;
+            font-weight: 700;
+            padding: 2px 8px;
+            border-radius: 20px;
+            margin-right: 6px;
+            letter-spacing: 1px;
+        }
+    </style>
+
+    <script type="module">
+        import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+        mermaid.initialize({ startOnLoad: true, theme: 'dark' });
+    </script>
+</head>
+
+<body>
+    <div class="topbar">
+        <a href="index.html">🏠 Kafka Bootcamp</a><span class="sep">›</span>
+        <span class="cur">02 · Instalación con Docker</span>
+    </div>
+
+    <div class="hero">
+        <div class="badge">Sección 02 · Setup</div>
+        <h1>🐳 Kafka con Docker — Listo en 3 minutos</h1>
+        <p>Cluster Kafka completo con KRaft (sin Zookeeper), Kafka UI visual y CLI. Todo en un único
+            <code>docker-compose.yml</code> que puedes ejecutar ahora mismo.
+        </p>
+    </div>
+
+    <div class="content">
+
+        <div class="section-title">🚀 Opción 1: KRaft — Kafka moderno (sin Zookeeper)</div>
+        <div class="grid">
+
+            <div class="card grid-wide">
+                <div class="card-title">docker-compose.yml — El fichero que lo ejecuta todo</div>
+                <p>Desde Kafka 3.3+, Kafka no necesita Zookeeper. KRaft simplifica enormemente el setup.
+                    Este fichero levanta Kafka + Kafka UI en 3 comandos.</p>
+                <pre><span class="c"># docker-compose.yml — Kafka KRaft + UI</span>
+<span class="kw">version</span>: <span class="str">'3.8'</span>
+
+<span class="kw">services</span>:
+  <span class="c"># ──── KAFKA BROKER ────────────────────────────────────────────</span>
+  <span class="fn">kafka</span>:
+    image: <span class="str">confluentinc/cp-kafka:7.7.0</span>
+    container_name: <span class="str">kafka</span>
+    ports:
+      - <span class="str">"9092:9092"</span>    <span class="c"># para tu app Python</span>
+      - <span class="str">"9094:9094"</span>    <span class="c"># para Kafka UI, si lo pones en Docker también</span>
+    environment:
+      <span class="c"># KRaft: Kafka gestiona su propio consenso (sin Zookeeper)</span>
+      KAFKA_NODE_ID: <span class="num">1</span>
+      KAFKA_PROCESS_ROLES: <span class="str">'broker,controller'</span>
+      KAFKA_LISTENERS: <span class="str">'PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093,EXTERNAL://0.0.0.0:9094'</span>
+      KAFKA_ADVERTISED_LISTENERS: <span class="str">'PLAINTEXT://kafka:9092,EXTERNAL://localhost:9094'</span>
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: <span class="str">'PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT,EXTERNAL:PLAINTEXT'</span>
+      KAFKA_CONTROLLER_QUORUM_VOTERS: <span class="str">'1@kafka:9093'</span>
+      KAFKA_CONTROLLER_LISTENER_NAMES: <span class="str">'CONTROLLER'</span>
+      KAFKA_INTER_BROKER_LISTENER_NAME: <span class="str">'PLAINTEXT'</span>
+      <span class="c"># Configuración básica</span>
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: <span class="num">1</span>
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: <span class="num">0</span>
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: <span class="str">'true'</span>
+      KAFKA_LOG_DIRS: <span class="str">'/var/lib/kafka/data'</span>
+      <span class="c"># Generar cluster ID único (solo una vez)</span>
+      CLUSTER_ID: <span class="str">'MkU3OEVBNTcwNTJENDM2Qk'</span>
+    volumes:
+      - kafka_data:/var/lib/kafka/data
+
+  <span class="c"># ──── KAFKA UI ─────────────────────────────────────────────────</span>
+  <span class="fn">kafka-ui</span>:
+    image: <span class="str">provectuslabs/kafka-ui:latest</span>
+    container_name: <span class="str">kafka-ui</span>
+    depends_on:
+      - kafka
+    ports:
+      - <span class="str">"8080:8080"</span>
+    environment:
+      KAFKA_CLUSTERS_0_NAME: <span class="str">local</span>
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: <span class="str">kafka:9092</span>
+
+<span class="kw">volumes</span>:
+  <span class="fn">kafka_data</span>: {}</pre>
+
+                <div class="hi g">✅ Guarda este fichero como <code>docker-compose.yml</code> en cualquier carpeta y
+                    ejecuta los comandos de abajo.</div>
+            </div>
+
+            <div class="card">
+                <div class="card-title"><span class="step-badge">PASO 1</span> Levantar el cluster</div>
+                <pre><span class="c"># Levantar en background</span>
+docker compose up -d
+
+<span class="c"># Ver que está levantado</span>
+docker compose ps
+
+<span class="c"># Ver logs de Kafka</span>
+docker compose logs -f kafka
+
+<span class="c"># Esperamos hasta ver:</span>
+<span class="gr"># INFO Kafka Server started (kafka.server.KafkaServer)</span></pre>
+                <div class="hi b">💡 La primera vez tarda 20-30 segundos en arrancar. Espera hasta ver el mensaje de
+                    inicio antes de usarlo.</div>
+            </div>
+
+            <div class="card">
+                <div class="card-title"><span class="step-badge">PASO 2</span> Kafka UI — interfaz visual</div>
+                <p>Abre <code>http://localhost:8080</code> en tu navegador. Verás:</p>
+                <ul>
+                    <li>📊 Overview del cluster (brokers, topics, consumers)</li>
+                    <li>📋 Topics: crear, ver mensajes, configuración</li>
+                    <li>👥 Consumer Groups: lag, partición asignada</li>
+                    <li>📨 Produce/Consume mensajes manualmente</li>
+                    <li>🔍 Topic Monitoring en tiempo real</li>
+                </ul>
+                <div class="hi g">🎯 Kafka UI es esencial para desarrollo. Puedes ver los mensajes que produce tu app en
+                    tiempo real.</div>
+            </div>
+
+        </div>
+
+        <div class="section-title">💻 CLI de Kafka — El verdadero panel de control</div>
+        <p style="margin-bottom: 24px;">Aunque Kafka UI es genial para desarrollo visual, <strong>Kafka es intrínsecamente "headless" (sin cabeza)</strong>. En servidores de producción o entornos puramente backend administrarás Kafka exclusivamente mediante su CLI (Command Line Interface). Las herramientas CLI ya vienen instaladas dentro del contenedor del broker.</p>
+        
+        <div class="grid">
+            <div class="card grid-wide">
+                <div class="card-title"><span class="step-badge">Paso 0</span> Entrar a la consola de Kafka</div>
+                <p>Primero, debemos abrir una terminal <em>dentro</em> del contenedor Docker que está corriendo Kafka para poder usar sus herramientas oficiales.</p>
+                <pre><span class="c"># Entrar al contenedor de Kafka interactivo (bash)</span>
+docker exec -it kafka bash
+
+<span class="c"># (Ahora tu terminal mostrará algo como appuser@kafka:/$)</span></pre>
+            </div>
+
+            <div class="card grid-wide">
+                <div class="card-title"><span class="step-badge">Paso 1</span> Crear nuestro primer Topic</div>
+                <p>Usaremos el comando <code>kafka-topics</code>. Kafka necesita saber dónde está el clúster usando el flag <code>--bootstrap-server</code>. Crearemos un topic llamado "pedidos" definiendo explícitamente cuánto paralelismo queremos (3 particiones).</p>
+                <pre><span class="c"># Crear un topic con 3 particiones y replication factor 1 (estamos en local)</span>
+kafka-topics --bootstrap-server localhost:9092 \
+  --create --topic pedidos \
+  --partitions 3 \
+  --replication-factor 1
+
+<span class="c"># Ver que efectivamente se ha creado listando todos los topics:</span>
+kafka-topics --bootstrap-server localhost:9092 --list</pre>
+            </div>
+
+            <div class="card grid-wide">
+                <div class="card-title"><span class="step-badge">Paso 2</span> Producer: Enviar mensajes manualmente</div>
+                <p>La herramienta <code>kafka-console-producer</code> nos permite inyectar mensajes por consola escribiendo texto y pulsando Enter. Vamos a enviar datos simulando que vienen con una clave (el ID del usuario) para que mensajes del mismo usuario vayan siempre a la misma partición.</p>
+                <pre><span class="c"># Escribir con clave (formato clave:valor)</span>
+kafka-console-producer --bootstrap-server localhost:9092 \
+  --topic pedidos \
+  --property "parse.key=true" \
+  --property "key.separator=:"
+
+<span class="c"># (Aparecerá un cursor '>' esperando que escribas. Escribe:)</span>
+<span class="gr">></span>usuario_A:compro_manzana
+<span class="gr">></span>usuario_B:compro_pera
+<span class="gr">></span>usuario_A:compro_platano
+<span class="c"># (Pulsa Ctrl+C para salir cuando termines)</span></pre>
+            </div>
+
+            <div class="card grid-wide">
+                <div class="card-title"><span class="step-badge">Paso 3</span> Consumer: Leer en tiempo real</div>
+                <p>Para ver qué ha llegado, usaremos <code>kafka-console-consumer</code>. Le diremos explícitamente a Kafka que queremos leer desde el principio de los tiempos (<code>--from-beginning</code>) y que nos muestre las <em>entrañas</em> técnicas del mensaje: clave, partición y offset, que por defecto vienen ocultos.</p>
+                <pre><span class="c"># Leer TODO el historial mostrando detalles técnicos:</span>
+kafka-console-consumer --bootstrap-server localhost:9092 \
+  --topic pedidos \
+  --from-beginning \
+  --property print.key=true \
+  --property print.partition=true \
+  --property print.offset=true \
+  --group analistas-pedidos   <span class="c"># ← Le asignamos un Consumer Group</span>
+
+<span class="c"># (Verás que "usuario_A" y "usuario_B" acaban en particiones distintas)</span></pre>
+                <div class="hi b">💡 <strong>Truco pro:</strong> Si abres dos terminales lado a lado y pones a rodar el <em>Consumer</em> en una y envías mensajes en el <em>Producer</em> en la otra sin parar (quitando el <code>--from-beginning</code>), verás los mensajes llegar al milisegundo. Eso es event-streaming en directo.</div>
+            </div>
+
+            <div class="card grid-wide">
+                <div class="card-title"><span class="step-badge">Paso 4</span> Monitorizar el Consumer Group (El Lag)</div>
+                <p>Dado que al comando anterior le añadimos <code>--group analistas-pedidos</code>, Kafka acaba de dar de alta nuestro grupo internamente y ha empezado a traquear por qué <em>offset</em> íbamos cuando le dimos a Ctrl+C. Esto lo vemos con <code>kafka-consumer-groups</code>.</p>
+                <pre><span class="c"># Listar todos los grupos registrados en el clúster:</span>
+kafka-consumer-groups --bootstrap-server localhost:9092 --list
+
+<span class="c"># Ver el estado (LAG) del grupo "analistas-pedidos":</span>
+kafka-consumer-groups --bootstrap-server localhost:9092 \
+  --describe --group analistas-pedidos
+
+<span class="c"># Ejemplo de output analizado:</span>
+<span class="gr"># GROUP              TOPIC    PARTITION  CURRENT-OFFSET  LOG-END-OFFSET  LAG</span>
+<span class="gr"># analistas-pedidos  pedidos  0          150             155             5</span>   <span class="c">← 5 mensajes pendientes</span>
+<span class="gr"># analistas-pedidos  pedidos  1          200             200             0</span>   <span class="c">← al día</span>
+<span class="gr"># analistas-pedidos  pedidos  2          98              98              0</span>   <span class="c">← al día</span></pre>
+                <div class="hi o">💡 El <strong>LAG</strong> es la métrica #1 de salud de tus consumers. Si aumenta de forma constante, significa que la cola de mensajes crece más rápido que la capacidad que tienen tus sistemas para vaciarla.</div>
+            </div>
+        </div>
+
+        <div class="section-title">🔧 Configuración de topics importantes</div>
+        <div class="grid">
+            <div class="card grid-wide">
+                <div class="card-title">Parámetros clave al crear un topic</div>
+                <table>
+                    <tr>
+                        <th>Parámetro</th>
+                        <th>Por defecto</th>
+                        <th>Descripción</th>
+                        <th>Cuándo cambiarlo</th>
+                    </tr>
+                    <tr>
+                        <td><code>--partitions</code></td>
+                        <td>1</td>
+                        <td>Número de particiones (paralelismo máximo de consumers)</td>
+                        <td>Pon tantas como consumers máximos esperas</td>
+                    </tr>
+                    <tr>
+                        <td><code>--replication-factor</code></td>
+                        <td>1</td>
+                        <td>Cuántas réplicas del dato (1 = sin redundancia)</td>
+                        <td>≥3 en producción para alta disponibilidad</td>
+                    </tr>
+                    <tr>
+                        <td><code>retention.ms</code></td>
+                        <td>7 días</td>
+                        <td>Cuánto tiempo guardar los mensajes</td>
+                        <td>Aumentar si necesitas replay histórico</td>
+                    </tr>
+                    <tr>
+                        <td><code>retention.bytes</code></td>
+                        <td>-1 (ilimitado)</td>
+                        <td>Tamaño máximo del topic</td>
+                        <td>Limitar en topics de alto volumen</td>
+                    </tr>
+                    <tr>
+                        <td><code>cleanup.policy</code></td>
+                        <td>delete</td>
+                        <td>delete (borrar por tiempo/tamaño) o compact (solo último valor por clave)</td>
+                        <td>compact para tablas de estado, delete para eventos</td>
+                    </tr>
+                    <tr>
+                        <td><code>min.insync.replicas</code></td>
+                        <td>1</td>
+                        <td>Mínimo de réplicas sincronizadas para aceptar escritura</td>
+                        <td>2 o 3 en producción</td>
+                    </tr>
+                </table>
+                <pre><span class="c"># Crear topic de producción</span>
+kafka-topics --bootstrap-server localhost:9092 \
+  --create --topic eventos-usuario \
+  --partitions 12 \
+  --replication-factor 3 \
+  --config retention.ms=604800000 \   <span class="c"># 7 días</span>
+  --config min.insync.replicas=2
+
+<span class="c"># Topic compactado (para estado/tabla)</span>
+kafka-topics --bootstrap-server localhost:9092 \
+  --create --topic usuarios-estado \
+  --partitions 6 \
+  --replication-factor 3 \
+  --config cleanup.policy=compact \
+  --config min.cleanable.dirty.ratio=0.1</pre>
+            </div>
+        </div>
+
+        <div class="section-title">📦 Opción 2: Confluent Cloud (sin instalar nada)</div>
+        <div class="grid">
+            <div class="card grid-wide">
+                <div class="card-title">Para quien quiera Kafka gestionado en la nube</div>
+                <p>Si no quieres gestionar la infraestructura, Confluent Cloud tiene un tier gratuito con 400.000
+                    mensajes al mes.
+                    El código Python es idéntico, solo cambia el bootstrap server y las credenciales.</p>
+                <pre><span class="c"># Instalar CLI de Confluent</span>
+brew install confluentinc/tap/cli   <span class="c"># Mac</span>
+
+<span class="c"># Login y crear cluster</span>
+confluent login
+confluent kafka cluster create mi-kafka --cloud aws --region eu-west-1 --type basic
+
+<span class="c"># Crear API Key</span>
+confluent api-key create --resource &lt;cluster-id&gt;
+
+<span class="c"># Usar en Python — la única diferencia es la configuración:</span>
+conf = {
+    <span class="str">'bootstrap.servers'</span>: <span class="str">'pkc-xxxxx.eu-west-1.aws.confluent.cloud:9092'</span>,
+    <span class="str">'security.protocol'</span>: <span class="str">'SASL_SSL'</span>,
+    <span class="str">'sasl.mechanisms'</span>: <span class="str">'PLAIN'</span>,
+    <span class="str">'sasl.username'</span>: <span class="str">'TU_API_KEY'</span>,
+    <span class="str">'sasl.password'</span>: <span class="str">'TU_API_SECRET'</span>,
+}</pre>
+                <div class="hi b">💡 Para aprender y desarrollar, usa Docker local. Para producción empresarial, evalúa
+                    Confluent Cloud o AWS MSK.</div>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="nav-footer">
+        <a href="01_fundamentos.html" class="nav-btn">← 01 · Kafka desde cero</a>
+        <a href="03_python_basico.html" class="nav-btn">03 · Producer y Consumer Python →</a>
+    </div>
+</body>
+
+</html>

@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <title>07 · Kafka Streams con Python (Faust) — Kafka Bootcamp</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', system-ui, sans-serif;
+            background: #0d1117;
+            color: #e6edf3;
+        }
+
+        .topbar {
+            background: #161b22;
+            border-bottom: 1px solid #30363d;
+            padding: 12px 24px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 0.82em;
+        }
+
+        .topbar a {
+            color: #e3b341;
+            text-decoration: none;
+        }
+
+        .topbar a:hover {
+            color: #f0cc69;
+        }
+
+        .topbar .sep {
+            color: #484f58;
+        }
+
+        .topbar .cur {
+            color: #e6edf3;
+            font-weight: 600;
+        }
+
+        .hero {
+            background: linear-gradient(135deg, #2a200a22, #0d1117);
+            border-bottom: 1px solid #30363d;
+            padding: 36px 24px;
+            text-align: center;
+        }
+
+        .badge {
+            display: inline-block;
+            background: #2a200a;
+            color: #e3b341;
+            font-size: 0.7em;
+            font-weight: 700;
+            padding: 3px 12px;
+            border-radius: 20px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            margin-bottom: 14px;
+        }
+
+        .hero h1 {
+            font-size: 1.9em;
+            font-weight: 900;
+            margin-bottom: 8px;
+        }
+
+        .hero p {
+            color: #8b949e;
+            font-size: 0.88em;
+            max-width: 640px;
+            margin: 0 auto;
+            line-height: 1.6;
+        }
+
+        .content {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 32px 24px;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .grid-wide {
+            grid-column: 1 / -1;
+        }
+
+        .card {
+            background: #161b22;
+            border-radius: 12px;
+            border: 1px solid #30363d;
+            padding: 20px;
+            transition: border-color 0.18s;
+        }
+
+        .card:hover {
+            border-color: #e3b34144;
+        }
+
+        .card-title {
+            font-weight: 700;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.95em;
+        }
+
+        p {
+            color: #8b949e;
+            line-height: 1.65;
+            margin-bottom: 8px;
+            font-size: 0.85em;
+        }
+
+        pre {
+            background: #010409;
+            border: 1px solid #21262d;
+            border-radius: 8px;
+            padding: 14px 16px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.76em;
+            overflow-x: auto; white-space: pre;
+            line-height: 1.7;
+            margin: 8px 0;
+            white-space: pre;
+        }
+
+        code {
+            font-family: monospace;
+            background: #21262d;
+            padding: 1px 5px;
+            border-radius: 4px;
+            font-size: 0.88em;
+            color: #a5d6ff;
+        }
+
+        .c {
+            color: #6e7681;
+        }
+
+        .kw {
+            color: #ff7b72;
+        }
+
+        .str {
+            color: #a5d6ff;
+        }
+
+        .num {
+            color: #79c0ff;
+        }
+
+        .nm {
+            color: #d2a8ff;
+        }
+
+        .fn {
+            color: #e3b341;
+        }
+
+        .gr {
+            color: #3fb950;
+        }
+
+        .cy {
+            color: #39d0d8;
+        }
+
+        .or {
+            color: #ff6b35;
+        }
+
+        ul,
+        ol {
+            padding-left: 20px;
+            margin: 6px 0 10px;
+        }
+
+        li {
+            color: #8b949e;
+            margin-bottom: 4px;
+            font-size: 0.85em;
+            line-height: 1.5;
+        }
+
+        li::marker {
+            color: #e3b341;
+        }
+
+        .hi {
+            margin: 10px 0;
+            background: #2a200a33;
+            border: 1px solid #e3b34144;
+            border-radius: 8px;
+            padding: 10px 14px;
+            font-size: 0.82em;
+            color: #f0cc69;
+        }
+
+        .hi.g {
+            background: #1a3a2a33;
+            border-color: #3fb95044;
+            color: #7ee787;
+        }
+
+        .hi.b {
+            background: #1f3a5f33;
+            border-color: #79c0ff44;
+            color: #a5d6ff;
+        }
+
+        .hi.r {
+            background: #3a1a1a33;
+            border-color: #ff7b7244;
+            color: #ffa198;
+        }
+
+        .hi.o {
+            background: #1a0d0533;
+            border-color: #ff6b3544;
+            color: #ff8c5a;
+        }
+
+        .section-title {
+            font-size: 1.1em;
+            font-weight: 700;
+            color: #e3b341;
+            margin: 32px 0 16px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #21262d;
+        }
+
+        .diagram {
+            background: #010409;
+            border: 1px solid #2a200a;
+            border-radius: 10px;
+            padding: 16px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.76em;
+            line-height: 1.8;
+            margin: 12px 0;
+            overflow-x: auto; white-space: pre;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.8em;
+            margin: 8px 0;
+        }
+
+        th {
+            background: #1b1f24;
+            color: #8b949e;
+            text-align: left;
+            padding: 7px 10px;
+            font-weight: 600;
+        }
+
+        td {
+            padding: 6px 10px;
+            border-bottom: 1px solid #21262d;
+            color: #8b949e;
+            vertical-align: top;
+        }
+
+        tr:hover td {
+            background: #21262d44;
+        }
+
+        .nav-footer {
+            border-top: 1px solid #30363d;
+            padding: 20px 24px;
+            display: flex;
+            justify-content: space-between;
+            margin-top: 20px;
+        }
+
+        .nav-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            padding: 10px 18px;
+            text-decoration: none;
+            color: #e6edf3;
+            font-size: 0.83em;
+            font-weight: 600;
+            transition: all 0.18s;
+        }
+
+        .nav-btn:hover {
+            border-color: #e3b341;
+            color: #e3b341;
+        }
+    </style>
+
+    <script type="module">
+        import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+        mermaid.initialize({ startOnLoad: true, theme: 'dark' });
+    </script>
+</head>
+
+<body>
+    <div class="topbar">
+        <a href="index.html">🏠 Kafka Bootcamp</a><span class="sep">›</span>
+        <span class="cur">07 · Kafka Streams con Python</span>
+    </div>
+    <div class="hero">
+        <div class="badge">Sección 07 · Streams</div>
+        <h1>🌊 Kafka Streams con Python: Faust</h1>
+        <p>Procesamiento de streams en tiempo real con <code>Faust</code> (el Kafka Streams de Python).
+            Transformaciones, filtros, aggregations, tablas y ventanas temporales.</p>
+    </div>
+
+    <div class="content">
+
+        <div class="section-title">🌊 ¿Qué es el stream processing?</div>
+        <div class="grid">
+            <div class="card grid-wide">
+                <div class="card-title">Batch vs Stream — la diferencia fundamental</div>
+                <div class="mermaid">
+graph TD
+    subgraph BATCH PROCESSING
+        DB[Datos] -->|Esperar horas| PB[Procesar todos] --> RB[Resultado]
+    end
+    subgraph STREAM PROCESSING
+        DS[Evento] -->|Inmediato| PS[Procesar] --> RS[Resultado <100ms]
+    end
+</div>
+            </div>
+        </div>
+
+        <div class="section-title">☕ El problema de "Kafka Streams" en Python</div>
+        <div class="grid">
+            <div class="card grid-wide">
+                <div class="card-title">Kafka Streams NO es una funcionalidad del servidor Kafka</div>
+                <p>Existe una gran confusión en la industria: mucha gente cree que <em>Kafka Streams</em> es un motor interno que corre dentro del clúster de Kafka (como si fueran <em>Triggers</em> o o Procedimientos Almacenados de SQL). <strong>Esto es falso.</strong></p>
+                <div class="hi r">⚠️ <strong>La Verdad:</strong> Kafka es solo un disco duro mudo y ultra-rápido. "Kafka Streams" es puramente una <strong>librería cliente</strong> (un archivo <code>.jar</code>) creada por Confluent.</div>
+                
+                <h4 style="color: #8b949e; margin-top: 15px;">Entonces, ¿Puedo usar "Kafka Streams" en Python?</h4>
+                <p><strong>Nativamente NO.</strong> Dado que <em>Kafka Streams</em> está escrito en Java, solo puedes importarlo en aplicaciones Java, Scala o Kotlin.</p>
+                
+                <h4 style="color: #8b949e; margin-top: 15px;">¿Cuáles son las alternativas reales para Python?</h4>
+                <div class="mermaid">
+graph LR
+    K[(Kafka Broker)] -->|Java| KS[Kafka Streams Library]
+    K -->|Python Falso| FK[❌ Imposible Nativo]
+    K -->|Python Real| F[Faust]
+    K -->|Big Data Distribuido| PF[Apache Flink / PyFlink]
+</div>
+                <ul>
+                    <li><strong>Faust:</strong> Un clon de la arquitectura de Kafka Streams escrito 100% en Python Asyncio. Ideal para aplicaciones ligeras o microservicios estándar de backend en Python.</li>
+                    <li><strong>PyFlink:</strong> El motor estándar de las gigantes tecnológicas. Flink corre como un clúster masivo separado (basado en Java) pero te permite escribir la lógica en Python (PyFlink). Cubre casos donde el volumen de datos destruiría a Faust.</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="section-title">🐍 Faust — Kafka Streams para Python</div>
+        <div class="grid">
+            <div class="card grid-wide">
+                <div class="card-title">Instalación y hola mundo</div>
+                <pre><span class="c"># Instalar Faust (desarrollado por Robinhood para procesar millones de events/s)</span>
+pip install faust-streaming  <span class="c"># fork activo de faust original</span>
+
+<span class="c"># ─── app.py ──────────────────────────────────────────────────────────────────</span>
+<span class="kw">import</span> faust
+<span class="kw">from</span> dataclasses <span class="kw">import</span> dataclass
+
+app = faust.App(
+    <span class="str">'mi-app-streams'</span>,
+    broker=<span class="str">'kafka://localhost:9094'</span>,
+    value_serializer=<span class="str">'json'</span>,
+)
+
+<span class="c"># ─── Definir el modelo del mensaje ───────────────────────────────────────────</span>
+<span class="kw">class</span> <span class="nm">Pedido</span>(faust.Record):
+    pedido_id: str
+    usuario_id: str
+    total: float
+    estado: str
+
+<span class="c"># ─── Declarar los topics ──────────────────────────────────────────────────────</span>
+topic_pedidos = app.topic(<span class="str">'pedidos'</span>, value_type=<span class="nm">Pedido</span>)
+topic_alertas  = app.topic(<span class="str">'alertas'</span>, value_type=str)
+
+<span class="c"># ─── Agent: consume y procesa de forma continua ───────────────────────────────</span>
+<span class="fn">@app</span>.agent(topic_pedidos)
+<span class="kw">async def</span> <span class="fn">procesar_pedidos</span>(pedidos):
+    <span class="kw">async for</span> pedido <span class="kw">in</span> pedidos:
+        <span class="fn">print</span>(<span class="str">f"[{pedido.pedido_id}] €{pedido.total} — {pedido.estado}"</span>)
+
+        <span class="c"># Filtrar y enviar alerta si el pedido es grande</span>
+        <span class="kw">if</span> pedido.total > <span class="num">1000</span>:
+            await topic_alertas.send(
+                key=pedido.usuario_id,
+                value=<span class="str">f"PEDIDO GRANDE: {pedido.pedido_id} = €{pedido.total}"</span>
+            )
+
+<span class="c"># Ejecutar:</span>
+<span class="c"># faust -A app worker -l info</span></pre>
+                <div class="hi b">💡 <code>@app.agent</code> es el equivalente de un consumer loop pero con async/await
+                    nativo,
+                    paralelismo automático, fault-tolerance y reinicio automático ante errores.</div>
+            </div>
+
+            <div class="card grid-wide">
+                <div class="card-title">📊 Tablas — estado persistente en streams</div>
+                <p>Las tablas de Faust son diccionarios distribuidos y persistentes respaldados por un topic Kafka
+                    compactado.
+                    Permiten mantener <strong>estado entre eventos</strong> sin una base de datos externa.</p>
+                <pre><span class="kw">import</span> faust
+
+app = faust.App(<span class="str">'contador'</span>, broker=<span class="str">'kafka://localhost:9094'</span>)
+
+<span class="kw">class</span> <span class="nm">Click</span>(faust.Record):
+    url: str
+    usuario_id: str
+
+topic_clicks = app.topic(<span class="str">'clicks'</span>, value_type=<span class="nm">Click</span>)
+
+<span class="c"># Tabla: cuenta clicks por URL (sobrevive reinicios de la app)</span>
+conteos_url = app.Table(
+    <span class="str">'conteos_url'</span>,
+    default=int,        <span class="c"># valor por defecto si la clave no existe</    partitions=8,
+)
+
+<span class="fn">@app</span>.agent(topic_clicks)
+<span class="kw">async def</span> <span class="fn">contar_clicks</span>(clicks):
+    <span class="kw">async for</span> click <span class="kw">in</span> clicks:
+        conteos_url[click.url] += <span class="num">1</span>
+        <span class="fn">print</span>(<span class="str">f"{click.url}: {conteos_url[click.url]} clicks"</span>)
+
+<span class="c"># También puedes exponer los resultados vía HTTP:</span>
+<span class="fn">@app</span>.page(<span class="str">'/clicks/{url}/'</span>)
+<span class="fn">@app</span>.table_related(conteos_url)
+<span class="kw">async def</span> <span class="fn">get_url_clicks</span>(web, request, url):
+    <span class="kw">return</span> web.json({<span class="str">'url'</span>: url, <span class="str">'clicks'</span>: conteos_url[url]})</pre>
+            </div>
+
+            <div class="card grid-wide">
+                <div class="card-title">⏱️ Ventanas temporales — aggregations en tiempo real</div>
+                <pre><span class="kw">import</span> faust
+<span class="kw">from</span> datetime <span class="kw">import</span> timedelta
+
+app = faust.App(<span class="str">'ventanas'</span>, broker=<span class="str">'kafka://localhost:9094'</span>)
+
+<span class="kw">class</span> <span class="nm">Venta</span>(faust.Record):
+    producto_id: str
+    monto: float
+
+topic_ventas = app.topic(<span class="str">'ventas'</span>, value_type=<span class="nm">Venta</span>)
+
+<span class="c"># Tabla con ventana TUMBLING de 1 minuto</span>
+<span class="c"># Acumula ventas en ventanas no solapadas de 60s</span>
+ventas_por_minuto = app.Table(
+    <span class="str">'ventas_minuto'</span>,
+    default=float,
+).tumbling(
+    timedelta(minutes=<span class="num">1</span>),          <span class="c"># tamaño ventana</span>
+    expires=timedelta(hours=<span class="num">1</span>),    <span class="c"># cuánto guardar</span>
+)
+
+<span class="fn">@app</span>.agent(topic_ventas, sink=[topic_ventas])
+<span class="kw">async def</span> <span class="fn">acumular_ventas</span>(ventas):
+    <span class="kw">async for</span> venta <span class="kw">in</span> ventas:
+        ventas_por_minuto[venta.producto_id] += venta.monto
+        total_minuto = ventas_por_minuto[venta.producto_id].current()
+        <span class="fn">print</span>(<span class="str">f"[1min] {venta.producto_id}: €{total_minuto:.2f}"</span>)
+
+<span class="c"># Tipos de ventanas:</span>
+<span class="c"># .tumbling(size)         → ventanas fijas no solapadas (0-60s, 60-120s...)</span>
+<span class="c"># .hopping(size, step)    → ventanas solapadas (0-60s, 30-90s, 60-120s...)</span></pre>
+                <div class="hi g">✅ Las ventanas temporales permiten responder preguntas como "¿cuántas ventas en la
+                    última hora?"
+                    en tiempo real, sin necesitar una base de datos.</div>
+            </div>
+        </div>
+
+        <div class="section-title">🔄 Pipeline completo: enriquecimiento en tiempo real</div>
+        <div class="grid">
+            <div class="card grid-wide">
+                <div class="card-title">Patrón real: enriquecer eventos con lookup a BD</div>
+                <pre><span class="kw">import</span> faust
+<span class="kw">import</span> asyncio
+
+app = faust.App(<span class="str">'enriquecedor'</span>, broker=<span class="str">'kafka://localhost:9094'</span>)
+
+<span class="kw">class</span> <span class="nm">EventoRaw</span>(faust.Record):
+    user_id: str
+    event_type: str
+    timestamp: float
+
+<span class="kw">class</span> <span class="nm">EventoEnriquecido</span>(faust.Record):
+    user_id: str
+    user_email: str
+    user_plan: str
+    event_type: str
+    timestamp: float
+
+topic_raw       = app.topic(<span class="str">'eventos-raw'</span>,        value_type=<span class="nm">EventoRaw</span>)
+topic_enriched  = app.topic(<span class="str">'eventos-enriched'</span>,   value_type=<span class="nm">EventoEnriquecido</span>)
+
+<span class="c"># Caché en memoria para evitar consultas repetidas a BD</span>
+user_cache: dict = {}
+
+<span class="kw">async def</span> <span class="fn">get_user_info</span>(user_id: str) -> dict:
+    <span class="kw">if</span> user_id <span class="kw">in</span> user_cache:
+        <span class="kw">return</span> user_cache[user_id]
+    <span class="c"># En real: await db.fetch("SELECT email, plan FROM users WHERE id=$1", user_id)</span>
+    await asyncio.sleep(<span class="num">0.01</span>)  <span class="c"># simular latencia BD</span>
+    info = {<span class="str">"email"</span>: <span class="str">f"{user_id}@ejemplo.com"</span>, <span class="str">"plan"</span>: <span class="str">"premium"</span>}
+    user_cache[user_id] = info
+    <span class="kw">return</span> info
+
+<span class="fn">@app</span>.agent(topic_raw)
+<span class="kw">async def</span> <span class="fn">enriquecer</span>(eventos):
+    <span class="kw">async for</span> evento <span class="kw">in</span> eventos:
+        user_info = await get_user_info(evento.user_id)
+        enriched = EventoEnriquecido(
+            user_id=evento.user_id,
+            user_email=user_info[<span class="str">"email"</span>],
+            user_plan=user_info[<span class="str">"plan"</span>],
+            event_type=evento.event_type,
+            timestamp=evento.timestamp,
+        )
+        await topic_enriched.send(key=evento.user_id, value=enriched)</pre>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="nav-footer">
+        <a href="06_garantias_entrega.html" class="nav-btn">← 06 · Garantías</a>
+        <a href="08_produccion.html" class="nav-btn">08 · Kafka en Producción →</a>
+    </div>
+</body>
+
+</html>

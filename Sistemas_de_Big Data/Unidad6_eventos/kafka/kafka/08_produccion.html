@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <title>08 · Kafka en Producción — Kafka Bootcamp</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', system-ui, sans-serif;
+            background: #0d1117;
+            color: #e6edf3;
+        }
+
+        .topbar {
+            background: #161b22;
+            border-bottom: 1px solid #30363d;
+            padding: 12px 24px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 0.82em;
+        }
+
+        .topbar a {
+            color: #ff79c6;
+            text-decoration: none;
+        }
+
+        .topbar a:hover {
+            color: #ffb3e0;
+        }
+
+        .topbar .sep {
+            color: #484f58;
+        }
+
+        .topbar .cur {
+            color: #e6edf3;
+            font-weight: 600;
+        }
+
+        .hero {
+            background: linear-gradient(135deg, #2a0a1a22, #0d1117);
+            border-bottom: 1px solid #30363d;
+            padding: 36px 24px;
+            text-align: center;
+        }
+
+        .badge {
+            display: inline-block;
+            background: #2a0a1a;
+            color: #ff79c6;
+            font-size: 0.7em;
+            font-weight: 700;
+            padding: 3px 12px;
+            border-radius: 20px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            margin-bottom: 14px;
+        }
+
+        .hero h1 {
+            font-size: 1.9em;
+            font-weight: 900;
+            margin-bottom: 8px;
+        }
+
+        .hero p {
+            color: #8b949e;
+            font-size: 0.88em;
+            max-width: 640px;
+            margin: 0 auto;
+            line-height: 1.6;
+        }
+
+        .content {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 32px 24px;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .grid-wide {
+            grid-column: 1 / -1;
+        }
+
+        .card {
+            background: #161b22;
+            border-radius: 12px;
+            border: 1px solid #30363d;
+            padding: 20px;
+            transition: border-color 0.18s;
+        }
+
+        .card:hover {
+            border-color: #ff79c644;
+        }
+
+        .card-title {
+            font-weight: 700;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.95em;
+        }
+
+        p {
+            color: #8b949e;
+            line-height: 1.65;
+            margin-bottom: 8px;
+            font-size: 0.85em;
+        }
+
+        pre {
+            background: #010409;
+            border: 1px solid #21262d;
+            border-radius: 8px;
+            padding: 14px 16px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.76em;
+            overflow-x: auto; white-space: pre;
+            line-height: 1.7;
+            margin: 8px 0;
+            white-space: pre;
+        }
+
+        code {
+            font-family: monospace;
+            background: #21262d;
+            padding: 1px 5px;
+            border-radius: 4px;
+            font-size: 0.88em;
+            color: #a5d6ff;
+        }
+
+        .c {
+            color: #6e7681;
+        }
+
+        .kw {
+            color: #ff7b72;
+        }
+
+        .str {
+            color: #a5d6ff;
+        }
+
+        .num {
+            color: #79c0ff;
+        }
+
+        .nm {
+            color: #d2a8ff;
+        }
+
+        .fn {
+            color: #e3b341;
+        }
+
+        .gr {
+            color: #3fb950;
+        }
+
+        .cy {
+            color: #39d0d8;
+        }
+
+        .or {
+            color: #ff6b35;
+        }
+
+        ul,
+        ol {
+            padding-left: 20px;
+            margin: 6px 0 10px;
+        }
+
+        li {
+            color: #8b949e;
+            margin-bottom: 4px;
+            font-size: 0.85em;
+            line-height: 1.5;
+        }
+
+        li::marker {
+            color: #ff79c6;
+        }
+
+        .hi {
+            margin: 10px 0;
+            background: #2a0a1a33;
+            border: 1px solid #ff79c644;
+            border-radius: 8px;
+            padding: 10px 14px;
+            font-size: 0.82em;
+            color: #ffb3e0;
+        }
+
+        .hi.g {
+            background: #1a3a2a33;
+            border-color: #3fb95044;
+            color: #7ee787;
+        }
+
+        .hi.b {
+            background: #1f3a5f33;
+            border-color: #79c0ff44;
+            color: #a5d6ff;
+        }
+
+        .hi.r {
+            background: #3a1a1a33;
+            border-color: #ff7b7244;
+            color: #ffa198;
+        }
+
+        .hi.o {
+            background: #1a0d0533;
+            border-color: #ff6b3544;
+            color: #ff8c5a;
+        }
+
+        .section-title {
+            font-size: 1.1em;
+            font-weight: 700;
+            color: #ff79c6;
+            margin: 32px 0 16px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #21262d;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.8em;
+            margin: 8px 0;
+        }
+
+        th {
+            background: #1b1f24;
+            color: #8b949e;
+            text-align: left;
+            padding: 7px 10px;
+            font-weight: 600;
+        }
+
+        td {
+            padding: 6px 10px;
+            border-bottom: 1px solid #21262d;
+            color: #8b949e;
+            vertical-align: top;
+        }
+
+        tr:hover td {
+            background: #21262d44;
+        }
+
+        .nav-footer {
+            border-top: 1px solid #30363d;
+            padding: 20px 24px;
+            display: flex;
+            justify-content: space-between;
+            margin-top: 20px;
+        }
+
+        .nav-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            padding: 10px 18px;
+            text-decoration: none;
+            color: #e6edf3;
+            font-size: 0.83em;
+            font-weight: 600;
+            transition: all 0.18s;
+        }
+
+        .nav-btn:hover {
+            border-color: #ff79c6;
+            color: #ff79c6;
+        }
+
+        .diagram {
+            background: #010409;
+            border: 1px solid #2a0a1a;
+            border-radius: 10px;
+            padding: 16px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.76em;
+            line-height: 1.8;
+            margin: 12px 0;
+            overflow-x: auto; white-space: pre;
+        }
+    </style>
+
+    <script type="module">
+        import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+        mermaid.initialize({ startOnLoad: true, theme: 'dark' });
+    </script>
+</head>
+
+<body>
+    <div class="topbar">
+        <a href="index.html">🏠 Kafka Bootcamp</a><span class="sep">›</span>
+        <span class="cur">08 · Kafka en Producción</span>
+    </div>
+    <div class="hero">
+        <div class="badge">Sección 08 · Producción</div>
+        <h1>🏭 Kafka en Producción</h1>
+        <p>Configuración del broker para alta disponibilidad, retención, compactación, monitoreo con
+            Prometheus y Grafana, alertas y troubleshooting de los problemas más comunes.</p>
+    </div>
+
+    <div class="content">
+
+        <div class="section-title">⚙️ Configuración del broker para producción</div>
+        <div class="grid">
+            <div class="card grid-wide">
+                <div class="card-title">Los parámetros que más importan en server.properties</div>
+                <table>
+                    <tr>
+                        <th>Parámetro</th>
+                        <th>Valor recomendado</th>
+                        <th>Por qué</th>
+                    </tr>
+                    <tr>
+                        <td><code>num.partitions</code></td>
+                        <td>6-12</td>
+                        <td>Por defecto para nuevos topics</td>
+                    </tr>
+                    <tr>
+                        <td><code>default.replication.factor</code></td>
+                        <td>3</td>
+                        <td>Alta disponibilidad (tolera 1 broker caído)</td>
+                    </tr>
+                    <tr>
+                        <td><code>min.insync.replicas</code></td>
+                        <td>2</td>
+                        <td>Con acks=all: 2 réplicas deben confirmar</td>
+                    </tr>
+                    <tr>
+                        <td><code>log.retention.hours</code></td>
+                        <td>168 (7 días)</td>
+                        <td>Retención por tiempo</td>
+                    </tr>
+                    <tr>
+                        <td><code>log.retention.bytes</code></td>
+                        <td>-1 (ilimitado)</td>
+                        <td>Retención por tamaño</td>
+                    </tr>
+                    <tr>
+                        <td><code>log.segment.bytes</code></td>
+                        <td>1073741824 (1GB)</td>
+                        <td>Tamaño de cada segmento</td>
+                    </tr>
+                    <tr>
+                        <td><code>num.io.threads</code></td>
+                        <td>CPUs*2 o 8</td>
+                        <td>Hilos de I/O para disk</td>
+                    </tr>
+                    <tr>
+                        <td><code>num.network.threads</code></td>
+                        <td>3-5</td>
+                        <td>Hilos de red</td>
+                    </tr>
+                    <tr>
+                        <td><code>socket.send.buffer.bytes</code></td>
+                        <td>102400</td>
+                        <td>Buffer de envío</td>
+                    </tr>
+                    <tr>
+                        <td><code>auto.create.topics.enable</code></td>
+                        <td><code>false</code></td>
+                        <td>Prevenir topics mal nombrados en prod</td>
+                    </tr>
+                    <tr>
+                        <td><code>unclean.leader.election.enable</code></td>
+                        <td><code>false</code></td>
+                        <td>Evitar pérdida de datos (no elegir réplica desactualizada)</td>
+                    </tr>
+                </table>
+            </div>
+
+            <div class="card">
+                <div class="card-title">🗜️ Compactación — topics como tablas</div>
+                <p>Un topic compactado solo guarda el <strong>último mensaje por clave</strong>. Es como una tabla KV
+                    distribuida.</p>
+                <pre><span class="c"># Crear topic compactado</span>
+kafka-topics --create --topic usuarios \
+  --config cleanup.policy=compact \
+  --config min.cleanable.dirty.ratio=0.1 \
+  --config segment.ms=60000 \
+  --config delete.retention.ms=86400000
+
+<span class="c"># Caso de uso: estado de usuarios</span>
+<span class="c"># key="user_123" value={"nombre":"Ana","plan":"pro"}</span>
+<span class="c"># key="user_123" value={"nombre":"Ana","plan":"enterprise"}</span>
+<span class="c"># Kafka solo guarda la última: plan=enterprise</span>
+
+<span class="c"># Para borrar un usuario: enviar null value (tombstone)</span>
+producer.produce("usuarios", key=b"user_123", value=None)</pre>
+            </div>
+
+            <div class="card">
+                <div class="card-title">📊 Cuotas y throttling</div>
+                <p>Para evitar que un producer o consumer consuma todo el ancho de banda del broker:</p>
+                <pre><span class="c"># Limitar un cliente específico</span>
+kafka-configs --bootstrap-server localhost:9092 \
+  --alter --add-config \
+  'producer_byte_rate=1048576,consumer_byte_rate=2097152' \
+  --entity-type clients \
+  --entity-name mi-cliente
+
+<span class="c"># 1MB/s de escritura, 2MB/s de lectura</span>
+<span class="c"># Configurar en el producer automáticamente:</span>
+conf = {
+    <span class="str">'client.id'</span>: <span class="str">'mi-cliente'</span>,  <span class="c"># ← esta string aplica la cuota</span>
+}</pre>
+            </div>
+        </div>
+
+        <div class="section-title">📈 Monitoreo: Prometheus + Grafana</div>
+        <div class="grid">
+            <div class="card grid-wide">
+                <div class="card-title">Stack de monitoreo completo</div>
+                <pre><span class="c"># Añadir a docker-compose.yml</span>
+<span class="fn">kafka-exporter</span>:
+  image: <span class="str">danielqsj/kafka-exporter:latest</span>
+  command: <span class="str">"--kafka.server=kafka:9092"</span>
+  ports: [<span class="str">"9308:9308"</span>]
+
+<span class="fn">prometheus</span>:
+  image: <span class="str">prom/prometheus:latest</span>
+  ports: [<span class="str">"9090:9090"</span>]
+  volumes:
+    - ./prometheus.yml:/etc/prometheus/prometheus.yml
+
+<span class="fn">grafana</span>:
+  image: <span class="str">grafana/grafana:latest</span>
+  ports: [<span class="str">"3000:3000"</span>]</pre>
+                <table>
+                    <tr>
+                        <th>Métrica</th>
+                        <th>Qué indica</th>
+                        <th>Umbral de alerta</th>
+                    </tr>
+                    <tr>
+                        <td><code>kafka_consumer_group_lag</code></td>
+                        <td>Mensajes pendientes por consumer group</td>
+                        <td>&gt;10000 o tendencia creciente</td>
+                    </tr>
+                    <tr>
+                        <td><code>kafka_brokers</code></td>
+                        <td>Número de brokers activos</td>
+                        <td>&lt; replication_factor</td>
+                    </tr>
+                    <tr>
+                        <td><code>kafka_topic_partitions</code></td>
+                        <td>Particiones por topic</td>
+                        <td>Cambios inesperados</td>
+                    </tr>
+                    <tr>
+                        <td><code>under_replicated_partitions</code></td>
+                        <td>Particiones sin suficientes réplicas</td>
+                        <td>&gt;0 es crítico</td>
+                    </tr>
+                    <tr>
+                        <td><code>kafka_log_log_size</code></td>
+                        <td>Tamaño del log en disco</td>
+                        <td>&gt;80% capacidad disco</td>
+                    </tr>
+                    <tr>
+                        <td><code>network_processor_avg_idle</code></td>
+                        <td>CPU libre en red</td>
+                        <td>&lt;30% = saturación</td>
+                    </tr>
+                </table>
+                <div class="hi b">💡 Importa el dashboard <strong>Kafka Overview (ID: 7589)</strong> en Grafana para
+                    tener todas estas métricas en minutos.</div>
+            </div>
+        </div>
+
+        <div class="section-title">🔍 Troubleshooting — los problemas más comunes</div>
+        <div class="grid">
+            <div class="card grid-wide">
+                <div class="card-title">Diagnóstico rápido de los problemas más frecuentes</div>
+                <table>
+                    <tr>
+                        <th>Síntoma</th>
+                        <th>Causa probable</th>
+                        <th>Solución</th>
+                    </tr>
+                    <tr>
+                        <td>Consumer lag aumentando continuamente</td>
+                        <td>Consumer más lento que el producer</td>
+                        <td>Aumentar consumidores, optimizar procesamiento, aumentar particiones</td>
+                    </tr>
+                    <tr>
+                        <td><code>LEADER_NOT_AVAILABLE</code></td>
+                        <td>Broker líder caído, reelección en curso</td>
+                        <td>Esperar 10-30s. Si persiste, verificar estado del broker.</td>
+                    </tr>
+                    <tr>
+                        <td><code>GroupCoordinator not available</code></td>
+                        <td>Topic <code>__consumer_offsets</code> sin líder</td>
+                        <td>Verificar que hay brokers suficientes para el replication factor.</td>
+                    </tr>
+                    <tr>
+                        <td>Mensajes fuera de orden</td>
+                        <td>Produciendo sin clave o max.in.flight>1</td>
+                        <td>Usar clave consistente para datos que necesitan orden.</td>
+                    </tr>
+                    <tr>
+                        <td>Rebalanceos frecuentes</td>
+                        <td>Consumer tarda demasiado (max.poll.interval.ms)</td>
+                        <td>Aumentar <code>max.poll.interval.ms</code> o reducir el tiempo de procesamiento.</td>
+                    </tr>
+                    <tr>
+                        <td>Disco lleno en broker</td>
+                        <td>Retención configurada muy alta</td>
+                        <td>Reducir <code>log.retention.hours</code> o aumentar disco.</td>
+                    </tr>
+                    <tr>
+                        <td>Producer bloqueado en <code>produce()</code></td>
+                        <td>Buffer interno lleno (<code>BufferError</code>)</td>
+                        <td>Llamar a <code>poll()</code> regularmente o <code>flush()</code> antes de continuar.</td>
+                    </tr>
+                    <tr>
+                        <td>Bajo throughput en producer</td>
+                        <td><code>linger.ms=0</code> y sin batching</td>
+                        <td>Aumentar <code>linger.ms</code> a 5-10ms y <code>batch.size</code></td>
+                    </tr>
+                </table>
+            </div>
+
+            <div class="card grid-wide">
+                <div class="card-title">🩺 Script de diagnóstico rápido</div>
+                <pre><span class="c">#!/bin/bash
+# diagnostico_kafka.sh — ejecutar desde el contenedor de Kafka</span>
+
+echo "=== BROKERS ACTIVOS ==="
+kafka-broker-api-versions --bootstrap-server localhost:9092 | grep -c "BROKER"
+
+echo "=== TOPICS Y PARTICIONES ==="
+kafka-topics --bootstrap-server localhost:9092 --describe | grep "Topic:"
+
+echo "=== UNDER-REPLICATED PARTITIONS (debe ser 0) ==="
+kafka-topics --bootstrap-server localhost:9092 \
+  --describe --under-replicated-partitions
+
+echo "=== LAG POR CONSUMER GROUP ==="
+kafka-consumer-groups --bootstrap-server localhost:9092 --list | \
+  xargs -I{} kafka-consumer-groups --bootstrap-server localhost:9092 \
+  --describe --group {}
+
+echo "=== OFFSETS DEL TOPIC ==="
+kafka-run-class kafka.tools.GetOffsetShell \
+  --broker-list localhost:9092 \
+  --topic mi-topic</pre>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="nav-footer">
+        <a href="07_streams_python.html" class="nav-btn">← 07 · Streams</a>
+        <a href="09_arquitecturas.html" class="nav-btn">09 · Patrones Avanzados →</a>
+    </div>
+</body>
+
+</html>

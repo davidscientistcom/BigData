@@ -1,0 +1,677 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Apache Kafka — Bootcamp Completo con Python</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description"
+        content="Guía completa de Apache Kafka con Python: desde los fundamentos hasta patrones de producción avanzados. El backbone de tu arquitectura big data.">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', system-ui, sans-serif;
+            background: #0d1117;
+            color: #e6edf3;
+            min-height: 100vh;
+            padding: 40px 20px;
+        }
+
+        h1 {
+            text-align: center;
+            font-size: 2.6em;
+            font-weight: 900;
+            margin-bottom: 8px;
+            background: linear-gradient(90deg, #ff6b35, #f7c59f, #ffffea, #e8f4d4, #39d0d8, #bc8cff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #8b949e;
+            font-size: 0.9em;
+            margin-bottom: 48px;
+        }
+
+        .path-label {
+            text-align: center;
+            font-size: 0.75em;
+            color: #ff6b35;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            margin-bottom: 12px;
+            font-weight: 600;
+        }
+
+        .group-label {
+            text-align: center;
+            font-size: 0.7em;
+            color: #484f58;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            margin: 32px 0 12px;
+            font-weight: 700;
+        }
+
+        .sections-grid {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 18px;
+            margin-bottom: 24px;
+        }
+
+        .card {
+            background: #161b22;
+            border-radius: 14px;
+            border: 1px solid #30363d;
+            padding: 22px;
+            text-decoration: none;
+            color: inherit;
+            transition: all 0.22s;
+            cursor: pointer;
+            display: block;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: var(--accent);
+        }
+
+        .card:hover {
+            border-color: var(--accent);
+            transform: translateY(-4px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, .5);
+        }
+
+        .card-num {
+            font-size: 0.65em;
+            font-weight: 700;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: var(--accent);
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .card-num::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: var(--accent);
+            opacity: .3;
+        }
+
+        .card h2 {
+            font-size: 1.05em;
+            margin-bottom: 8px;
+            font-weight: 700;
+        }
+
+        .card p {
+            font-size: 0.8em;
+            color: #8b949e;
+            line-height: 1.6;
+            margin-bottom: 14px;
+        }
+
+        .tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .tag {
+            font-size: 0.68em;
+            padding: 2px 8px;
+            border-radius: 10px;
+            border: 1px solid #30363d;
+            color: #8b949e;
+            background: #21262d;
+        }
+
+        .card-arrow {
+            position: absolute;
+            bottom: 18px;
+            right: 18px;
+            font-size: 1.3em;
+            color: var(--accent);
+            opacity: .5;
+            transition: opacity .2s, transform .2s;
+        }
+
+        .card:hover .card-arrow {
+            opacity: 1;
+            transform: translateX(4px);
+        }
+
+        /* Difficulty dots */
+        .difficulty {
+            display: flex;
+            gap: 3px;
+            margin-bottom: 10px;
+        }
+
+        .dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: #21262d;
+            border: 1px solid #30363d;
+        }
+
+        .dot.on {
+            background: var(--accent);
+            border-color: var(--accent);
+        }
+
+        /* Color palette */
+        .c1 {
+            --accent: #ff6b35;
+        }
+
+        /* naranja Kafka */
+        .c2 {
+            --accent: #f7c59f;
+        }
+
+        /* melocotón */
+        .c3 {
+            --accent: #3fb950;
+        }
+
+        /* verde */
+        .c4 {
+            --accent: #39d0d8;
+        }
+
+        /* cyan */
+        .c5 {
+            --accent: #79c0ff;
+        }
+
+        /* azul */
+        .c6 {
+            --accent: #bc8cff;
+        }
+
+        /* morado */
+        .c7 {
+            --accent: #e3b341;
+        }
+
+        /* amarillo */
+        .c8 {
+            --accent: #ff79c6;
+        }
+
+        /* rosa */
+        .c9 {
+            --accent: #50fa7b;
+        }
+
+        /* verde lima */
+
+        /* Banner hero */
+        .hero-banner {
+            max-width: 1200px;
+            margin: 0 auto 32px;
+            background: linear-gradient(135deg, #1a0d0522, #0d1117);
+            border: 1px solid #ff6b3522;
+            border-radius: 16px;
+            padding: 28px 32px;
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 24px;
+        }
+
+        .hero-stat {
+            text-align: center;
+        }
+
+        .hero-stat .num {
+            font-size: 2em;
+            font-weight: 900;
+            color: #ff6b35;
+        }
+
+        .hero-stat .label {
+            font-size: 0.72em;
+            color: #8b949e;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .banner {
+            max-width: 1200px;
+            margin: 0 auto 28px;
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 14px;
+            padding: 18px 24px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .banner-icon {
+            font-size: 2em;
+        }
+
+        .banner h3 {
+            font-size: 0.88em;
+            font-weight: 700;
+            margin-bottom: 4px;
+            color: #ff6b35;
+        }
+
+        .banner p {
+            font-size: 0.78em;
+            color: #8b949e;
+        }
+
+        code {
+            font-family: monospace;
+            background: #21262d;
+            padding: 1px 6px;
+            border-radius: 4px;
+            font-size: .9em;
+            color: #a5d6ff;
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 48px;
+            color: #484f58;
+            font-size: .78em;
+        }
+
+        .badge-hot {
+            display: inline-block;
+            background: #3a1a0a;
+            color: #ff6b35;
+            font-size: .6em;
+            font-weight: 700;
+            padding: 1px 7px;
+            border-radius: 10px;
+            vertical-align: middle;
+            margin-left: 6px;
+            letter-spacing: .5px;
+        }
+
+        @media (max-width: 640px) {
+            .hero-banner {
+                grid-template-columns: 1fr;
+            }
+
+            h1 {
+                font-size: 1.8em;
+            }
+        }
+    </style>
+
+    <script type="module">
+        import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+        mermaid.initialize({ startOnLoad: true, theme: 'dark' });
+    </script>
+</head>
+
+<body>
+    <h1>⚡ Apache Kafka Bootcamp</h1>
+    <p class="subtitle">El backbone de tu arquitectura Big Data · De cero a producción con Python · 2025-26</p>
+
+    <!-- Stats banner -->
+    <div class="hero-banner">
+        <div class="hero-stat">
+            <div class="num">10M+</div>
+            <div class="label">mensajes/segundo por broker</div>
+        </div>
+        <div class="hero-stat">
+            <div class="num">100%</div>
+            <div class="label">durabilidad garantizada</div>
+        </div>
+        <div class="hero-stat">
+            <div class="num">∞</div>
+            <div class="label">retención configurable</div>
+        </div>
+    </div>
+
+    <!-- Librería recomendada -->
+    <div class="banner">
+        <div class="banner-icon">🐍</div>
+        <div>
+            <h3>Librería recomendada: confluent-kafka-python</h3>
+            <p>
+                Usamos <code>confluent-kafka</code> (wrapper oficial de <code>librdkafka</code>, la implementación más
+                rápida).
+                Instalar: <code>pip install confluent-kafka</code>.
+                Para schemas Avro/Protobuf: <code>pip install confluent-kafka[avro]</code>.
+                También veremos <code>kafka-python</code> en los ejemplos básicos.
+            </p>
+        </div>
+    </div>
+
+    <div class="path-label">🛤️ Ruta de aprendizaje — sigue el orden</div>
+
+    <!-- BLOQUE 1 -->
+    <div class="group-label">🧱 Fundamentos — ¿Qué es Kafka y por qué existe?</div>
+    <div class="sections-grid">
+        <a href="01_fundamentos.html" class="card c1">
+            <div class="card-num">Sección 01</div>
+            <h2>🧠 Kafka desde cero</h2>
+            <p>¿Por qué Kafka? Brokers, topics, particiones, offsets, consumers, producers. La arquitectura que lo
+                cambia todo.</p>
+            <div class="difficulty">
+                <div class="dot on"></div>
+                <div class="dot"></div>
+                <div class="dot"></div>
+                <div class="dot"></div>
+                <div class="dot"></div>
+            </div>
+            <div class="tags"><span class="tag">broker</span><span class="tag">topic</span><span
+                    class="tag">offset</span><span class="tag">partition</span></div>
+            <span class="card-arrow">→</span>
+        </a>
+        <a href="02_instalacion.html" class="card c2">
+            <div class="card-num">Sección 02</div>
+            <h2>🐳 Instalación con Docker</h2>
+            <p>Kafka + Zookeeper (o KRaft) en Docker. <code>docker-compose</code> listo para usar, Kafka UI,
+                verificación y primeros comandos CLI.</p>
+            <div class="difficulty">
+                <div class="dot on"></div>
+                <div class="dot"></div>
+                <div class="dot"></div>
+                <div class="dot"></div>
+                <div class="dot"></div>
+            </div>
+            <div class="tags"><span class="tag">Docker</span><span class="tag">KRaft</span><span
+                    class="tag">kafka-ui</span><span class="tag">CLI</span></div>
+            <span class="card-arrow">→</span>
+        </a>
+        <a href="03_python_basico.html" class="card c3">
+            <div class="card-num">Sección 03</div>
+            <h2>🐍 Producer y Consumer en Python</h2>
+            <p>Tu primer producer y consumer con <code>confluent-kafka</code>. Publicar mensajes, suscribirse, manejar
+                offsets. Ejemplos ejecutables.</p>
+            <div class="difficulty">
+                <div class="dot on"></div>
+                <div class="dot on"></div>
+                <div class="dot"></div>
+                <div class="dot"></div>
+                <div class="dot"></div>
+            </div>
+            <div class="tags"><span class="tag">confluent-kafka</span><span class="tag">producer</span><span
+                    class="tag">consumer</span></div>
+            <span class="card-arrow">→</span>
+        </a>
+    </div>
+
+    <!-- BLOQUE 2 -->
+    <div class="group-label">🔬 Conceptos clave — Lo que separa experts de usuarios básicos</div>
+    <div class="sections-grid">
+        <a href="04_particiones_grupos.html" class="card c4">
+            <div class="card-num">Sección 04</div>
+            <h2>⚖️ Particiones y Consumer Groups</h2>
+            <p>La magia del escalado horizontal. Cómo las particiones permiten paralelismo real. Rebalanceos, lag,
+                estrategias de asignación.</p>
+            <div class="difficulty">
+                <div class="dot on"></div>
+                <div class="dot on"></div>
+                <div class="dot on"></div>
+                <div class="dot"></div>
+                <div class="dot"></div>
+            </div>
+            <div class="tags"><span class="tag">partitions</span><span class="tag">consumer group</span><span
+                    class="tag">rebalance</span><span class="tag">lag</span></div>
+            <span class="card-arrow">→</span>
+        </a>
+        <a href="05_schemas_serialization.html" class="card c5">
+            <div class="card-num">Sección 05</div>
+            <h2>📐 Schemas y Serialización</h2>
+            <p>Por qué JSON no basta en producción. Avro, Protobuf y JSON Schema con Schema Registry. Compatibilidad
+                forward/backward.</p>
+            <div class="difficulty">
+                <div class="dot on"></div>
+                <div class="dot on"></div>
+                <div class="dot on"></div>
+                <div class="dot"></div>
+                <div class="dot"></div>
+            </div>
+            <div class="tags"><span class="tag">Avro</span><span class="tag">Protobuf</span><span class="tag">Schema
+                    Registry</span></div>
+            <span class="card-arrow">→</span>
+        </a>
+        <a href="06_garantias_entrega.html" class="card c6">
+            <div class="card-num">Sección 06</div>
+            <h2>🔒 Garantías de Entrega</h2>
+            <p>At-most-once, at-least-once, exactly-once. <code>acks</code>, <code>idempotence</code>, transacciones
+                Kafka. Cuándo importa cada una.</p>
+            <div class="difficulty">
+                <div class="dot on"></div>
+                <div class="dot on"></div>
+                <div class="dot on"></div>
+                <div class="dot on"></div>
+                <div class="dot"></div>
+            </div>
+            <div class="tags"><span class="tag">acks</span><span class="tag">idempotent</span><span
+                    class="tag">EOS</span><span class="tag">transactions</span></div>
+            <span class="card-arrow">→</span>
+        </a>
+    </div>
+
+    <!-- BLOQUE 3 -->
+    <div class="group-label">🚀 Producción — Kafka a escala real</div>
+    <div class="sections-grid">
+        <a href="07_streams_python.html" class="card c7">
+            <div class="card-num">Sección 07</div>
+            <h2>🌊 Kafka Streams con Python</h2>
+            <p>Procesamiento de streams en Python: <code>Faust</code> y patrones de transformación. Joins, ventanas
+                temporales, aggregations en tiempo real.</p>
+            <div class="difficulty">
+                <div class="dot on"></div>
+                <div class="dot on"></div>
+                <div class="dot on"></div>
+                <div class="dot on"></div>
+                <div class="dot"></div>
+            </div>
+            <div class="tags"><span class="tag">Faust</span><span class="tag">streams</span><span
+                    class="tag">windowing</span><span class="tag">joins</span></div>
+            <span class="card-arrow">→</span>
+        </a>
+        <a href="08_produccion.html" class="card c8">
+            <div class="card-num">Sección 08</div>
+            <h2>🏭 Kafka en Producción</h2>
+            <p>Configuración para producción: retención, compactación, replicación, monitoreo con Prometheus/Grafana,
+                alertas y troubleshooting.</p>
+            <div class="difficulty">
+                <div class="dot on"></div>
+                <div class="dot on"></div>
+                <div class="dot on"></div>
+                <div class="dot on"></div>
+                <div class="dot on"></div>
+            </div>
+            <div class="tags"><span class="tag">retention</span><span class="tag">replication</span><span
+                    class="tag">monitoring</span><span class="tag">Prometheus</span></div>
+            <span class="card-arrow">→</span>
+        </a>
+        <a href="09_arquitecturas.html" class="card c9">
+            <div class="card-num">Sección 09</div>
+            <h2>🏗️ Patrones de Arquitectura</h2>
+            <p>Event sourcing, CQRS, saga pattern, outbox pattern con Kafka. Integración con Spark, Flink, dbt y el data
+                lakehouse.</p>
+            <div class="difficulty">
+                <div class="dot on"></div>
+                <div class="dot on"></div>
+                <div class="dot on"></div>
+                <div class="dot on"></div>
+                <div class="dot on"></div>
+            </div>
+            <div class="tags"><span class="tag">event sourcing</span><span class="tag">CQRS</span><span
+                    class="tag">Spark</span><span class="tag">Flink</span></div>
+            <span class="card-arrow">→</span>
+        </a>
+    </div>
+
+    <!-- BLOQUE 4 -->
+    <div class="group-label">💻 Prácticas de Laboratorio — De 0 a Producción</div>
+    <div class="sections-grid">
+        <a href="10_practica_basica.html" class="card c3">
+            <div class="card-num">Lab 01</div>
+            <h2>🌱 Práctica: Hola Mundo Kafka</h2>
+            <p>Entorno desde cero construyendo tu primer Producer y Consumer asíncrono para enviar eventos en una partición. Ideal para perder el miedo.</p>
+            <div class="difficulty">
+                <div class="dot on"></div>
+                <div class="dot on"></div>
+                <div class="dot"></div>
+                <div class="dot"></div>
+                <div class="dot"></div>
+            </div>
+            <div class="tags"><span class="tag">python</span><span class="tag">java</span><span class="tag">basico</span></div>
+            <span class="card-arrow">→</span>
+        </a>
+        <a href="11_practica_grupos.html" class="card c5">
+            <div class="card-num">Lab 02</div>
+            <h2>⚖️ Práctica: Escalabilidad y Grupos</h2>
+            <p>Divide y vencerás. Hash-routing por <code>key</code> en 3 particiones y un Consumer Group de 3 hilos demostrando el rebalanceo cooperativo.</p>
+            <div class="difficulty">
+                <div class="dot on"></div>
+                <div class="dot on"></div>
+                <div class="dot on"></div>
+                <div class="dot"></div>
+                <div class="dot"></div>
+            </div>
+            <div class="tags"><span class="tag">partitions</span><span class="tag">keys</span><span class="tag">consumer-group</span></div>
+            <span class="card-arrow">→</span>
+        </a>
+        <a href="12_practica_avanzada.html" class="card c1">
+            <div class="card-num">Lab 03</div>
+            <h2>🛡️ Práctica: Producción (E-Commerce)</h2>
+            <p>Producer blindado <code>Exactly-Once</code> con Schema Registry (Avro) + Consumer robusto síncrono para garantizar cero pérdida de pedidos.</p>
+            <div class="difficulty">
+                <div class="dot on"></div>
+                <div class="dot on"></div>
+                <div class="dot on"></div>
+                <div class="dot on"></div>
+                <div class="dot on"></div>
+            </div>
+            <div class="tags"><span class="tag">avro</span><span class="tag">idempotence</span><span class="tag">manual commits</span></div>
+            <span class="card-arrow">→</span>
+        </a>
+    </div>
+
+    <!-- BLOQUE 5 -->
+    <div class="group-label">🔬 Ingeniería de Datos: Masterclass Formatos</div>
+    <div class="sections-grid">
+        <a href="13_formato_avro.html" class="card c5">
+            <div class="card-num">Masterclass 01</div>
+            <h2>🧬 Apache Avro en Profundidad</h2>
+            <p>Binarización matemática, omisión de metadatos en Kafka y la regla de oro para la Evolución de Esquemas (Backward/Forward Compatibility).</p>
+            <div class="difficulty">
+                <div class="dot on"></div>
+                <div class="dot on"></div>
+                <div class="dot on"></div>
+                <div class="dot on"></div>
+                <div class="dot"></div>
+            </div>
+            <div class="tags"><span class="tag">binario</span><span class="tag">schemas</span><span class="tag">confluent</span></div>
+            <span class="card-arrow">→</span>
+        </a>
+        <a href="14_formato_protobuf.html" class="card c7">
+            <div class="card-num">Masterclass 02</div>
+            <h2>📠 Protocol Buffers (gRPC)</h2>
+            <p>La Filosofía de Google. El ecosistema RPC de latencia microscópica, compilación basada en <code>Tags</code> estáticos y por qué destruye REST.</p>
+            <div class="difficulty">
+                <div class="dot on"></div>
+                <div class="dot on"></div>
+                <div class="dot on"></div>
+                <div class="dot on"></div>
+                <div class="dot on"></div>
+            </div>
+            <div class="tags"><span class="tag">protobuf</span><span class="tag">grpc</span><span class="tag">microservicios</span></div>
+            <span class="card-arrow">→</span>
+        </a>
+        <a href="15_formato_parquet.html" class="card c6">
+            <div class="card-num">Masterclass 03</div>
+            <h2>🧊 Apache Parquet (Data Lakes)</h2>
+            <p>Desmitificación del pilar Analítico: Almacenamiento Columnar masivo, Predicate Pushdown (Min/Max Stats) y compresión RLE con Diccionarios.</p>
+            <div class="difficulty">
+                <div class="dot on"></div>
+                <div class="dot on"></div>
+                <div class="dot on"></div>
+                <div class="dot on"></div>
+                <div class="dot on"></div>
+            </div>
+            <div class="tags"><span class="tag">columnar</span><span class="tag">spark</span><span class="tag">s3</span></div>
+            <span class="card-arrow">→</span>
+        </a>
+    </div>
+
+    <!-- BLOQUE 6 -->
+    <div class="group-label">🧪 Laboratorios Prácticos: Formatos Data</div>
+    <div class="sections-grid">
+        <a href="16_practica_avro.html" class="card c5">
+            <div class="card-num">Lab 04</div>
+            <h2>Práctica Binarización: Confluent Avro</h2>
+            <p>Implementación desde cero en Python: Serialización binaria interceptando el JSON, validación con `.avsc` y conexión al Schema Registry port 8081.</p>
+            <div class="difficulty">
+                <div class="dot on"></div>
+                <div class="dot on"></div>
+                <div class="dot on"></div>
+                <div class="dot on"></div>
+                <div class="dot"></div>
+            </div>
+            <div class="tags"><span class="tag">python</span><span class="tag">avro</span><span class="tag">registry</span></div>
+            <span class="card-arrow">→</span>
+        </a>
+        <a href="17_practica_protobuf.html" class="card c7">
+            <div class="card-num">Lab 05</div>
+            <h2>Práctica Compilación: Protocol Buffers</h2>
+            <p>Usando el comando `protoc` de Google para transpirar un `.proto` a clases nativas de Python, produciendo y consumiendo payloads raw desde Kafka.</p>
+            <div class="difficulty">
+                <div class="dot on"></div>
+                <div class="dot on"></div>
+                <div class="dot on"></div>
+                <div class="dot on"></div>
+                <div class="dot on"></div>
+            </div>
+            <div class="tags"><span class="tag">protoc</span><span class="tag">python</span><span class="tag">raw</span></div>
+            <span class="card-arrow">→</span>
+        </a>
+        <a href="18_practica_parquet.html" class="card c6">
+            <div class="card-num">Lab 06</div>
+            <h2>Práctica Data Lake: Pandas + Parquet</h2>
+            <p>Simulación del final del Pipeline analítico. Grabaremos un DataFrame Masivo y aplicaremos Predicate Pushdown directo al disco para evitar latencia de RAM.</p>
+            <div class="difficulty">
+                <div class="dot on"></div>
+                <div class="dot on"></div>
+                <div class="dot on"></div>
+                <div class="dot on"></div>
+                <div class="dot on"></div>
+            </div>
+            <div class="tags"><span class="tag">pandas</span><span class="tag">pyarrow</span><span class="tag">batch</span></div>
+            <span class="card-arrow">→</span>
+        </a>
+    </div>
+
+    <div class="footer">Apache Kafka Bootcamp · confluent-kafka-python · Big Data 2025-26</div>
+</body>
+
+</html>
