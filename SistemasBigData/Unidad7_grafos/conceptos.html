@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Conceptos Fundamentales — Apuntes de Grafos</title>
+    <meta name="description"
+        content="Conceptos fundamentales de grafos: nodos, aristas, grado, caminos, ciclos, componentes conectadas.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+
+    <nav class="navbar" id="navbar">
+        <div class="nav-inner">
+            <div class="nav-brand">
+                <span class="brand-icon">🕸️</span>
+                <span class="brand-text">Grafos Bootcamp</span>
+            </div>
+            <ul class="nav-links">
+                <li><a href="index.html">Inicio</a></li>
+                <li><a href="conceptos.html" class="active">Conceptos</a></li>
+                <li><a href="tipos.html">Tipos</a></li>
+                <li><a href="propiedades.html">Propiedades</a></li>
+                <li><a href="algoritmos.html">Algoritmos</a></li>
+                <li><a href="problemas.html">Problemas Reales</a></li>
+                <li><a href="neo4j.html">Neo4j</a></li>
+            </ul>
+            <button class="nav-mobile-btn" id="navToggle">☰</button>
+        </div>
+    </nav>
+
+    <div class="breadcrumb">
+        <div class="breadcrumb-inner">
+            <a href="index.html">Inicio</a>
+            <span class="breadcrumb-sep">›</span>
+            <span>Conceptos Fundamentales</span>
+        </div>
+    </div>
+
+    <div class="page-hero">
+        <span class="page-hero-icon">🧮</span>
+        <h1>Conceptos <span class="gradient-text">Fundamentales</span></h1>
+        <p>Todo lo que necesitas entender sobre grafos: la terminología básica, los elementos clave y cómo se relacionan
+            entre sí.</p>
+    </div>
+
+    <div class="content">
+
+        <!-- 1. DEFINICIÓN FORMAL -->
+        <h2>1. ¿Qué es exactamente un Grafo?</h2>
+        <p>
+            Un grafo es una estructura matemática formada por dos elementos: un conjunto de <strong>nodos</strong>
+            (también llamados vértices)
+            y un conjunto de <strong>aristas</strong> (también llamadas arcos o edges) que conectan pares de nodos.
+        </p>
+        <p>
+            Formalmente se escribe como <code>G = (V, E)</code> donde <code>V</code> es el conjunto de vértices y
+            <code>E</code>
+            el conjunto de aristas. Pero no te preocupes por la notación matemática: lo importante es el concepto.
+        </p>
+
+        <div class="info-box info">
+            <span class="info-box-icon">📖</span>
+            <div class="info-box-text">
+                <strong>En términos simples:</strong> un grafo es un <strong>mapa de conexiones</strong>.
+                Es la mejor herramienta cuando lo que te importa no solo son los datos en sí,
+                sino <strong>cómo se relacionan</strong> entre ellos.
+            </div>
+        </div>
+
+        <!-- Ejemplo visual: Definición -->
+        <div class="graph-demo">
+            <span class="graph-demo-label">Grafo simple G con 4 nodos y 4 aristas</span>
+            <svg viewBox="0 0 600 200" style="height:200px">
+                <!-- Aristas -->
+                <line x1="120" y1="100" x2="260" y2="50" stroke="rgba(99,102,241,0.5)" stroke-width="2" />
+                <line x1="120" y1="100" x2="260" y2="150" stroke="rgba(99,102,241,0.5)" stroke-width="2" />
+                <line x1="260" y1="50" x2="400" y2="100" stroke="rgba(99,102,241,0.5)" stroke-width="2" />
+                <line x1="260" y1="150" x2="400" y2="100" stroke="rgba(99,102,241,0.5)" stroke-width="2" />
+                <!-- Nodos -->
+                <circle cx="120" cy="100" r="28" fill="rgba(99,102,241,0.25)" stroke="#6366f1" stroke-width="2" />
+                <text x="120" y="96" text-anchor="middle" fill="#818cf8" font-size="12" font-weight="700"
+                    font-family="Inter">Nodo 1</text>
+                <text x="120" y="111" text-anchor="middle" fill="#64748b" font-size="9" font-family="Inter">v₁</text>
+
+                <circle cx="260" cy="50" r="28" fill="rgba(16,185,129,0.25)" stroke="#10b981" stroke-width="2" />
+                <text x="260" y="46" text-anchor="middle" fill="#4ade80" font-size="12" font-weight="700"
+                    font-family="Inter">Nodo 2</text>
+                <text x="260" y="61" text-anchor="middle" fill="#64748b" font-size="9" font-family="Inter">v₂</text>
+
+                <circle cx="260" cy="150" r="28" fill="rgba(16,185,129,0.25)" stroke="#10b981" stroke-width="2" />
+                <text x="260" y="146" text-anchor="middle" fill="#4ade80" font-size="12" font-weight="700"
+                    font-family="Inter">Nodo 3</text>
+                <text x="260" y="161" text-anchor="middle" fill="#64748b" font-size="9" font-family="Inter">v₃</text>
+
+                <circle cx="400" cy="100" r="28" fill="rgba(245,158,11,0.25)" stroke="#f59e0b" stroke-width="2" />
+                <text x="400" y="96" text-anchor="middle" fill="#fbbf24" font-size="12" font-weight="700"
+                    font-family="Inter">Nodo 4</text>
+                <text x="400" y="111" text-anchor="middle" fill="#64748b" font-size="9" font-family="Inter">v₄</text>
+
+                <!-- Etiquetas aristas -->
+                <text x="185" y="62" text-anchor="middle" fill="#6366f1" font-size="10" font-family="Inter">e₁</text>
+                <text x="185" y="138" text-anchor="middle" fill="#6366f1" font-size="10" font-family="Inter">e₂</text>
+                <text x="332" y="62" text-anchor="middle" fill="#6366f1" font-size="10" font-family="Inter">e₃</text>
+                <text x="332" y="138" text-anchor="middle" fill="#6366f1" font-size="10" font-family="Inter">e₄</text>
+
+                <!-- Formula -->
+                <text x="530" y="95" text-anchor="middle" fill="#818cf8" font-size="13" font-weight="700"
+                    font-family="JetBrains Mono">G=(V,E)</text>
+                <text x="530" y="113" text-anchor="middle" fill="#64748b" font-size="10" font-family="Inter">|V|=4,
+                    |E|=4</text>
+            </svg>
+        </div>
+
+        <!-- 2. NODOS -->
+        <h2>2. Nodos (Vértices)</h2>
+        <p>
+            Los nodos son los <strong>actores</strong> del grafo. Representan cualquier entidad sobre la que quieras
+            guardar información.
+            Pueden ser personas, ciudades, transacciones, páginas web, productos...
+        </p>
+        <p>En Neo4j, los nodos pueden tener una o varias <strong>etiquetas</strong> que indican su tipo, y un conjunto
+            de <strong>propiedades</strong> con sus datos.</p>
+
+        <div class="two-col">
+            <div class="mini-card">
+                <h5>📌 Ejemplos de nodos</h5>
+                <ul>
+                    <li><strong>Red social:</strong> Persona, Empresa</li>
+                    <li><strong>E-commerce:</strong> Producto, Cliente, Pedido</li>
+                    <li><strong>Logística:</strong> Ciudad, Almacén, Ruta</li>
+                    <li><strong>Web:</strong> Página, URL</li>
+                </ul>
+            </div>
+            <div class="mini-card">
+                <h5>🏷️ Propiedades de un nodo</h5>
+                <ul>
+                    <li><strong>Persona:</strong> nombre, edad, email</li>
+                    <li><strong>Producto:</strong> nombre, precio, stock</li>
+                    <li><strong>Ciudad:</strong> nombre, población, país</li>
+                    <li>Cualquier par <code>clave: valor</code></li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="code-block">
+            <div class="code-header">
+                <span class="code-lang">cypher — Neo4j</span>
+                <button class="copy-btn" onclick="copyCode(this)">📋 Copiar</button>
+            </div>
+            <pre><code><span class="cmt">// Crear un nodo de tipo Persona con propiedades</span>
+<span class="kw">CREATE</span> (p:<span class="fn">Persona</span> {
+  nombre: <span class="str">"Ana García"</span>,
+  edad: <span class="num">29</span>,
+  ciudad: <span class="str">"Madrid"</span>
+})
+
+<span class="cmt">// Los corchetes (:Persona) son la etiqueta (tipo de nodo)</span>
+<span class="cmt">// Las llaves {} contienen las propiedades</span></code></pre>
+        </div>
+
+        <!-- 3. ARISTAS -->
+        <h2>3. Aristas (Relaciones)</h2>
+        <p>
+            Las aristas conectan dos nodos y representan una <strong>relación</strong> entre ellos.
+            Son la parte más poderosa de los grafos: permiten modelar cómo dos entidades están relacionadas.
+        </p>
+        <p>
+            En Neo4j, cada relación tiene siempre un <strong>tipo</strong> (en mayúsculas por convención)
+            y puede tener propiedades adicionales.
+        </p>
+
+        <div class="graph-demo">
+            <span class="graph-demo-label">Relaciones con tipo y propiedades</span>
+            <svg viewBox="0 0 700 180" style="height:180px">
+                <defs>
+                    <marker id="arr" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto">
+                        <path d="M0,0 L0,6 L8,3 z" fill="rgba(99,102,241,0.8)" />
+                    </marker>
+                    <marker id="arr2" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto">
+                        <path d="M0,0 L0,6 L8,3 z" fill="rgba(16,185,129,0.8)" />
+                    </marker>
+                    <marker id="arr3" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto">
+                        <path d="M0,0 L0,6 L8,3 z" fill="rgba(245,158,11,0.8)" />
+                    </marker>
+                </defs>
+                <!-- Nodo Ana -->
+                <circle cx="100" cy="90" r="35" fill="rgba(99,102,241,0.2)" stroke="#6366f1" stroke-width="2" />
+                <text x="100" y="86" text-anchor="middle" fill="#818cf8" font-size="13" font-weight="700"
+                    font-family="Inter">Ana</text>
+                <text x="100" y="102" text-anchor="middle" fill="#64748b" font-size="9"
+                    font-family="Inter">Persona</text>
+
+                <!-- Nodo Luis -->
+                <circle cx="310" cy="40" r="35" fill="rgba(16,185,129,0.2)" stroke="#10b981" stroke-width="2" />
+                <text x="310" y="36" text-anchor="middle" fill="#4ade80" font-size="13" font-weight="700"
+                    font-family="Inter">Luis</text>
+                <text x="310" y="52" text-anchor="middle" fill="#64748b" font-size="9"
+                    font-family="Inter">Persona</text>
+
+                <!-- Nodo Empresa -->
+                <circle cx="310" cy="140" r="35" fill="rgba(245,158,11,0.2)" stroke="#f59e0b" stroke-width="2" />
+                <text x="310" y="136" text-anchor="middle" fill="#fbbf24" font-size="12" font-weight="700"
+                    font-family="Inter">TechCo</text>
+                <text x="310" y="152" text-anchor="middle" fill="#64748b" font-size="9"
+                    font-family="Inter">Empresa</text>
+
+                <!-- Nodo Ciudad -->
+                <circle cx="520" cy="90" r="35" fill="rgba(6,182,212,0.2)" stroke="#06b6d4" stroke-width="2" />
+                <text x="520" y="86" text-anchor="middle" fill="#22d3ee" font-size="13" font-weight="700"
+                    font-family="Inter">Madrid</text>
+                <text x="520" y="102" text-anchor="middle" fill="#64748b" font-size="9"
+                    font-family="Inter">Ciudad</text>
+
+                <!-- Relación CONOCE -->
+                <line x1="135" y1="73" x2="270" y2="48" stroke="rgba(99,102,241,0.7)" stroke-width="1.5"
+                    marker-end="url(#arr)" />
+                <rect x="166" y="42" width="80" height="18" rx="4" fill="rgba(99,102,241,0.15)"
+                    stroke="rgba(99,102,241,0.3)" stroke-width="1" />
+                <text x="206" y="55" text-anchor="middle" fill="#818cf8" font-size="10" font-weight="600"
+                    font-family="Inter">CONOCE</text>
+
+                <!-- Relación TRABAJA_EN -->
+                <line x1="135" y1="107" x2="272" y2="132" stroke="rgba(16,185,129,0.7)" stroke-width="1.5"
+                    marker-end="url(#arr2)" />
+                <rect x="154" y="112" width="105" height="18" rx="4" fill="rgba(16,185,129,0.1)"
+                    stroke="rgba(16,185,129,0.3)" stroke-width="1" />
+                <text x="207" y="125" text-anchor="middle" fill="#4ade80" font-size="10" font-weight="600"
+                    font-family="Inter">TRABAJA_EN</text>
+
+                <!-- Relación VIVE_EN -->
+                <line x1="345" y1="90" x2="482" y2="90" stroke="rgba(245,158,11,0.7)" stroke-width="1.5"
+                    marker-end="url(#arr3)" />
+                <rect x="375" y="77" width="80" height="18" rx="4" fill="rgba(245,158,11,0.1)"
+                    stroke="rgba(245,158,11,0.3)" stroke-width="1" />
+                <text x="415" y="90" text-anchor="middle" fill="#fbbf24" font-size="10" font-weight="600"
+                    font-family="Inter">VIVE_EN</text>
+            </svg>
+        </div>
+
+        <div class="code-block">
+            <div class="code-header">
+                <span class="code-lang">cypher — Neo4j</span>
+                <button class="copy-btn" onclick="copyCode(this)">📋 Copiar</button>
+            </div>
+            <pre><code><span class="cmt">// Crear una relación entre dos nodos</span>
+<span class="kw">MATCH</span> (a:<span class="fn">Persona</span> {nombre: <span class="str">"Ana García"</span>})
+<span class="kw">MATCH</span> (e:<span class="fn">Empresa</span> {nombre: <span class="str">"TechCo"</span>})
+<span class="kw">CREATE</span> (a)-[:<span class="prop">TRABAJA_EN</span> {desde: <span class="num">2022</span>, rol: <span class="str">"Data Engineer"</span>}]->(e)
+
+<span class="cmt">// La flecha (-[]->) indica la dirección de la relación</span>
+<span class="cmt">// :TRABAJA_EN es el tipo de relación</span>
+<span class="cmt">// {desde: 2022, rol: ...} son propiedades de la relación</span></code></pre>
+        </div>
+
+        <!-- 4. GRADO DE UN NODO -->
+        <h2>4. Grado de un Nodo</h2>
+        <p>
+            El <strong>grado</strong> de un nodo es el número de aristas que lo conectan con otros nodos.
+            Es una medida simple pero muy informativa: nos dice cuántas conexiones tiene una entidad.
+        </p>
+
+        <div class="graph-demo">
+            <span class="graph-demo-label">Grado de los nodos</span>
+            <svg viewBox="0 0 600 220" style="height:220px">
+                <!-- Edges desde nodo central -->
+                <line x1="300" y1="110" x2="160" y2="50" stroke="rgba(99,102,241,0.4)" stroke-width="2" />
+                <line x1="300" y1="110" x2="440" y2="50" stroke="rgba(99,102,241,0.4)" stroke-width="2" />
+                <line x1="300" y1="110" x2="160" y2="170" stroke="rgba(99,102,241,0.4)" stroke-width="2" />
+                <line x1="300" y1="110" x2="440" y2="170" stroke="rgba(99,102,241,0.4)" stroke-width="2" />
+                <!-- Edge entre periféricos -->
+                <line x1="160" y1="50" x2="440" y2="50" stroke="rgba(16,185,129,0.3)" stroke-width="1.5" />
+
+                <!-- Nodo central (grado 4) -->
+                <circle cx="300" cy="110" r="38" fill="rgba(99,102,241,0.3)" stroke="#6366f1" stroke-width="2.5" />
+                <text x="300" y="105" text-anchor="middle" fill="#818cf8" font-size="12" font-weight="800"
+                    font-family="Inter">Hub</text>
+                <text x="300" y="120" text-anchor="middle" fill="#22d3ee" font-size="10" font-weight="700"
+                    font-family="Inter">grado = 4</text>
+
+                <!-- Periférico B (grado 3) -->
+                <circle cx="160" cy="50" r="28" fill="rgba(16,185,129,0.2)" stroke="#10b981" stroke-width="2" />
+                <text x="160" y="45" text-anchor="middle" fill="#4ade80" font-size="11" font-weight="700"
+                    font-family="Inter">B</text>
+                <text x="160" y="60" text-anchor="middle" fill="#22d3ee" font-size="9" font-weight="700"
+                    font-family="Inter">grado=2</text>
+
+                <!-- Periférico C (grado 2) -->
+                <circle cx="440" cy="50" r="28" fill="rgba(16,185,129,0.2)" stroke="#10b981" stroke-width="2" />
+                <text x="440" y="45" text-anchor="middle" fill="#4ade80" font-size="11" font-weight="700"
+                    font-family="Inter">C</text>
+                <text x="440" y="60" text-anchor="middle" fill="#22d3ee" font-size="9" font-weight="700"
+                    font-family="Inter">grado=2</text>
+
+                <!-- Periférico D (grado 1) -->
+                <circle cx="160" cy="170" r="28" fill="rgba(245,158,11,0.2)" stroke="#f59e0b" stroke-width="2" />
+                <text x="160" y="165" text-anchor="middle" fill="#fbbf24" font-size="11" font-weight="700"
+                    font-family="Inter">D</text>
+                <text x="160" y="180" text-anchor="middle" fill="#22d3ee" font-size="9" font-weight="700"
+                    font-family="Inter">grado=1</text>
+
+                <!-- Periférico E (grado 1) -->
+                <circle cx="440" cy="170" r="28" fill="rgba(245,158,11,0.2)" stroke="#f59e0b" stroke-width="2" />
+                <text x="440" y="165" text-anchor="middle" fill="#fbbf24" font-size="11" font-weight="700"
+                    font-family="Inter">E</text>
+                <text x="440" y="180" text-anchor="middle" fill="#22d3ee" font-size="9" font-weight="700"
+                    font-family="Inter">grado=1</text>
+            </svg>
+        </div>
+
+        <div class="info-box tip">
+            <span class="info-box-icon">💡</span>
+            <div class="info-box-text">
+                <strong>¿Para qué sirve el grado?</strong> En una red social, el grado es el número de amigos que tiene
+                alguien.
+                Nodos con <strong>grado muy alto</strong> ("hubs") son muy influyentes en el grafo: si los eliminas,
+                la red puede fragmentarse. Google los llama "páginas con muchos enlaces entrantes" → mayor importancia =
+                mejor ranking.
+            </div>
+        </div>
+
+        <p>En grafos <strong>dirigidos</strong>, hay dos tipos de grado:</p>
+        <ul>
+            <li><strong>Grado de entrada (in-degree):</strong> cuántas aristas llegan al nodo (cuántos te siguen en
+                Twitter)</li>
+            <li><strong>Grado de salida (out-degree):</strong> cuántas aristas salen del nodo (a cuántos sigues tú)</li>
+        </ul>
+
+        <!-- 5. CAMINOS -->
+        <h2>5. Caminos y Recorridos</h2>
+        <p>
+            Un <strong>camino</strong> es una secuencia de nodos conectados por aristas. Nos dice cómo llegar de un nodo
+            a otro.
+        </p>
+
+        <div class="two-col">
+            <div class="mini-card">
+                <h5>🛤️ Camino (Path)</h5>
+                <p>Secuencia de nodos donde <strong>no se repite ningún nodo</strong>.
+                    Por ejemplo: A → B → C → D es un camino de longitud 3.</p>
+            </div>
+            <div class="mini-card">
+                <h5>📏 Camino más corto</h5>
+                <p>El camino con <strong>menos aristas</strong> (o menor peso total) entre dos nodos.
+                    Es lo que calcula Google Maps entre dos ciudades.</p>
+            </div>
+        </div>
+
+        <div class="info-box info">
+            <span class="info-box-icon">🔗</span>
+            <div class="info-box-text">
+                <strong>Separación entre personas:</strong> El famoso experimento de los <em>"6 grados de
+                    separación"</em>
+                dice que cualquier persona en el mundo está conectada a cualquier otra en máximo 6 pasos (camino de
+                longitud 6).
+                Facebook ha medido que en su red social son <strong>3,5 grados</strong> de media.
+            </div>
+        </div>
+
+        <div class="code-block">
+            <div class="code-header">
+                <span class="code-lang">cypher — Camino más corto en Neo4j</span>
+                <button class="copy-btn" onclick="copyCode(this)">📋 Copiar</button>
+            </div>
+            <pre><code><span class="cmt">// ¿Cuál es el camino más corto entre Ana y Pedro?</span>
+<span class="kw">MATCH</span> (inicio:<span class="fn">Persona</span> {nombre: <span class="str">"Ana"</span>}),
+      (fin:<span class="fn">Persona</span> {nombre: <span class="str">"Pedro"</span>})
+<span class="kw">MATCH</span> p = <span class="fn">shortestPath</span>((inicio)-[*]-(fin))
+<span class="kw">RETURN</span> p, <span class="fn">length</span>(p) <span class="kw">AS</span> distancia
+
+<span class="cmt">// [*] significa "a través de cualquier número de relaciones"</span></code></pre>
+        </div>
+
+        <!-- 6. CICLOS -->
+        <h2>6. Ciclos</h2>
+        <p>
+            Un <strong>ciclo</strong> es un camino que empieza y termina en el mismo nodo.
+            Son importantes porque indican "bucles" en las relaciones.
+        </p>
+
+        <div class="graph-demo">
+            <span class="graph-demo-label">Ciclo A → B → C → D → A</span>
+            <svg viewBox="0 0 500 180" style="height:180px">
+                <defs>
+                    <marker id="arr-c" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto">
+                        <path d="M0,0 L0,6 L8,3 z" fill="rgba(245,158,11,0.9)" />
+                    </marker>
+                </defs>
+                <!-- Cycle edges -->
+                <line x1="100" y1="90" x2="220" y2="40" stroke="rgba(245,158,11,0.6)" stroke-width="2"
+                    marker-end="url(#arr-c)" />
+                <line x1="240" y1="40" x2="365" y2="40" stroke="rgba(245,158,11,0.6)" stroke-width="2"
+                    marker-end="url(#arr-c)" />
+                <line x1="390" y1="57" x2="390" y2="128" stroke="rgba(245,158,11,0.6)" stroke-width="2"
+                    marker-end="url(#arr-c)" />
+                <line x1="375" y1="148" x2="125" y2="115" stroke="rgba(245,158,11,0.6)" stroke-width="2"
+                    marker-end="url(#arr-c)" />
+                <!-- Nodes -->
+                <circle cx="100" cy="90" r="28" fill="rgba(245,158,11,0.2)" stroke="#f59e0b" stroke-width="2" />
+                <text x="100" y="95" text-anchor="middle" fill="#fbbf24" font-size="14" font-weight="700"
+                    font-family="Inter">A</text>
+                <circle cx="240" cy="40" r="28" fill="rgba(245,158,11,0.2)" stroke="#f59e0b" stroke-width="2" />
+                <text x="240" y="45" text-anchor="middle" fill="#fbbf24" font-size="14" font-weight="700"
+                    font-family="Inter">B</text>
+                <circle cx="390" cy="40" r="28" fill="rgba(245,158,11,0.2)" stroke="#f59e0b" stroke-width="2" />
+                <text x="390" y="45" text-anchor="middle" fill="#fbbf24" font-size="14" font-weight="700"
+                    font-family="Inter">C</text>
+                <circle cx="390" cy="148" r="28" fill="rgba(245,158,11,0.2)" stroke="#f59e0b" stroke-width="2" />
+                <text x="390" y="153" text-anchor="middle" fill="#fbbf24" font-size="14" font-weight="700"
+                    font-family="Inter">D</text>
+
+                <text x="250" y="130" text-anchor="middle" fill="#64748b" font-size="11" font-family="Inter">Ciclo de
+                    longitud 4</text>
+            </svg>
+        </div>
+
+        <p>Los ciclos aparecen en muchos casos reales:</p>
+        <ul>
+            <li><strong>Dependencias circulares:</strong> A depende de B, B de C, C de A → problema en software</li>
+            <li><strong>Transacciones fraudulentas:</strong> dinero que circula en bucle entre cuentas</li>
+            <li><strong>Cadenas de suministro:</strong> detectar dependencias cíclicas entre proveedores</li>
+        </ul>
+
+        <!-- 7. ADYACENCIA Y CONECTIVIDAD -->
+        <h2>7. Adyacencia y Conectividad</h2>
+        <p>
+            Dos nodos son <strong>adyacentes</strong> si están directamente conectados por una arista.
+            Un grafo es <strong>conexo</strong> (o conectado) si existe un camino entre cualquier par de nodos.
+        </p>
+
+        <div class="two-col">
+            <div class="mini-card">
+                <h5>✅ Grafo Conexo</h5>
+                <p>Desde cualquier nodo puedes llegar a cualquier otro nodo siguiendo las aristas. <strong>Todos están
+                        conectados.</strong></p>
+            </div>
+            <div class="mini-card">
+                <h5>⛔ Grafo Disconexo</h5>
+                <p>Hay "islas" de nodos que no están conectadas entre sí. Se llaman <strong>componentes
+                        conectadas</strong>.</p>
+            </div>
+        </div>
+
+        <div class="info-box warning">
+            <span class="info-box-icon">⚠️</span>
+            <div class="info-box-text">
+                <strong>Componentes conectadas en la práctica:</strong> Si tienes una base de datos de clientes en Neo4j
+                y hay componentes desconectadas, puede indicar datos huérfanos, clientes duplicados,
+                o segmentos de mercado completamente independientes. ¡Son fáciles de detectar con Cypher!
+            </div>
+        </div>
+
+        <!-- RESUMEN -->
+        <h2>Resumen de Conceptos</h2>
+        <div class="table-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Concepto</th>
+                        <th>Definición</th>
+                        <th>Ejemplo real</th>
+                        <th>En Neo4j</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Nodo</strong></td>
+                        <td>Entidad del grafo</td>
+                        <td>Persona, ciudad, producto</td>
+                        <td><code>(:Persona)</code></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Arista</strong></td>
+                        <td>Conexión entre nodos</td>
+                        <td>Amistad, compra, vuelo directo</td>
+                        <td><code>-[:CONOCE]-></code></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Propiedad</strong></td>
+                        <td>Atributo de un nodo o arista</td>
+                        <td>Nombre, edad, precio, fecha</td>
+                        <td><code>{nombre: "Ana"}</code></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Grado</strong></td>
+                        <td>Nº de aristas de un nodo</td>
+                        <td>Nº de amigos, seguidores</td>
+                        <td><code>size((n)--())</code></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Camino</strong></td>
+                        <td>Secuencia de nodos conectados</td>
+                        <td>Ruta de A a B en el mapa</td>
+                        <td><code>shortestPath(...)</code></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Ciclo</strong></td>
+                        <td>Camino que vuelve al origen</td>
+                        <td>Dependencia circular, fraude</td>
+                        <td><code>MATCH (a)-[*]->(a)</code></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Componente</strong></td>
+                        <td>Subgrafo conectado</td>
+                        <td>Grupo aislado de usuarios</td>
+                        <td>GDS: weakly connected</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div style="display:flex; gap:1rem; flex-wrap:wrap; margin-top:2rem">
+            <a href="tipos.html" class="btn btn-primary">→ Tipos de Grafos</a>
+            <a href="propiedades.html" class="btn btn-outline">→ Propiedades y Métricas</a>
+        </div>
+
+    </div>
+
+    <footer class="footer">
+        <div class="footer-inner">
+            <div class="footer-brand">
+                <div class="brand-logo">🕸️ Grafos Bootcamp</div>
+                <p>Apuntes de teoría de grafos para proyectos Big Data con Neo4j.</p>
+            </div>
+            <div class="footer-links">
+                <h5>Secciones</h5>
+                <ul>
+                    <li><a href="index.html">Inicio</a></li>
+                    <li><a href="conceptos.html">Conceptos</a></li>
+                    <li><a href="tipos.html">Tipos de Grafos</a></li>
+                    <li><a href="propiedades.html">Propiedades</a></li>
+                    <li><a href="neo4j.html">Neo4j</a></li>
+                </ul>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p>Grafos Bootcamp — Apuntes para proyecto Big Data con Neo4j</p>
+        </div>
+    </footer>
+
+    <script>
+        const navbar = document.getElementById('navbar');
+        window.addEventListener('scroll', () => {
+            navbar.classList.toggle('scrolled', window.scrollY > 50);
+        });
+        document.getElementById('navToggle').addEventListener('click', () => {
+            document.querySelector('.nav-links').classList.toggle('open');
+        });
+        function copyCode(btn) {
+            const pre = btn.closest('.code-block').querySelector('pre');
+            navigator.clipboard.writeText(pre.innerText).then(() => {
+                btn.textContent = '✅ Copiado';
+                btn.classList.add('copied');
+                setTimeout(() => { btn.textContent = '📋 Copiar'; btn.classList.remove('copied'); }, 2000);
+            });
+        }
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <title>06 · Garantías de Entrega — Kafka Bootcamp</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', system-ui, sans-serif;
+            background: #0d1117;
+            color: #e6edf3;
+        }
+
+        .topbar {
+            background: #161b22;
+            border-bottom: 1px solid #30363d;
+            padding: 12px 24px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 0.82em;
+        }
+
+        .topbar a {
+            color: #bc8cff;
+            text-decoration: none;
+        }
+
+        .topbar a:hover {
+            color: #d2a8ff;
+        }
+
+        .topbar .sep {
+            color: #484f58;
+        }
+
+        .topbar .cur {
+            color: #e6edf3;
+            font-weight: 600;
+        }
+
+        .hero {
+            background: linear-gradient(135deg, #2a1a3a22, #0d1117);
+            border-bottom: 1px solid #30363d;
+            padding: 36px 24px;
+            text-align: center;
+        }
+
+        .badge {
+            display: inline-block;
+            background: #2a1a3a;
+            color: #bc8cff;
+            font-size: 0.7em;
+            font-weight: 700;
+            padding: 3px 12px;
+            border-radius: 20px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            margin-bottom: 14px;
+        }
+
+        .hero h1 {
+            font-size: 1.9em;
+            font-weight: 900;
+            margin-bottom: 8px;
+        }
+
+        .hero p {
+            color: #8b949e;
+            font-size: 0.88em;
+            max-width: 640px;
+            margin: 0 auto;
+            line-height: 1.6;
+        }
+
+        .content {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 32px 24px;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .grid-wide {
+            grid-column: 1 / -1;
+        }
+
+        .card {
+            background: #161b22;
+            border-radius: 12px;
+            border: 1px solid #30363d;
+            padding: 20px;
+            transition: border-color 0.18s;
+        }
+
+        .card:hover {
+            border-color: #bc8cff44;
+        }
+
+        .card-title {
+            font-weight: 700;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.95em;
+        }
+
+        p {
+            color: #8b949e;
+            line-height: 1.65;
+            margin-bottom: 8px;
+            font-size: 0.85em;
+        }
+
+        pre {
+            background: #010409;
+            border: 1px solid #21262d;
+            border-radius: 8px;
+            padding: 14px 16px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.76em;
+            overflow-x: auto; white-space: pre;
+            line-height: 1.7;
+            margin: 8px 0;
+            white-space: pre;
+        }
+
+        code {
+            font-family: monospace;
+            background: #21262d;
+            padding: 1px 5px;
+            border-radius: 4px;
+            font-size: 0.88em;
+            color: #a5d6ff;
+        }
+
+        .c {
+            color: #6e7681;
+        }
+
+        .kw {
+            color: #ff7b72;
+        }
+
+        .str {
+            color: #a5d6ff;
+        }
+
+        .num {
+            color: #79c0ff;
+        }
+
+        .nm {
+            color: #d2a8ff;
+        }
+
+        .fn {
+            color: #e3b341;
+        }
+
+        .gr {
+            color: #3fb950;
+        }
+
+        .cy {
+            color: #39d0d8;
+        }
+
+        .or {
+            color: #ff6b35;
+        }
+
+        ul,
+        ol {
+            padding-left: 20px;
+            margin: 6px 0 10px;
+        }
+
+        li {
+            color: #8b949e;
+            margin-bottom: 4px;
+            font-size: 0.85em;
+            line-height: 1.5;
+        }
+
+        li::marker {
+            color: #bc8cff;
+        }
+
+        .hi {
+            margin: 10px 0;
+            background: #2a1a3a33;
+            border: 1px solid #bc8cff44;
+            border-radius: 8px;
+            padding: 10px 14px;
+            font-size: 0.82em;
+            color: #d2a8ff;
+        }
+
+        .hi.g {
+            background: #1a3a2a33;
+            border-color: #3fb95044;
+            color: #7ee787;
+        }
+
+        .hi.b {
+            background: #1f3a5f33;
+            border-color: #79c0ff44;
+            color: #a5d6ff;
+        }
+
+        .hi.r {
+            background: #3a1a1a33;
+            border-color: #ff7b7244;
+            color: #ffa198;
+        }
+
+        .hi.o {
+            background: #1a0d0533;
+            border-color: #ff6b3544;
+            color: #ff8c5a;
+        }
+
+        .section-title {
+            font-size: 1.1em;
+            font-weight: 700;
+            color: #bc8cff;
+            margin: 32px 0 16px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #21262d;
+        }
+
+        .diagram {
+            background: #010409;
+            border: 1px solid #2a1a3a;
+            border-radius: 10px;
+            padding: 16px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.76em;
+            line-height: 1.8;
+            margin: 12px 0;
+            overflow-x: auto; white-space: pre;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.8em;
+            margin: 8px 0;
+        }
+
+        th {
+            background: #1b1f24;
+            color: #8b949e;
+            text-align: left;
+            padding: 7px 10px;
+            font-weight: 600;
+        }
+
+        td {
+            padding: 6px 10px;
+            border-bottom: 1px solid #21262d;
+            color: #8b949e;
+            vertical-align: top;
+        }
+
+        tr:hover td {
+            background: #21262d44;
+        }
+
+        .nav-footer {
+            border-top: 1px solid #30363d;
+            padding: 20px 24px;
+            display: flex;
+            justify-content: space-between;
+            margin-top: 20px;
+        }
+
+        .nav-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            padding: 10px 18px;
+            text-decoration: none;
+            color: #e6edf3;
+            font-size: 0.83em;
+            font-weight: 600;
+            transition: all 0.18s;
+        }
+
+        .nav-btn:hover {
+            border-color: #bc8cff;
+            color: #bc8cff;
+        }
+    </style>
+
+    <script type="module">
+        import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+        mermaid.initialize({ startOnLoad: true, theme: 'dark' });
+    </script>
+</head>
+
+<body>
+    <div class="topbar">
+        <a href="index.html">🏠 Kafka Bootcamp</a><span class="sep">›</span>
+        <span class="cur">06 · Garantías de Entrega</span>
+    </div>
+    <div class="hero">
+        <div class="badge">Sección 06 · Fiabilidad</div>
+        <h1>🔒 Garantías de Entrega</h1>
+        <p>At-most-once, at-least-once y exactly-once. Las configuraciones <code>acks</code>, <code>idempotence</code>
+            y transacciones Kafka. El triángulo de imposibilidades y cuándo importa cada garantía.</p>
+    </div>
+
+    <div class="content">
+
+        <div class="section-title">🔢 Las 3 garantías de entrega</div>
+        <div class="grid">
+            <div class="card grid-wide">
+                <div class="card-title">El triángulo: Velocidad — Fiabilidad — Complejidad</div>
+                <div class="mermaid">
+graph TD
+    subgraph Garantías de Entrega
+        AMO[AT-MOST-ONCE <br> Avanza offset sin esperar]
+        ALO[AT-LEAST-ONCE <br> Avanza offset después de procesar]
+        EO[EXACTLY-ONCE <br> Producer idempotente + transacciones]
+    end
+</div>
+            </div>
+
+            <div class="card">
+                <div class="card-title">🔑 acks — el parámetro más importante del Producer</div>
+                <table>
+                    <tr>
+                        <th>Valor</th>
+                        <th>Significado</th>
+                        <th>Pérdida posible</th>
+                        <th>Rendimiento</th>
+                    </tr>
+                    <tr>
+                        <td><code>0</code></td>
+                        <td>Fire and forget — no esperar confirmación</td>
+                        <td>✅ Alta</td>
+                        <td>⚡ Máximo</td>
+                    </tr>
+                    <tr>
+                        <td><code>1</code></td>
+                        <td>Confirma el líder de la partición</td>
+                        <td>🟡 Si el líder cae antes de replicar</td>
+                        <td>🔄 Alto</td>
+                    </tr>
+                    <tr>
+                        <td><code>all</code> o <code>-1</code></td>
+                        <td>Confirma el líder + todas las réplicas in-sync</td>
+                        <td>❌ Cero (con min.insync.replicas=2)</td>
+                        <td>🐢 Moderado</td>
+                    </tr>
+                </table>
+                <pre><span class="c"># Producción: acks=all siempre</span>
+conf = {
+    <span class="str">'acks'</span>: <span class="str">'all'</span>,
+    <span class="str">'min.insync.replicas'</span>: <span class="num">2</span>,  <span class="c"># configurar en el topic</span>
+}</pre>
+            </div>
+
+            <div class="card">
+                <div class="card-title">🔄 Idempotencia del Producer</div>
+                <p>Con retries activados, un producer puede enviar el mismo mensaje dos veces si no recibe la
+                    confirmación a tiempo.
+                    El producer idempotente usa un <strong>sequence number</strong> para que el broker detecte y
+                    descarte duplicados.</p>
+                <pre><span class="c"># Habilitar idempotencia — SIEMPRE en producción</span>
+conf = {
+    <span class="str">'enable.idempotence'</span>: <span class="nm">True</span>,
+    <span class="c"># Automáticamente establece:</span>
+    <span class="c"># acks = 'all'</span>
+    <span class="c"># retries = MAX_INT</span>
+    <span class="c"># max.in.flight.requests.per.connection = 5</span>
+}
+
+<span class="c"># Resultado: exactamente 1 copia del mensaje en Kafka</span>
+<span class="c"># incluso si el producer reintenta 100 veces</span></pre>
+                <div class="hi g">✅ <code>enable.idempotence=True</code> tiene un coste de rendimiento mínimo (≈1-2%) y
+                    garantiza que ningún mensaje se duplique en el broker. Úsalo siempre.</div>
+            </div>
+
+        </div>
+
+        <div class="section-title">⚡ Transacciones Kafka — Exactly-once end-to-end</div>
+        <div class="grid">
+            <div class="card grid-wide">
+                <div class="card-title">Leer-Procesar-Escribir atómicamente</div>
+                <p>El patrón más potente: leer de un topic de entrada, procesar, escribir en otro topic, y commitear el
+                    offset de entrada —
+                    todo en una sola transacción atómica.</p>
+                <pre><span class="kw">from</span> confluent_kafka <span class="kw">import</span> Producer, Consumer, TopicPartition
+
+<span class="c"># ─── Producer Transaccional ──────────────────────────────────────────────────</span>
+producer = Producer({
+    <span class="str">'bootstrap.servers'</span>: <span class="str">'localhost:9094'</span>,
+    <span class="str">'transactional.id'</span>: <span class="str">'mi-app-transaccional-1'</span>,  <span class="c"># único por instancia de app</span>
+    <span class="str">'enable.idempotence'</span>: <span class="nm">True</span>,
+})
+
+consumer = Consumer({
+    <span class="str">'bootstrap.servers'</span>: <span class="str">'localhost:9094'</span>,
+    <span class="str">'group.id'</span>: <span class="str">'procesador-transaccional'</span>,
+    <span class="str">'isolation.level'</span>: <span class="str">'read_committed'</span>,  <span class="c"># ← solo lee mensajes committed</span>
+    <span class="str">'enable.auto.commit'</span>: <span class="nm">False</span>,
+})
+
+<span class="c"># Inicializar transacciones (una vez al arrancar)</span>
+producer.init_transactions()
+consumer.subscribe([<span class="str">'pedidos-entrada'</span>])
+
+<span class="kw">while</span> <span class="nm">True</span>:
+    msgs = consumer.consume(num_messages=<span class="num">100</span>, timeout=<span class="num">1.0</span>)
+    <span class="kw">if not</span> msgs: <span class="kw">continue</span>
+
+    producer.begin_transaction()
+    <span class="kw">try</span>:
+        <span class="kw">for</span> msg <span class="kw">in</span> msgs:
+            <span class="kw">if</span> msg.error(): <span class="kw">continue</span>
+
+            pedido = json.loads(msg.value())
+            <span class="c"># Transformar</span>
+            pedido_enriquecido = enriquecer(pedido)
+
+            <span class="c"># Escribir resultado en topic de salida</span>
+            producer.produce(
+                topic=<span class="str">'pedidos-procesados'</span>,
+                key=msg.key(),
+                value=json.dumps(pedido_enriquecido).encode()
+            )
+
+        <span class="c"># Commitear los offsets como parte de la transacción</span>
+        offsets = [TopicPartition(m.topic(), m.partition(), m.offset() + <span class="num">1</span>) <span class="kw">for</span> m <span class="kw">in</span> msgs]
+        producer.send_offsets_to_transaction(offsets, consumer.consumer_group_metadata())
+
+        <span class="c"># Commit atómico: si falla, nada se escribe ni se commitea</span>
+        producer.commit_transaction()
+
+    <span class="kw">except</span> <span class="nm">Exception</span> <span class="kw">as</span> e:
+        producer.abort_transaction()
+        <span class="fn">print</span>(<span class="str">f"Transacción abortada: {e}"</span>)</pre>
+                <div class="hi b">💡 <strong>Cuándo necesitas transacciones:</strong> pagos, reservas de inventario,
+                    transferencias bancarias —
+                    cualquier caso donde procesar un mensaje dos veces tenga consecuencias económicas o de negocio.
+                </div>
+            </div>
+
+            <div class="card grid-wide">
+                <div class="card-title">Dead Letter Queue (DLQ) — para mensajes que no se pueden procesar</div>
+                <pre><span class="c"># Patrón DLQ: si el procesamiento falla N veces, manda el mensaje a un topic especial</span>
+<span class="kw">import</span> json
+<span class="kw">from</span> confluent_kafka <span class="kw">import</span> Consumer, Producer
+
+DLQ_TOPIC = <span class="str">"pedidos-dlq"</span>
+MAX_REINTENTOS = <span class="num">3</span>
+
+<span class="kw">def</span> <span class="fn">procesar_con_dlq</span>(consumer: Consumer, producer: Producer):
+    reintentos: dict = {}
+
+    <span class="kw">while</span> <span class="nm">True</span>:
+        msg = consumer.poll(<span class="num">1.0</span>)
+        <span class="kw">if</span> msg <span class="kw">is</span> <span class="nm">None</span> <span class="kw">or</span> msg.error(): <span class="kw">continue</span>
+
+        msg_id = <span class="str">f"{msg.topic()}-{msg.partition()}-{msg.offset()}"</span>
+        intentos = reintentos.get(msg_id, <span class="num">0</span>) + <span class="num">1</span>
+
+        <span class="kw">try</span>:
+            evento = json.loads(msg.value())
+            procesar(evento)
+            consumer.commit(asynchronous=<span class="nm">False</span>)
+            reintentos.pop(msg_id, <span class="nm">None</span>)
+
+        <span class="kw">except</span> <span class="nm">Exception</span> <span class="kw">as</span> e:
+            <span class="kw">if</span> intentos >= MAX_REINTENTOS:
+                <span class="c"># Mandar a DLQ con metadatos del error</span>
+                dlq_value = {
+                    <span class="str">"original_topic"</span>: msg.topic(),
+                    <span class="str">"original_partition"</span>: msg.partition(),
+                    <span class="str">"original_offset"</span>: msg.offset(),
+                    <span class="str">"error"</span>: <span class="str">str(e)</span>,
+                    <span class="str">"payload"</span>: msg.value().decode()
+                }
+                producer.produce(DLQ_TOPIC, value=json.dumps(dlq_value).encode())
+                producer.flush()
+                consumer.commit(asynchronous=<span class="nm">False</span>)  <span class="c"># avanzar offset</span>
+                reintentos.pop(msg_id, <span class="nm">None</span>)
+            <span class="kw">else</span>:
+                reintentos[msg_id] = intentos  <span class="c"># reintentar</span></pre>
+                <div class="hi">🎯 Los mensajes en el DLQ pueden ser inspeccionados, corregidos y re-publicados
+                    manualmente.
+                    Es el mecanismo estándar para gestionar mensajes "poison pill".</div>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="nav-footer">
+        <a href="05_schemas_serialization.html" class="nav-btn">← 05 · Schemas</a>
+        <a href="07_streams_python.html" class="nav-btn">07 · Kafka Streams Python →</a>
+    </div>
+</body>
+
+</html>

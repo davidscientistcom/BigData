@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Lab 06 · Práctica Parquet — Kafka Bootcamp</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Inter', system-ui, sans-serif; background: #0d1117; color: #e6edf3; line-height: 1.6; }
+        .topbar { background: #161b22; border-bottom: 1px solid #30363d; padding: 12px 24px; display: flex; align-items: center; gap: 12px; font-size: 0.82em; }
+        .topbar a { color: #d2a8ff; text-decoration: none; }
+        .topbar a:hover { color: #e2c5ff; }
+        .topbar .sep { color: #484f58; }
+        .topbar .cur { color: #e6edf3; font-weight: 600; }
+        .hero { background: linear-gradient(135deg, #2a1a3a22, #0d1117); border-bottom: 1px solid #30363d; padding: 40px 24px; text-align: center; }
+        .badge { display: inline-block; background: #2a1a3a; color: #d2a8ff; font-size: 0.7em; font-weight: 700; padding: 4px 14px; border-radius: 20px; letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 16px; }
+        .hero h1 { font-size: 2.4em; font-weight: 900; margin-bottom: 12px; color: #ffffff; }
+        .hero p { color: #8b949e; font-size: 1.05em; max-width: 760px; margin: 0 auto; }
+        .content { max-width: 1000px; margin: 40px auto; padding: 0 24px; }
+        h2 { font-size: 1.5em; color: #d2a8ff; margin: 48px 0 20px; padding-bottom: 10px; border-bottom: 1px solid #30363d; }
+        h3 { font-size: 1.2em; color: #e6edf3; margin: 32px 0 16px; }
+        p { margin-bottom: 18px; font-size: 0.95em; }
+        ul, ol { margin-left: 24px; margin-bottom: 18px; font-size: 0.95em; color: #c9d1d9; }
+        li { margin-bottom: 8px; }
+        .card { background: #161b22; border: 1px solid #30363d; border-radius: 12px; padding: 24px; margin-bottom: 24px; }
+        .terminal { background: #010409; border: 1px solid #21262d; border-radius: 8px; padding: 16px; font-family: 'Courier New', monospace; font-size: 0.85em; overflow-x: auto; margin: 16px 0; color: #e6edf3; border-left: 3px solid #d2a8ff; }
+        .code-container { position: relative; margin: 20px 0; }
+        .code-header { background: #161b22; padding: 8px 16px; font-family: monospace; font-size: 0.8em; color: #8b949e; border: 1px solid #30363d; border-bottom: none; border-radius: 8px 8px 0 0; display: flex; justify-content: space-between; align-items: center; }
+        .code-block { background: #0d1117; padding: 16px; font-family: 'Courier New', monospace; font-size: 0.85em; color: #c9d1d9; border: 1px solid #30363d; border-radius: 0 0 8px 8px; overflow-x: auto; line-height: 1.5; }
+        .token.comment { color: #8b949e; font-style: italic; }
+        .token.keyword { color: #ff7b72; }
+        .token.string { color: #a5d6ff; }
+        .token.function { color: #d2a8ff; }
+        .hi { padding: 16px 20px; border-radius: 8px; margin: 24px 0; font-size: 0.95em; border-left: 4px solid; background: #161b22; }
+        .hi.info { border-color: #d2a8ff; background: #2a1a3a33; }
+        .hi.warn { border-color: #ffb95e; background: #3a2a0a33; }
+        .nav-footer { border-top: 1px solid #30363d; padding: 30px 24px; display: flex; justify-content: space-between; margin-top: 60px; max-width: 1000px; margin-left: auto; margin-right: auto; }
+        .nav-btn { display: inline-flex; align-items: center; gap: 10px; background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 12px 24px; text-decoration: none; color: #e6edf3; font-weight: 600; transition: all 0.2s; }
+        .nav-btn:hover { border-color: #d2a8ff; color: #d2a8ff; }
+    </style>
+</head>
+
+<body>
+    <div class="topbar">
+        <a href="index.html">🏠 Menú Principal</a><span class="sep">›</span>
+        <span class="cur">Lab 06 · Código Parquet</span>
+    </div>
+
+    <div class="hero">
+        <div class="badge">Laboratorio 06 — Python Data Science</div>
+        <h1>Práctica Data Lakes: Apache Parquet</h1>
+        <p>Demostrando el poder del Big Data real. Simularemos el fin de un pipeline de Kafka, guardaremos 1 millón de registros y ejecutaremos el legendario "Predicate Pushdown" filtrando Gigabytes matemáticamente.</p>
+    </div>
+
+    <div class="content">
+
+        <h2>1. Preparando la Herramienta Analítica</h2>
+        <p>En este laboratorio el protagonista no es `confluent-kafka` (ya que, como vimos en la masterclass, nadie "emite mensaje a mensaje" en Parquet por red). Aquí simularemos el consumidor de Batch Analytics (Spark) usando <strong>Pandas</strong> y su motor ultra-rápido en C++ <strong>PyArrow</strong>.</p>
+        
+        <div class="terminal">
+            pip install pandas pyarrow
+        </div>
+
+        <h2>2. Creación Masiva: Escribiendo el Archivo</h2>
+        <p>Vamos a generar en tu computadora portátil **10 Millones** de supuestos eventos pasados (que vinieron de Kafka de uno en uno, pero que tu servidor de BI acumuló en RAM para guardarlos de golpe).</p>
+
+        <div class="code-container">
+            <div class="code-header"><span>escribir_parquet.py</span><span>Python</span></div>
+            <pre class="code-block">
+<span class="token keyword">import</span> pandas <span class="token keyword">as</span> pd
+<span class="token keyword">import</span> numpy <span class="token keyword">as</span> np
+
+<span class="token function">print</span>(<span class="token string">"Generando 10 millones de filas en memoria... (Paciencia)"</span>)
+
+<span class="token comment"># Emulamos Data. Imagina que 10M de usuarios pasaron por el Checkout</span>
+datos_masivos = {
+    <span class="token string">"id_transaccion"</span>: np.arange(10_000_000),
+    <span class="token string">"pais"</span>: np.random.choice([<span class="token string">'ES'</span>, <span class="token string">'FR'</span>, <span class="token string">'UK'</span>, <span class="token string">'IT'</span>], size=10_000_000),
+    <span class="token string">"edad"</span>: np.random.randint(18, 90, size=10_000_000),
+    <span class="token string">"premium"</span>: np.random.choice([<span class="token keyword">True</span>, <span class="token keyword">False</span>], size=10_000_000, p=[0.2, 0.8]),
+    <span class="token string">"gasto_euros"</span>: np.random.uniform(5.5, 500.0, size=10_000_000)
+}
+
+df = pd.DataFrame(datos_masivos)
+
+<span class="token function">print</span>(<span class="token string">"Guardando en disco en formato Parquet via PyArrow..."</span>)
+<span class="token comment"># PyArrow calculará silenciosamente las Min/Max Stats, el RLE</span>
+<span class="token comment"># de 'premium', el Diccionario de 'pais', y empaquetará columnas.</span>
+df.to_parquet(<span class="token string">'data_lake_dump.parquet'</span>, engine=<span class="token string">'pyarrow'</span>, compression=<span class="token string">'snappy'</span>)
+
+<span class="token function">print</span>(<span class="token string">"Archivo 'data_lake_dump.parquet' escrito. Fíjate en cuánto pesa en disco."</span>)
+            </pre>
+        </div>
+
+        <div class="hi info">
+            <strong>Reto del Disco:</strong> Ejecuta ese script. Verás que en RAM un DataFrame de 10 millones de filas ocupa varios GBs, pero el fichero <code>.parquet</code> resultante apenas pesará unos pocos Megas. Esto es gracias a la codificación de Diccionario en la columna "pais" y el "Run-Length Encoding" natural que PyArrow le aplicó.
+        </div>
+
+        <h2>3. La Lectura Mágica: Predicate Pushdown</h2>
+        <p>Ahora viene la prueba de Arquitectura pura. Digamos que el CEO te pide: *"Suma el gasto de los españoles (ES) que tengan más de 80 años"*. Un Junior Novato haría esto: <code>pd.read_parquet('data_lake_dump.parquet')</code> subiendo los 10 Gigabytes de nuevo a la RAM, colapsando el servidor, y luego ejecutando el filtro estilo SQL de pandas.</p>
+        <p>Un Arquitecto Senior instruye al disco físico para que no suba cosas a la RAM <strong>antes</strong> de leerlas. Veamos el código:</p>
+
+        <div class="code-container">
+            <div class="code-header"><span>predicate_pushdown_read.py</span><span>Python</span></div>
+            <pre class="code-block">
+<span class="token keyword">import</span> pandas <span class="token keyword">as</span> pd
+<span class="token keyword">import</span> time
+
+<span class="token function">print</span>(<span class="token string">"Abriendo el Dataset masivo usando PREDICATE PUSHDOWN..."</span>)
+start_time = time.time()
+
+<span class="token comment"># Magia: En vez de cargar todo el DataFrame en RAM, le pasamos 'filters'</span>
+<span class="token comment"># internamente, PyArrow leerá el super-ligero FOOTER estadístico del Parquet,</span>
+<span class="token comment"># verá las Min/Max Stats, y le dirá al Disco Duro: "Sáltate todos los</span>
+<span class="token comment"># Row Groups donde el País no sea ES. Lee únicamente la columna gasto_euros".</span>
+
+df_filtrado_en_disco = pd.read_parquet(
+    <span class="token string">'data_lake_dump.parquet'</span>,
+    columns=[<span class="token string">'gasto_euros'</span>],  <span class="token comment"># <- Data Lake ignora Nombres, IDs, Premium</span>
+    filters=[
+        (<span class="token string">'pais'</span>, <span class="token string">'='</span>, <span class="token string">'ES'</span>),
+        (<span class="token string">'edad'</span>, <span class="token string">'>'</span>, 80)
+    ]
+)
+
+gasto_total = df_filtrado_en_disco[<span class="token string">'gasto_euros'</span>].<span class="token function">sum</span>()
+end_time = time.time()
+
+<span class="token function">print</span>(f<span class="token string">"✅ Resultado: {gasto_total:.2f} €"</span>)
+<span class="token function">print</span>(f<span class="token string">"⚡ Tiempo Total: {(end_time - start_time):.4f} segundos"</span>)
+            </pre>
+        </div>
+
+        <div class="hi warn">
+            <strong>Arquitectura Revelada:</strong> Acabas de hacer Analítica Big Data masiva en tu laptop en microsegundos. El sistema ignoró brutalmente (no la subió a la memoria) toda la información inútil aplicando los filtros matemáticos directo sobre el I/O del disco. Así es como Databricks procesa Amazon S3 sin que Amazon te cobre miles de dólares por TB escaneados.
+        </div>
+
+    </div>
+
+    <div class="nav-footer">
+        <a href="17_practica_protobuf.html" class="nav-btn">← Lab Protobuf</a>
+        <a href="index.html" class="nav-btn">Menú Principal →</a>
+    </div>
+</body>
+
+</html>

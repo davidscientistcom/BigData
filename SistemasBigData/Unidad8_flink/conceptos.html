@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Conceptos Fundamentales — Flink Bootcamp</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+
+    <nav class="navbar" id="navbar">
+        <div class="nav-inner">
+            <div class="nav-brand"><span class="brand-icon">⚡</span><span class="brand-text">Flink Bootcamp</span></div>
+                        <ul class="nav-links">
+                <li><a href="index.html">Inicio</a></li>
+                <li><a href="conceptos.html" class="active">Conceptos</a></li>
+                <li><a href="arquitectura.html">Arquitectura</a></li>
+                <li><a href="streams.html">Streams &amp; Batch</a></li>
+                <li><a href="operadores-visual.html">Operadores</a></li>
+                <li><a href="casos-uso.html">Casos de Uso</a></li>
+                <li><a href="pyflink.html">PyFlink</a></li>
+                <li><a href="flink-sql.html">Flink SQL</a></li>
+                <li><a href="flink-sql-ejemplos.html">Ejemplos SQL</a></li>
+                <li><a href="sql-vs-datastream.html">SQL vs DataStream</a></li>
+            </ul>
+            <button class="nav-mobile-btn" id="navToggle">☰</button>
+        </div>
+    </nav>
+
+    <div class="breadcrumb">
+        <div class="breadcrumb-inner">
+            <a href="index.html">Inicio</a><span class="breadcrumb-sep">›</span><span>Conceptos Fundamentales</span>
+        </div>
+    </div>
+
+    <div class="page-hero">
+        <span class="page-hero-icon">🧠</span>
+        <h1>Conceptos <span class="gradient-text">Fundamentales</span></h1>
+        <p>Streams, eventos, estado, tiempo de evento vs procesamiento y watermarks. Todo lo que necesitas antes de
+            programar con Flink.</p>
+    </div>
+
+    <div class="content">
+
+        <h2>1. ¿Qué es un Stream de Datos?</h2>
+        <p>Un <strong>stream</strong> es una secuencia de datos que se genera de forma continua. A diferencia de una
+            tabla estática, un stream es <strong>infinito y dinámico</strong>: siempre llegan nuevos datos.</p>
+        <p>Piensa en un río: el agua fluye constantemente. No puedes esperar a que el río "termine" para analizarlo.
+            Tienes que analizar el agua <em>mientras fluye</em>.</p>
+
+        <div class="diagram-demo">
+            <span class="diagram-demo-label">Stream de eventos de compras — infinito en el tiempo</span>
+            <svg viewBox="0 0 700 110" style="height:110px">
+                <defs>
+                    <marker id="arm" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+                        <path d="M0,0 L0,6 L8,3 z" fill="rgba(232,66,26,0.8)" />
+                    </marker>
+                </defs>
+                <line x1="20" y1="55" x2="660" y2="55" stroke="rgba(232,66,26,0.35)" stroke-width="2"
+                    marker-end="url(#arm)" />
+                <circle cx="90" cy="55" r="18" fill="rgba(16,185,129,0.25)" stroke="#10b981" stroke-width="2" />
+                <text x="90" y="51" text-anchor="middle" fill="#4ade80" font-size="8" font-weight="700"
+                    font-family="Inter">Compra</text>
+                <text x="90" y="63" text-anchor="middle" fill="#4ade80" font-size="7"
+                    font-family="Inter">12:00:01</text>
+                <circle cx="210" cy="55" r="18" fill="rgba(232,66,26,0.25)" stroke="#e8421a" stroke-width="2" />
+                <text x="210" y="51" text-anchor="middle" fill="#ff6b47" font-size="8" font-weight="700"
+                    font-family="Inter">Click</text>
+                <text x="210" y="63" text-anchor="middle" fill="#ff6b47" font-size="7"
+                    font-family="Inter">12:00:03</text>
+                <circle cx="330" cy="55" r="18" fill="rgba(245,158,11,0.25)" stroke="#f59e0b" stroke-width="2" />
+                <text x="330" y="51" text-anchor="middle" fill="#fbbf24" font-size="8" font-weight="700"
+                    font-family="Inter">Login</text>
+                <text x="330" y="63" text-anchor="middle" fill="#fbbf24" font-size="7"
+                    font-family="Inter">12:00:05</text>
+                <circle cx="450" cy="55" r="18" fill="rgba(6,182,212,0.25)" stroke="#06b6d4" stroke-width="2" />
+                <text x="450" y="51" text-anchor="middle" fill="#22d3ee" font-size="8" font-weight="700"
+                    font-family="Inter">Pago</text>
+                <text x="450" y="63" text-anchor="middle" fill="#22d3ee" font-size="7"
+                    font-family="Inter">12:00:09</text>
+                <text x="590" y="62" fill="#4b5563" font-size="26" font-family="Inter">...</text>
+            </svg>
+        </div>
+
+        <div class="two-col">
+            <div class="mini-card">
+                <h5>📊 Datos Estáticos (Batch)</h5>
+                <ul>
+                    <li>Datos en reposo: archivos, BD</li>
+                    <li>Tienes todos los datos disponibles</li>
+                    <li>Alta latencia (minutos a horas)</li>
+                    <li>Ej: informes diarios de ventas</li>
+                </ul>
+            </div>
+            <div class="mini-card">
+                <h5>⚡ Datos en Streaming</h5>
+                <ul>
+                    <li>Datos en movimiento (eventos)</li>
+                    <li>Los datos llegan continuamente</li>
+                    <li>Baja latencia (milisegundos)</li>
+                    <li>Ej: alertas de fraude en tiempo real</li>
+                </ul>
+            </div>
+        </div>
+
+        <h2>2. Eventos: los Átomos del Stream</h2>
+        <p>Un <strong>evento</strong> es la unidad básica de un stream: un registro de algo que ocurrió en un momento
+            concreto. Cada evento tiene un <strong>timestamp</strong>, unos <strong>datos (payload)</strong> y
+            opcionalmente una <strong>clave (key)</strong> para agrupar eventos relacionados.</p>
+
+        <div class="code-block">
+            <div class="code-header">
+                <span class="code-lang">json — Ejemplo de evento en Flink</span>
+                <button class="copy-btn" onclick="copyCode(this)">📋 Copiar</button>
+            </div>
+            <pre><code><span class="cmt">// Un evento de compra típico en e-commerce</span>
+{
+  <span class="prop">"event_id"</span>:   <span class="str">"evt-8821-abc"</span>,
+  <span class="prop">"timestamp"</span>:  <span class="str">"2024-03-15T12:00:01.234Z"</span>,  <span class="cmt">// cuándo ocurrió</span>
+  <span class="prop">"user_id"</span>:    <span class="str">"usr-42"</span>,             <span class="cmt">// clave para agrupar</span>
+  <span class="prop">"event_type"</span>: <span class="str">"PURCHASE"</span>,
+  <span class="prop">"amount"</span>:     <span class="num">49.99</span>,
+  <span class="prop">"currency"</span>:   <span class="str">"EUR"</span>
+}</code></pre>
+        </div>
+
+        <h2>3. Estado (State): la Memoria de Flink</h2>
+        <p>Para detectar que un usuario hizo más de 5 compras en 1 minuto, Flink necesita <strong>recordar el contador
+                de compras de ese usuario</strong>. Eso es el <strong>estado (state)</strong>: la memoria que mantiene
+            Flink entre eventos.</p>
+
+        <div class="info-box info">
+            <span class="info-box-icon">💡</span>
+            <div class="info-box-text">
+                <strong>Analogía:</strong> El estado es como la memoria de trabajo de un cajero de banco. Cada cliente
+                (key) tiene su propio expediente (estado), y el cajero lo consulta y actualiza con cada acción.
+            </div>
+        </div>
+
+        <div class="concept-grid">
+            <div class="concept-card orange">
+                <span class="concept-icon">🔑</span>
+                <h3>Keyed State</h3>
+                <p>Estado <strong>por clave</strong>. Cada usuario, producto o entidad tiene su propio estado
+                    independiente. El más habitual.</p>
+            </div>
+            <div class="concept-card green">
+                <span class="concept-icon">📋</span>
+                <h3>ValueState</h3>
+                <p>Guarda <strong>un único valor</strong>. Ej: total de ventas acumulado por usuario.</p>
+            </div>
+            <div class="concept-card cyan">
+                <span class="concept-icon">📝</span>
+                <h3>ListState</h3>
+                <p>Guarda <strong>una lista de valores</strong>. Ej: los últimos N eventos de un usuario.</p>
+            </div>
+            <div class="concept-card purple">
+                <span class="concept-icon">🗺️</span>
+                <h3>MapState</h3>
+                <p>Guarda <strong>pares clave-valor</strong> por cada entidad del stream, como un diccionario.</p>
+            </div>
+        </div>
+
+        <div class="code-block">
+            <div class="code-header">
+                <span class="code-lang">java — ValueState para contar compras por usuario</span>
+                <button class="copy-btn" onclick="copyCode(this)">📋 Copiar</button>
+            </div>
+            <pre><code><span class="kw">public class</span> <span class="type">FraudDetector</span> <span class="kw">extends</span> <span class="fn">KeyedProcessFunction</span>&lt;<span class="type">String</span>, <span class="type">Transaction</span>, <span class="type">Alert</span>&gt; {
+
+    <span class="kw">private</span> <span class="fn">ValueState</span>&lt;<span class="type">Integer</span>&gt; purchaseCount;
+
+    <span class="kw">@Override</span>
+    <span class="kw">public void</span> <span class="fn">open</span>(<span class="type">Configuration</span> params) {
+        purchaseCount = <span class="fn">getRuntimeContext</span>().<span class="fn">getState</span>(
+            <span class="kw">new</span> <span class="fn">ValueStateDescriptor</span>&lt;&gt;(<span class="str">"purchase-count"</span>, <span class="type">Integer</span>.class)
+        );
+    }
+
+    <span class="kw">@Override</span>
+    <span class="kw">public void</span> <span class="fn">processElement</span>(<span class="type">Transaction</span> tx, <span class="type">Context</span> ctx, <span class="type">Collector</span>&lt;<span class="type">Alert</span>&gt; out) <span class="kw">throws</span> <span class="type">Exception</span> {
+        <span class="type">Integer</span> count = purchaseCount.<span class="fn">value</span>();
+        <span class="kw">if</span> (count == <span class="kw">null</span>) count = <span class="num">0</span>;
+        purchaseCount.<span class="fn">update</span>(++count);
+
+        <span class="kw">if</span> (count > <span class="num">5</span>) {
+            out.<span class="fn">collect</span>(<span class="kw">new</span> <span class="fn">Alert</span>(tx.<span class="fn">getUserId</span>(), <span class="str">"Posible fraude: demasiadas compras"</span>));
+        }
+    }
+}</code></pre>
+        </div>
+
+        <h2>4. Event Time vs Processing Time</h2>
+
+        <div class="two-col">
+            <div class="mini-card">
+                <h5>🕐 Event Time</h5>
+                <ul>
+                    <li>Cuándo <strong>ocurrió</strong> en el mundo real</li>
+                    <li>Timestamp del propio evento</li>
+                    <li>Resultado <strong>determinista</strong> y correcto</li>
+                    <li>Gestiona eventos tardíos (watermarks)</li>
+                    <li><strong>✅ Recomendado en producción</strong></li>
+                </ul>
+            </div>
+            <div class="mini-card">
+                <h5>⏰ Processing Time</h5>
+                <ul>
+                    <li>Cuándo el sistema <strong>recibe</strong> el evento</li>
+                    <li>Reloj del servidor Flink</li>
+                    <li>Resultado puede variar entre ejecuciones</li>
+                    <li>Simple de implementar</li>
+                    <li>⚠️ Solo para demos y POCs</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="info-box warning">
+            <span class="info-box-icon">⚠️</span>
+            <div class="info-box-text">
+                <strong>¿Por qué importa?</strong> Un sensor IoT pierde conexión 2 minutos y luego envía todos los
+                eventos acumulados. Con Processing Time, parecería que llegaron todos a la vez. Con <strong>Event
+                    Time</strong>, Flink sabe que ocurrieron hace 2 minutos y los asigna a la ventana correcta.
+            </div>
+        </div>
+
+        <h2>5. Watermarks: gestionar eventos tardíos</h2>
+        <p>Los watermarks le dicen a Flink: <em>"Ya no van a llegar eventos con timestamp anterior a X"</em>. Sin ellos,
+            Flink no sabría cuándo cerrar una ventana temporal.</p>
+
+        <div class="code-block">
+            <div class="code-header">
+                <span class="code-lang">java — Configurar watermarks con tolerancia de 5 segundos</span>
+                <button class="copy-btn" onclick="copyCode(this)">📋 Copiar</button>
+            </div>
+            <pre><code><span class="type">DataStream</span>&lt;<span class="type">Transaction</span>&gt; stream = env
+    .<span class="fn">addSource</span>(<span class="kw">new</span> <span class="fn">KafkaSource</span>(...))
+    .<span class="fn">assignTimestampsAndWatermarks</span>(
+        <span class="fn">WatermarkStrategy</span>
+            .&lt;<span class="type">Transaction</span>&gt;<span class="fn">forBoundedOutOfOrderness</span>(<span class="type">Duration</span>.<span class="fn">ofSeconds</span>(<span class="num">5</span>))
+            .<span class="fn">withTimestampAssigner</span>((event, ts) -&gt; event.<span class="fn">getTimestamp</span>())
+    );
+<span class="cmt">// Flink esperará 5s extra antes de cerrar ventanas por si llegan eventos tardíos</span></code></pre>
+        </div>
+
+        <h2>6. Flink vs Spark Streaming</h2>
+
+        <div class="table-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Característica</th>
+                        <th>Apache Flink</th>
+                        <th>Spark Streaming</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Modelo</strong></td>
+                        <td>Streaming nativo (evento a evento)</td>
+                        <td>Micro-batch</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Latencia</strong></td>
+                        <td><span class="badge badge-green">Milisegundos</span></td>
+                        <td><span class="badge badge-amber">Segundos</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Estado</strong></td>
+                        <td>Gestión nativa y eficiente</td>
+                        <td>Stateless o con RDD</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Event Time</strong></td>
+                        <td>Soporte nativo excelente</td>
+                        <td>Soporte limitado</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Cuándo usarlo</strong></td>
+                        <td>Fraude, alertas, trading</td>
+                        <td>Batch + ML + latencia &gt;1s</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div style="display:flex; gap:1rem; flex-wrap:wrap; margin-top:2rem">
+            <a href="arquitectura.html" class="btn btn-primary">→ Arquitectura de Flink</a>
+            <a href="streams.html" class="btn btn-outline">→ Streams y Ventanas</a>
+        </div>
+    </div>
+
+    <footer class="footer">
+        <div class="footer-inner">
+            <div class="footer-brand">
+                <div class="brand-logo">⚡ Flink Bootcamp</div>
+                <p>Apuntes de Apache Flink para proyectos Big Data.</p>
+            </div>
+            <div class="footer-links">
+                <h5>Secciones</h5>
+                <ul>
+                    <li><a href="index.html">Inicio</a></li>
+                    <li><a href="conceptos.html">Conceptos</a></li>
+                    <li><a href="arquitectura.html">Arquitectura</a></li>
+                    <li><a href="streams.html">Streams &amp; Batch</a></li>
+                    <li><a href="operadores-visual.html">Operadores</a></li>
+                    <li><a href="casos-uso.html">Casos de Uso</a></li>
+                    <li><a href="pyflink.html">PyFlink</a></li>
+                <li><a href="flink-sql.html">Flink SQL</a></li>
+                <li><a href="flink-sql-ejemplos.html">Ejemplos SQL</a></li>
+                <li><a href="sql-vs-datastream.html">SQL vs DataStream</a></li>
+                </ul>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p>Flink Bootcamp — Big Data</p>
+        </div>
+    </footer>
+
+    <script>
+        const navbar = document.getElementById('navbar');
+        window.addEventListener('scroll', () => { navbar.classList.toggle('scrolled', window.scrollY > 50); });
+        document.getElementById('navToggle').addEventListener('click', () => { document.querySelector('.nav-links').classList.toggle('open'); });
+        function copyCode(btn) {
+            const pre = btn.closest('.code-block').querySelector('pre');
+            navigator.clipboard.writeText(pre.innerText).then(() => {
+                btn.textContent = '✅ Copiado'; btn.classList.add('copied');
+                setTimeout(() => { btn.textContent = '📋 Copiar'; btn.classList.remove('copied'); }, 2000);
+            });
+        }
+    </script>
+</body>
+
+</html>

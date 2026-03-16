@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <title>04 · Particiones y Consumer Groups — Kafka Bootcamp</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', system-ui, sans-serif;
+            background: #0d1117;
+            color: #e6edf3;
+        }
+
+        .topbar {
+            background: #161b22;
+            border-bottom: 1px solid #30363d;
+            padding: 12px 24px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 0.82em;
+        }
+
+        .topbar a {
+            color: #39d0d8;
+            text-decoration: none;
+        }
+
+        .topbar a:hover {
+            color: #7de8f0;
+        }
+
+        .topbar .sep {
+            color: #484f58;
+        }
+
+        .topbar .cur {
+            color: #e6edf3;
+            font-weight: 600;
+        }
+
+        .hero {
+            background: linear-gradient(135deg, #0d2a2a22, #0d1117);
+            border-bottom: 1px solid #30363d;
+            padding: 36px 24px;
+            text-align: center;
+        }
+
+        .badge {
+            display: inline-block;
+            background: #0d2a2a;
+            color: #39d0d8;
+            font-size: 0.7em;
+            font-weight: 700;
+            padding: 3px 12px;
+            border-radius: 20px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            margin-bottom: 14px;
+        }
+
+        .hero h1 {
+            font-size: 1.9em;
+            font-weight: 900;
+            margin-bottom: 8px;
+        }
+
+        .hero p {
+            color: #8b949e;
+            font-size: 0.88em;
+            max-width: 640px;
+            margin: 0 auto;
+            line-height: 1.6;
+        }
+
+        .content {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 32px 24px;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .grid-wide {
+            grid-column: 1 / -1;
+        }
+
+        .card {
+            background: #161b22;
+            border-radius: 12px;
+            border: 1px solid #30363d;
+            padding: 20px;
+            transition: border-color 0.18s;
+        }
+
+        .card:hover {
+            border-color: #39d0d844;
+        }
+
+        .card-title {
+            font-weight: 700;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.95em;
+        }
+
+        p {
+            color: #8b949e;
+            line-height: 1.65;
+            margin-bottom: 8px;
+            font-size: 0.85em;
+        }
+
+        pre {
+            background: #010409;
+            border: 1px solid #21262d;
+            border-radius: 8px;
+            padding: 14px 16px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.76em;
+            overflow-x: auto; white-space: pre;
+            line-height: 1.7;
+            margin: 8px 0;
+            white-space: pre;
+        }
+
+        code {
+            font-family: monospace;
+            background: #21262d;
+            padding: 1px 5px;
+            border-radius: 4px;
+            font-size: 0.88em;
+            color: #a5d6ff;
+        }
+
+        .c {
+            color: #6e7681;
+        }
+
+        .kw {
+            color: #ff7b72;
+        }
+
+        .str {
+            color: #a5d6ff;
+        }
+
+        .num {
+            color: #79c0ff;
+        }
+
+        .nm {
+            color: #d2a8ff;
+        }
+
+        .fn {
+            color: #e3b341;
+        }
+
+        .gr {
+            color: #3fb950;
+        }
+
+        .cy {
+            color: #39d0d8;
+        }
+
+        .or {
+            color: #ff6b35;
+        }
+
+        ul,
+        ol {
+            padding-left: 20px;
+            margin: 6px 0 10px;
+        }
+
+        li {
+            color: #8b949e;
+            margin-bottom: 4px;
+            font-size: 0.85em;
+            line-height: 1.5;
+        }
+
+        li::marker {
+            color: #39d0d8;
+        }
+
+        .hi {
+            margin: 10px 0;
+            background: #0d2a2a33;
+            border: 1px solid #39d0d844;
+            border-radius: 8px;
+            padding: 10px 14px;
+            font-size: 0.82em;
+            color: #7de8f0;
+        }
+
+        .hi.g {
+            background: #1a3a2a33;
+            border-color: #3fb95044;
+            color: #7ee787;
+        }
+
+        .hi.b {
+            background: #1f3a5f33;
+            border-color: #79c0ff44;
+            color: #a5d6ff;
+        }
+
+        .hi.r {
+            background: #3a1a1a33;
+            border-color: #ff7b7244;
+            color: #ffa198;
+        }
+
+        .hi.o {
+            background: #1a0d0533;
+            border-color: #ff6b3544;
+            color: #ff8c5a;
+        }
+
+        .section-title {
+            font-size: 1.1em;
+            font-weight: 700;
+            color: #39d0d8;
+            margin: 32px 0 16px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #21262d;
+        }
+
+        .diagram {
+            background: #010409;
+            border: 1px solid #0d2a2a;
+            border-radius: 10px;
+            padding: 16px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.76em;
+            line-height: 1.8;
+            margin: 12px 0;
+            overflow-x: auto; white-space: pre;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.8em;
+            margin: 8px 0;
+        }
+
+        th {
+            background: #1b1f24;
+            color: #8b949e;
+            text-align: left;
+            padding: 7px 10px;
+            font-weight: 600;
+        }
+
+        td {
+            padding: 6px 10px;
+            border-bottom: 1px solid #21262d;
+            color: #8b949e;
+            vertical-align: top;
+        }
+
+        tr:hover td {
+            background: #21262d44;
+        }
+
+        .nav-footer {
+            border-top: 1px solid #30363d;
+            padding: 20px 24px;
+            display: flex;
+            justify-content: space-between;
+            margin-top: 20px;
+        }
+
+        .nav-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            padding: 10px 18px;
+            text-decoration: none;
+            color: #e6edf3;
+            font-size: 0.83em;
+            font-weight: 600;
+            transition: all 0.18s;
+        }
+
+        .nav-btn:hover {
+            border-color: #39d0d8;
+            color: #39d0d8;
+        }
+    </style>
+
+    <script type="module">
+        import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+        mermaid.initialize({ startOnLoad: true, theme: 'dark' });
+    </script>
+</head>
+
+<body>
+    <div class="topbar">
+        <a href="index.html">🏠 Kafka Bootcamp</a><span class="sep">›</span>
+        <span class="cur">04 · Particiones y Consumer Groups</span>
+    </div>
+    <div class="hero">
+        <div class="badge">Sección 04 · Escalado</div>
+        <h1>⚖️ Particiones y Consumer Groups</h1>
+        <p>El corazón del escalado horizontal en Kafka. Cómo se distribuye el trabajo, qué pasa en un rebalanceo,
+            cómo medir el lag y las estrategias de asignación de particiones.</p>
+    </div>
+
+    <div class="content">
+
+        <div class="section-title">🧩 Particiones — la unidad de paralelismo</div>
+        <div class="grid">
+            <div class="card grid-wide">
+                <div class="card-title">Cómo Kafka escala a millones de mensajes/segundo</div>
+                <p>Una partición es una secuencia ordenada e inmutable de mensajes. El número de particiones de un topic
+                    determina el <strong>máximo paralelismo</strong> de lectura. Piénsalo como "carriles" de una
+                    autopista.</p>
+                <div class="mermaid">
+graph LR
+    subgraph Topic: eventos
+        P0["P0: [login_u1] [click_u1] [buy_u1] ->"]
+        P1["P1: [login_u2] [view_u2] [login_u4] ->"]
+        P2["P2: [buy_u3] [click_u3] ->"]
+        P3["P3: [view_u5] [view_u6] [buy_u7] ->"]
+    end
+</div>
+
+                <table>
+                    <tr>
+                        <th>Pregunta</th>
+                        <th>Respuesta</th>
+                    </tr>
+                    <tr>
+                        <td>¿Cuántas particiones poner?</td>
+                        <td>Tantas como el máximo de consumers que quieras en paralelo. Regla práctica: empieza con 6-12
+                            para topics importantes.</td>
+                    </tr>
+                    <tr>
+                        <td>¿Se puede cambiar después?</td>
+                        <td>Solo se puede <em>aumentar</em>, nunca reducir. Esto redistribuye mensajes y rompe el orden
+                            por clave existente.</td>
+                    </tr>
+                    <tr>
+                        <td>¿Más particiones = más rápido?</td>
+                        <td>Hasta cierto punto. Más particiones = más archivos en disco, más conexiones, más overhead en
+                            el broker.</td>
+                    </tr>
+                    <tr>
+                        <td>¿Dónde van los mensajes sin clave?</td>
+                        <td>Kafka 2.4+: sticky partitioning (un mismo partición por batch para mejor batching).</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+
+        <div class="section-title">👥 Consumer Groups — el escalado del lado consumidor</div>
+        <div class="grid">
+            <div class="card grid-wide">
+                <div class="card-title">La asignación de particiones a consumers</div>
+                <div class="mermaid">
+graph TD
+    subgraph Topic: pedidos 6 particiones
+        P0[P0]; P1[P1]; P2[P2]; P3[P3]; P4[P4]; P5[P5]
+    end
+    subgraph 2 consumers en el grupo
+        CA1[Consumer A]
+        CB1[Consumer B]
+    end
+    P0 --> CA1; P1 --> CA1; P2 --> CA1
+    P3 --> CB1; P4 --> CB1; P5 --> CB1
+</div>
+            </div>
+
+            <div class="card">
+                <div class="card-title">🔄 Rebalanceo — lo que pasa al añadir/quitar consumers</div>
+                <p>Un <strong>rebalanceo</strong> ocurre cuando cambia la membresía del grupo: se une un consumer,
+                    uno falla, o el heartbeat expira.</p>
+                <ol>
+                    <li>El Group Coordinator detecta el cambio</li>
+                    <li>Todos los consumers del grupo detienen la lectura y esperan</li>
+                    <li>Se reasignan las particiones (el "rebalanceo")</li>
+                    <li>Los consumers retoman desde el último offset comprometido</li>
+                </ol>
+                <div class="hi r">🔴 <strong>Stop-the-world:</strong> durante el rebalanceo, ningún consumer del grupo
+                    procesa mensajes.
+                    En Kafka 2.4+ hay rebalanceos incrementales (Cooperative Rebalancing) que minimizan el impacto.
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-title">📏 Lag — la métrica #1 de salud</div>
+                <p>El <strong>consumer lag</strong> es cuántos mensajes hay en Kafka que el consumer aún no ha
+                    procesado.
+                    Lag = 0 significa "al día". Lag creciente significa "el consumer no da abasto".</p>
+                <pre><span class="c"># Monitorizar lag desde Python</span>
+<span class="kw">from</span> confluent_kafka <span class="kw">import</span> Consumer, TopicPartition
+
+consumer = Consumer({
+    <span class="str">'bootstrap.servers'</span>: <span class="str">'localhost:9094'</span>,
+    <span class="str">'group.id'</span>: <span class="str">'mi-grupo'</span>,
+})
+
+<span class="kw">def</span> <span class="fn">obtener_lag</span>(topic: str, group: str):
+    partitions = consumer.list_topics(topic).topics[topic].partitions
+    lags = {}
+    <span class="kw">for</span> pid <span class="kw">in</span> partitions:
+        tp = TopicPartition(topic, pid)
+        <span class="c"># offset del consumer</span>
+        committed = consumer.committed([tp])[<span class="num">0</span>].offset
+        <span class="c"># último offset del topic</span>
+        _, high = consumer.get_watermark_offsets(tp)
+        lags[pid] = max(<span class="num">0</span>, high - committed)
+    <span class="kw">return</span> lags
+
+consumer.close()</pre>
+                <div class="hi g">💡 Para monitorizar lag en producción usa Kafka Lag Exporter + Prometheus/Grafana o
+                    Confluent Control Center.</div>
+            </div>
+
+        </div>
+
+        <div class="section-title">🎯 Estrategias de particionado</div>
+        <div class="grid">
+            <div class="card grid-wide">
+                <div class="card-title">Cómo elegir la clave de particionado — importa mucho</div>
+                <div class="mermaid">
+graph LR
+    AMAZON[key='AMAZON'] -->|90% tráfico| P0[P0 - Cuello de botella]
+    U1[key='user_X'] -->|Poco| P1[P1]
+    U2[key='user_Y'] -->|Poco| P2[P2]
+</div>
+
+                <table>
+                    <tr>
+                        <th>Caso de uso</th>
+                        <th>Clave recomendada</th>
+                        <th>Resultado</th>
+                    </tr>
+                    <tr>
+                        <td>Eventos de usuario, necesito orden por usuario</td>
+                        <td><code>user_id</code></td>
+                        <td>Todos los eventos del user_id van al mismo partición → orden garantizado</td>
+                    </tr>
+                    <tr>
+                        <td>Logs, no necesito orden</td>
+                        <td><code>None</code></td>
+                        <td>Sticky partition → mayor throughput</td>
+                    </tr>
+                    <tr>
+                        <td>Pedidos de tienda, necesito orden por pedido</td>
+                        <td><code>pedido_id</code></td>
+                        <td>Todos los eventos del pedido van al mismo partición</td>
+                    </tr>
+                    <tr>
+                        <td>Transacciones bancarias</td>
+                        <td><code>cuenta_id</code></td>
+                        <td>Todas las transacciones de la misma cuenta → orden garantizado</td>
+                    </tr>
+                    <tr>
+                        <td>Compactación de estado</td>
+                        <td>La entidad (ej: <code>product_id</code>)</td>
+                        <td>Solo el último estado de cada producto se conserva</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="nav-footer">
+        <a href="03_python_basico.html" class="nav-btn">← 03 · Python básico</a>
+        <a href="05_schemas_serialization.html" class="nav-btn">05 · Schemas y Serialización →</a>
+    </div>
+</body>
+
+</html>

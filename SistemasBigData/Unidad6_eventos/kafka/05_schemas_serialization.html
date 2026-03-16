@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <title>05 · Schemas y Serialización — Kafka Bootcamp</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', system-ui, sans-serif;
+            background: #0d1117;
+            color: #e6edf3;
+        }
+
+        .topbar {
+            background: #161b22;
+            border-bottom: 1px solid #30363d;
+            padding: 12px 24px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 0.82em;
+        }
+
+        .topbar a {
+            color: #79c0ff;
+            text-decoration: none;
+        }
+
+        .topbar a:hover {
+            color: #aad8ff;
+        }
+
+        .topbar .sep {
+            color: #484f58;
+        }
+
+        .topbar .cur {
+            color: #e6edf3;
+            font-weight: 600;
+        }
+
+        .hero {
+            background: linear-gradient(135deg, #0d1a3a22, #0d1117);
+            border-bottom: 1px solid #30363d;
+            padding: 36px 24px;
+            text-align: center;
+        }
+
+        .badge {
+            display: inline-block;
+            background: #0d1a3a;
+            color: #79c0ff;
+            font-size: 0.7em;
+            font-weight: 700;
+            padding: 3px 12px;
+            border-radius: 20px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            margin-bottom: 14px;
+        }
+
+        .hero h1 {
+            font-size: 1.9em;
+            font-weight: 900;
+            margin-bottom: 8px;
+        }
+
+        .hero p {
+            color: #8b949e;
+            font-size: 0.88em;
+            max-width: 640px;
+            margin: 0 auto;
+            line-height: 1.6;
+        }
+
+        .content {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 32px 24px;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .grid-wide {
+            grid-column: 1 / -1;
+        }
+
+        .card {
+            background: #161b22;
+            border-radius: 12px;
+            border: 1px solid #30363d;
+            padding: 20px;
+            transition: border-color 0.18s;
+        }
+
+        .card:hover {
+            border-color: #79c0ff44;
+        }
+
+        .card-title {
+            font-weight: 700;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.95em;
+        }
+
+        p {
+            color: #8b949e;
+            line-height: 1.65;
+            margin-bottom: 8px;
+            font-size: 0.85em;
+        }
+
+        pre {
+            background: #010409;
+            border: 1px solid #21262d;
+            border-radius: 8px;
+            padding: 14px 16px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.76em;
+            overflow-x: auto; white-space: pre;
+            line-height: 1.7;
+            margin: 8px 0;
+            white-space: pre;
+        }
+
+        code {
+            font-family: monospace;
+            background: #21262d;
+            padding: 1px 5px;
+            border-radius: 4px;
+            font-size: 0.88em;
+            color: #a5d6ff;
+        }
+
+        .c {
+            color: #6e7681;
+        }
+
+        .kw {
+            color: #ff7b72;
+        }
+
+        .str {
+            color: #a5d6ff;
+        }
+
+        .num {
+            color: #79c0ff;
+        }
+
+        .nm {
+            color: #d2a8ff;
+        }
+
+        .fn {
+            color: #e3b341;
+        }
+
+        .gr {
+            color: #3fb950;
+        }
+
+        .cy {
+            color: #39d0d8;
+        }
+
+        .or {
+            color: #ff6b35;
+        }
+
+        ul,
+        ol {
+            padding-left: 20px;
+            margin: 6px 0 10px;
+        }
+
+        li {
+            color: #8b949e;
+            margin-bottom: 4px;
+            font-size: 0.85em;
+            line-height: 1.5;
+        }
+
+        li::marker {
+            color: #79c0ff;
+        }
+
+        .hi {
+            margin: 10px 0;
+            background: #0d1a3a33;
+            border: 1px solid #79c0ff44;
+            border-radius: 8px;
+            padding: 10px 14px;
+            font-size: 0.82em;
+            color: #aad8ff;
+        }
+
+        .hi.g {
+            background: #1a3a2a33;
+            border-color: #3fb95044;
+            color: #7ee787;
+        }
+
+        .hi.r {
+            background: #3a1a1a33;
+            border-color: #ff7b7244;
+            color: #ffa198;
+        }
+
+        .hi.o {
+            background: #1a0d0533;
+            border-color: #ff6b3544;
+            color: #ff8c5a;
+        }
+
+        .hi.p {
+            background: #2a1a3a33;
+            border-color: #d2a8ff44;
+            color: #d2a8ff;
+        }
+
+        .section-title {
+            font-size: 1.1em;
+            font-weight: 700;
+            color: #79c0ff;
+            margin: 32px 0 16px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #21262d;
+        }
+
+        .diagram {
+            background: #010409;
+            border: 1px solid #0d1a3a;
+            border-radius: 10px;
+            padding: 16px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.76em;
+            line-height: 1.8;
+            margin: 12px 0;
+            overflow-x: auto; white-space: pre;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.8em;
+            margin: 8px 0;
+        }
+
+        th {
+            background: #1b1f24;
+            color: #8b949e;
+            text-align: left;
+            padding: 7px 10px;
+            font-weight: 600;
+        }
+
+        td {
+            padding: 6px 10px;
+            border-bottom: 1px solid #21262d;
+            color: #8b949e;
+            vertical-align: top;
+        }
+
+        tr:hover td {
+            background: #21262d44;
+        }
+
+        .nav-footer {
+            border-top: 1px solid #30363d;
+            padding: 20px 24px;
+            display: flex;
+            justify-content: space-between;
+            margin-top: 20px;
+        }
+
+        .nav-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            padding: 10px 18px;
+            text-decoration: none;
+            color: #e6edf3;
+            font-size: 0.83em;
+            font-weight: 600;
+            transition: all 0.18s;
+        }
+
+        .nav-btn:hover {
+            border-color: #79c0ff;
+            color: #79c0ff;
+        }
+    </style>
+
+    <script type="module">
+        import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+        mermaid.initialize({ startOnLoad: true, theme: 'dark' });
+    </script>
+</head>
+
+<body>
+    <div class="topbar">
+        <a href="index.html">🏠 Kafka Bootcamp</a><span class="sep">›</span>
+        <span class="cur">05 · Schemas y Serialización</span>
+    </div>
+    <div class="hero">
+        <div class="badge">Sección 05 · Datos</div>
+        <h1>📐 Schemas y Serialización</h1>
+        <p>Por qué JSON no basta en producción. Avro, Protobuf y Schema Registry. Compatibilidad
+            hacia delante y atrás. El contrato entre producers y consumers.</p>
+    </div>
+
+    <div class="content">
+
+        <div class="section-title">🤔 Por qué JSON puro no es suficiente para Producción</div>
+        <div class="grid">
+            <div class="card grid-wide">
+                <div class="card-title">El problema: cambios de schema que rompen todo</div>
+                <div class="mermaid">
+graph TD
+    V1[Producer v1 <br> email: str] --> C1[Consumer v1: OK]
+    V2[Producer v2 <br> email, phone] -. ignora extra .-> C1
+    V3[Producer v3 <br> mail: str] -. KeyError .-> C1
+    V4[Producer v4 <br> user_id_str] -. Type Error .-> C1
+</div>
+                <div class="hi r">🔴 Sin gestión de schemas (usando JSON libre), <strong>cualquier cambio en el código del producer puede romper silenciosa y catastróficamente a todos los consumers</strong> que esperan una estructura de datos rígida.
+                </div>
+            </div>
+        </div>
+
+        <div class="section-title">🏛️ Schema Registry — El "Pydantic" a nivel Macro</div>
+        <div class="grid">
+            
+            <div class="card grid-wide">
+                <div class="card-title">¿Qué hace el Schema Registry? La analogía con Pydantic</div>
+                <p>En el mundo moderno de Python y FastAPI (donde validas peticiones y respuestas con <code>Pydantic</code>), la meta es rechazar un dato erróneo en la entrada de la API antes de que toque la lógica de negocio.</p>
+                <p><strong>El Schema Registry hace exactamente esto, pero a nivel de clúster Kafka:</strong></p>
+                <ul>
+                    <li>El contrato (el "modelo Pydantic" escrito usualmente en Avro o Protobuf) reside en un servidor central.</li>
+                    <li>Antes de que el <em>Producer</em> lance los bytes a la red, extrae el schema, valida los datos localmente y adjunta una "matrícula" (el ID del schema de 5 bytes).</li>
+                    <li>El <em>Consumer</em> extrae esa matrícula, pregunta al Registry cómo desencriptar ese ID, y garantiza que lo que leerá en su código será 100% de la forma prometida.</li>
+                </ul>
+                <div class="hi b">💡 Esto garantiza que Kafka nunca se convierta en un "sumidero de datos corruptos" irrecuperables. El Producer fallará y lanzará excepción localmente <em>antes</em> de contaminar el clúster.</div>
+            </div>
+            
+            <div class="card grid-wide">
+                <div class="card-title">Cómo funciona el flujo de validación en red</div>
+                <div class="mermaid">
+sequenceDiagram
+    participant P as Producer
+    participant SR as Schema Registry
+    participant K as Kafka Broker
+    participant C as Consumer
+    
+    P->>SR: 1. Registrar esquema (Avro/JSONSchema)
+    SR-->>P: Retorna ID de validación (ej. ID=5)
+    P->>P: Valida datos localmente y comprime
+    P->>K: 2. Enviar [0x00][ID=5][Bytes hiper-comprimidos]
+    
+    C->>K: 1. Elige leer un mensaje del Topic
+    K-->>C: Data cruda: [0x00][ID=5][Bytes]
+    C->>SR: 2. Pide receta para decodificar ID=5
+    SR-->>C: Devuelve la estructura
+    C->>C: 3. Deserializa limpiamente
+</div>
+            </div>
+
+            <div class="card">
+                <div class="card-title">🐳 Schema Registry con Docker</div>
+                <pre><span class="c"># Añadir a docker-compose.yml:</span>
+<span class="fn">schema-registry</span>:
+  image: <span class="str">confluentinc/cp-schema-registry:7.7.0</span>
+  container_name: <span class="str">schema-registry</span>
+  depends_on:
+    - kafka
+  ports:
+    - <span class="str">"8081:8081"</span>
+  environment:
+    SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: <span class="str">kafka:9092</span>
+    SCHEMA_REGISTRY_HOST_NAME: <span class="str">schema-registry</span>
+    SCHEMA_REGISTRY_LISTENERS: <span class="str">http://0.0.0.0:8081</span>
+
+<span class="c"># Ver schemas registrados:</span>
+curl http://localhost:8081/subjects
+<span class="c"># Ver versiones de un schema:</span>
+curl http://localhost:8081/subjects/pedidos-value/versions</pre>
+            </div>
+
+            <div class="card">
+                <div class="card-title">📋 Modos de compatibilidad</div>
+                <table>
+                    <tr>
+                        <th>Modo</th>
+                        <th>Significa</th>
+                        <th>Cuándo usarlo</th>
+                    </tr>
+                    <tr>
+                        <td><code>BACKWARD</code></td>
+                        <td>Consumers nuevos pueden leer mensajes viejos</td>
+                        <td>Default. Actualiza consumers antes que producers.</td>
+                    </tr>
+                    <tr>
+                        <td><code>FORWARD</code></td>
+                        <td>Consumers viejos pueden leer mensajes nuevos</td>
+                        <td>Actualiza producers antes que consumers.</td>
+                    </tr>
+                    <tr>
+                        <td><code>FULL</code></td>
+                        <td>Compatible en ambas direcciones</td>
+                        <td>Zero-downtime deployments.</td>
+                    </tr>
+                    <tr>
+                        <td><code>NONE</code></td>
+                        <td>Sin validación de compatibilidad</td>
+                        <td>Solo en desarrollo.</td>
+                    </tr>
+                </table>
+            </div>
+
+        </div>
+
+        <div class="section-title">📦 Avro con Python — el estándar en Kafka</div>
+        <div class="grid">
+            <div class="card grid-wide">
+                <div class="card-title">Producer y Consumer con Avro + Schema Registry</div>
+                <pre><span class="kw">from</span> confluent_kafka <span class="kw">import</span> Producer
+<span class="kw">from</span> confluent_kafka.schema_registry <span class="kw">import</span> SchemaRegistryClient
+<span class="kw">from</span> confluent_kafka.schema_registry.avro <span class="kw">import</span> AvroSerializer, AvroDeserializer
+<span class="kw">from</span> confluent_kafka.serialization <span class="kw">import</span> SerializationContext, MessageField, StringSerializer
+
+<span class="c"># ─── 1. Definir el schema Avro ───────────────────────────────────────────────</span>
+schema_str = <span class="str">"""
+{
+  "type": "record",
+  "name": "Pedido",
+  "namespace": "es.empresa.eventos",
+  "fields": [
+    {"name": "pedido_id",   "type": "string"},
+    {"name": "usuario_id",  "type": "string"},
+    {"name": "total",       "type": "double"},
+    {"name": "items",       "type": {"type": "array", "items": "string"}},
+    {"name": "timestamp",   "type": "long",   "logicalType": "timestamp-millis"},
+    {"name": "notas",       "type": ["null", "string"], "default": null}
+  ]
+}
+"""</span>
+
+<span class="c"># ─── 2. Configurar Schema Registry y Serializer ─────────────────────────────</span>
+schema_registry_conf = {<span class="str">'url'</span>: <span class="str">'http://localhost:8081'</span>}
+sr_client = SchemaRegistryClient(schema_registry_conf)
+
+avro_serializer = AvroSerializer(sr_client, schema_str,
+    to_dict=<span class="kw">lambda</span> obj, ctx: obj)  <span class="c"># dict → Avro automáticamente</span>
+
+avro_deserializer = AvroDeserializer(sr_client, schema_str,
+    from_dict=<span class="kw">lambda</span> obj, ctx: obj)  <span class="c"># Avro → dict automáticamente</span>
+
+<span class="c"># ─── 3. Producer con Avro ────────────────────────────────────────────────────</span>
+producer_conf = {
+    <span class="str">'bootstrap.servers'</span>: <span class="str">'localhost:9094'</span>,
+    <span class="str">'enable.idempotence'</span>: <span class="nm">True</span>,
+}
+producer = Producer(producer_conf)
+string_serializer = StringSerializer(<span class="str">'utf_8'</span>)
+
+pedido = {
+    <span class="str">"pedido_id"</span>: <span class="str">"ord_001"</span>,
+    <span class="str">"usuario_id"</span>: <span class="str">"user_123"</span>,
+    <span class="str">"total"</span>: <span class="num">59.99</span>,
+    <span class="str">"items"</span>: [<span class="str">"SKU-A01"</span>, <span class="str">"SKU-B02"</span>],
+    <span class="str">"timestamp"</span>: <span class="num">1709664000000</span>,
+    <span class="str">"notas"</span>: <span class="nm">None</span>
+}
+
+producer.produce(
+    topic=<span class="str">'pedidos'</span>,
+    key=string_serializer(<span class="str">'user_123'</span>),
+    value=avro_serializer(pedido, SerializationContext(<span class="str">'pedidos'</span>, MessageField.VALUE)),
+    on_delivery=<span class="kw">lambda</span> err, msg: <span class="fn">print</span>(<span class="str">f"Entregado: {msg.offset()}" if not err else err)
+)
+producer.flush()
+
+<span class="c"># ─── 4. Consumer con Avro ────────────────────────────────────────────────────</span>
+<span class="kw">from</span> confluent_kafka <span class="kw">import</span> Consumer
+
+consumer_conf = {
+    <span class="str">'bootstrap.servers'</span>: <span class="str">'localhost:9094'</span>,
+    <span class="str">'group.id'</span>: <span class="str">'avro-consumer'</span>,
+    <span class="str">'auto.offset.reset'</span>: <span class="str">'earliest'</span>,
+}
+consumer = Consumer(consumer_conf)
+consumer.subscribe([<span class="str">'pedidos'</span>])
+
+<span class="kw">while</span> <span class="nm">True</span>:
+    msg = consumer.poll(<span class="num">1.0</span>)
+    <span class="kw">if</span> msg <span class="kw">is</span> <span class="nm">None</span> <span class="kw">or</span> msg.error(): <span class="kw">continue</span>
+    pedido = avro_deserializer(msg.value(), SerializationContext(<span class="str">'pedidos'</span>, MessageField.VALUE))
+    <span class="fn">print</span>(<span class="str">f"Pedido recibido: {pedido}"</span>)</pre>
+                <div class="hi g">✅ Con Avro + Schema Registry: el mensaje incluye el schema_id en los primeros 5 bytes.
+                    El consumer descarga el schema automáticamente (y lo cachea). Cambios compatibles son transparentes.
+                </div>
+            </div>
+        </div>
+
+        <div class="section-title">💾 Formatos de Serialización en Producción (Masterclasses)</div>
+        <div class="grid">
+            <div class="card grid-wide">
+                <div class="card-title" style="color: #ffb95e; font-size: 1.1em; margin-bottom: 20px;">Hacia el Dominio del Ecosistema de Datos</div>
+                <p>El Schema Registry es solo el coordinador (el policía de tráfico). La verdadera magia de Kafka y el Big Data ocurre cuando entiendes cómo y por qué serializar binariamente en diferentes arquitecturas de Hardware y Red. Usar simplemente "JSON" a nivel empresarial de 10 millones de mensajes por segundo conlleva la quiebra financiera y la caída de los servidores por latencia.</p>
+                <div class="hi g">✅ <strong>Hemos preparado 3 Masterclasses Exhaustivas</strong> (Bloque 5 del Índice Principal) dedicadas única y exclusivamente a sumergirnos en la ingeniería interna de los tres grandes pilares del Data Streaming y el Analítica Batch:</div>
+                
+                <ul style="margin-left: 20px; color: #8b949e; line-height: 1.8;">
+                    <li><strong><a href="13_formato_avro.html" style="color: #63a9ff; text-decoration: none;">1. Apache Avro (El Rey de Confluent):</a></strong> Binarización matemática transaccional (Row-based) omitiendo metadatos en Kafka.</li>
+                    <li><strong><a href="14_formato_protobuf.html" style="color: #e3b341; text-decoration: none;">2. Protocol Buffers (El Rey de gRPC):</a></strong> Arquitectura "Tag-Based" estática de Google para microservicios de latencia microscópica.</li>
+                    <li><strong><a href="15_formato_parquet.html" style="color: #d2a8ff; text-decoration: none;">3. Apache Parquet (El Rey de S3/Analytics):</a></strong> Estructuras Columnares masivas (Column-based), predicado pushdown y compresión algorítmica dictaminada en Hadoop/Spark.</li>
+                </ul>
+                
+                <p style="margin-top: 20px;">Para continuar con el Flujo de Producción y Delivery en Kafka, continúa con la sección 06. Si deseas profundizar en la serialización pura primero, revisa las Masterclass en el índice principal.</p>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="nav-footer">
+        <a href="04_particiones_grupos.html" class="nav-btn">← 04 · Particiones</a>
+        <a href="06_garantias_entrega.html" class="nav-btn">06 · Garantías de Entrega →</a>
+    </div>
+</body>
+
+</html>

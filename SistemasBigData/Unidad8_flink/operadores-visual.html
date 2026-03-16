@@ -1,0 +1,1002 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Operadores Explicados Paso a Paso — Flink Bootcamp</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        /* Tabla de transformación visual */
+        .op-box {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            padding: 2rem;
+            margin: 2rem 0;
+            overflow-x: auto;
+        }
+
+        .op-title {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .op-title .op-icon {
+            font-size: 2rem;
+        }
+
+        .op-title h3 {
+            font-size: 1.3rem;
+            font-weight: 800;
+            margin: 0;
+        }
+
+        .op-title .op-badge {
+            font-size: 0.75rem;
+            padding: 0.25rem 0.75rem;
+            border-radius: 100px;
+            font-weight: 700;
+            background: rgba(232, 66, 26, 0.15);
+            color: #ff6b47;
+            border: 1px solid rgba(232, 66, 26, 0.3);
+            margin-left: auto;
+        }
+
+        .op-explain {
+            font-size: 1rem;
+            color: var(--text2);
+            margin-bottom: 1.5rem;
+            line-height: 1.7;
+            padding: 1rem 1.2rem;
+            background: rgba(232, 66, 26, 0.06);
+            border-left: 3px solid var(--primary);
+            border-radius: 0 8px 8px 0;
+        }
+
+        .op-explain strong {
+            color: var(--text);
+        }
+
+        /* Flujo visual de datos */
+        .data-flow {
+            display: flex;
+            align-items: stretch;
+            gap: 0;
+            margin: 1.5rem 0;
+            flex-wrap: wrap;
+        }
+
+        .data-col {
+            flex: 1;
+            min-width: 160px;
+        }
+
+        .data-col-header {
+            text-align: center;
+            font-size: 0.72rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--text3);
+            margin-bottom: 0.75rem;
+            padding: 0.4rem;
+        }
+
+        .data-col-header.in-h {
+            color: #22d3ee;
+        }
+
+        .data-col-header.op-h {
+            color: #ff6b47;
+        }
+
+        .data-col-header.out-h {
+            color: #4ade80;
+        }
+
+        .data-item {
+            border-radius: 8px;
+            padding: 0.55rem 0.85rem;
+            margin-bottom: 0.4rem;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.82rem;
+            text-align: center;
+            font-weight: 600;
+        }
+
+        .data-in {
+            background: rgba(6, 182, 212, 0.15);
+            border: 1px solid rgba(6, 182, 212, 0.3);
+            color: #67e8f9;
+        }
+
+        .data-out {
+            background: rgba(16, 185, 129, 0.15);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            color: #4ade80;
+        }
+
+        .data-gone {
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px dashed rgba(255, 255, 255, 0.1);
+            color: var(--text3);
+            text-decoration: line-through;
+        }
+
+        .data-op {
+            background: rgba(232, 66, 26, 0.15);
+            border: 1px solid rgba(232, 66, 26, 0.3);
+            color: #ff6b47;
+        }
+
+        .data-key {
+            background: rgba(245, 158, 11, 0.15);
+            border: 1px solid rgba(245, 158, 11, 0.3);
+            color: #fbbf24;
+        }
+
+        .data-key2 {
+            background: rgba(139, 92, 246, 0.15);
+            border: 1px solid rgba(139, 92, 246, 0.3);
+            color: #a78bfa;
+        }
+
+        .data-key3 {
+            background: rgba(16, 185, 129, 0.15);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            color: #4ade80;
+        }
+
+        .flow-arrow {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 0.75rem;
+            color: var(--text3);
+            font-size: 1.5rem;
+            flex-shrink: 0;
+            padding-top: 2rem;
+        }
+
+        .op-center {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            gap: 0.3rem;
+            min-width: 140px;
+            padding-top: 2rem;
+        }
+
+        .op-bubble {
+            background: linear-gradient(135deg, rgba(232, 66, 26, 0.3), rgba(245, 158, 11, 0.3));
+            border: 2px solid rgba(232, 66, 26, 0.5);
+            border-radius: 50px;
+            padding: 0.6rem 1.2rem;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: #ff6b47;
+            text-align: center;
+        }
+
+        .op-desc {
+            font-size: 0.72rem;
+            color: var(--text3);
+            text-align: center;
+            max-width: 120px;
+            line-height: 1.4;
+        }
+
+        /* Regla visual */
+        .rule-box {
+            background: rgba(0, 0, 0, 0.25);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 10px;
+            padding: 0.9rem 1.2rem;
+            margin: 1rem 0;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            font-size: 0.9rem;
+        }
+
+        .rule-box .rule-icon {
+            font-size: 1.4rem;
+            flex-shrink: 0;
+        }
+
+        .rule-box .rule-text {
+            color: var(--text2);
+        }
+
+        .rule-box .rule-text strong {
+            color: var(--text);
+        }
+
+        .rule-formula {
+            font-family: 'JetBrains Mono', monospace;
+            background: rgba(232, 66, 26, 0.1);
+            border: 1px solid rgba(232, 66, 26, 0.25);
+            border-radius: 6px;
+            padding: 0.65rem 1rem;
+            margin: 0.75rem 0;
+            font-size: 0.9rem;
+            color: #ff6b47;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .analogy-box {
+            background: rgba(16, 185, 129, 0.06);
+            border: 1px solid rgba(16, 185, 129, 0.2);
+            border-radius: 10px;
+            padding: 0.9rem 1.2rem;
+            margin: 1rem 0;
+            font-size: 0.9rem;
+            color: var(--text2);
+        }
+
+        .analogy-box strong {
+            color: #4ade80;
+        }
+
+        .data-group {
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 8px;
+            padding: 0.5rem;
+            margin-bottom: 0.5rem;
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .data-group-label {
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--text3);
+            margin-bottom: 0.4rem;
+            padding-bottom: 0.3rem;
+            border-bottom: 1px solid var(--border);
+        }
+    </style>
+</head>
+
+<body>
+
+    <nav class="navbar" id="navbar">
+        <div class="nav-inner">
+            <div class="nav-brand"><span class="brand-icon">⚡</span><span class="brand-text">Flink Bootcamp</span></div>
+                        <ul class="nav-links">
+                <li><a href="index.html">Inicio</a></li>
+                <li><a href="conceptos.html">Conceptos</a></li>
+                <li><a href="arquitectura.html">Arquitectura</a></li>
+                <li><a href="streams.html">Streams &amp; Batch</a></li>
+                <li><a href="operadores-visual.html" class="active">Operadores</a></li>
+                <li><a href="casos-uso.html">Casos de Uso</a></li>
+                <li><a href="pyflink.html">PyFlink</a></li>
+                <li><a href="flink-sql.html">Flink SQL</a></li>
+                <li><a href="flink-sql-ejemplos.html">Ejemplos SQL</a></li>
+                <li><a href="sql-vs-datastream.html">SQL vs DataStream</a></li>
+            </ul>
+            <button class="nav-mobile-btn" id="navToggle">☰</button>
+        </div>
+    </nav>
+
+    <div class="breadcrumb">
+        <div class="breadcrumb-inner">
+            <a href="index.html">Inicio</a><span class="breadcrumb-sep">›</span><span>Operadores Paso a Paso</span>
+        </div>
+    </div>
+
+    <div class="page-hero">
+        <span class="page-hero-icon">🔧</span>
+        <h1>Operadores <span class="gradient-text">Paso a Paso</span></h1>
+        <p>Qué hace cada operador con tus datos, explicado con ejemplos reales muy claros. Sin código: solo datos que
+            entran y datos que salen.</p>
+    </div>
+
+    <div class="content">
+
+        <div class="info-box info">
+            <span class="info-box-icon">📖</span>
+            <div class="info-box-text">
+                <strong>Cómo leer esta página:</strong> Para cada operador verás tres columnas:
+                <strong style="color:#22d3ee">Datos de entrada</strong> (lo que llega al operador),
+                <strong style="color:#ff6b47">el Operador</strong> (la transformación que aplica) y
+                <strong style="color:#4ade80">Datos de salida</strong> (lo que produce). Todo con un ejemplo concreto y
+                real.
+            </div>
+        </div>
+
+        <!-- =========== MAP =========== -->
+        <div class="op-box" id="map">
+            <div class="op-title">
+                <span class="op-icon">🔄</span>
+                <h3>map — Transformar elemento a elemento</h3>
+                <span class="op-badge">1 entrada → 1 salida</span>
+            </div>
+
+            <div class="op-explain">
+                <strong>¿Qué hace?</strong> Aplica una función a <strong>cada elemento</strong> del stream y devuelve
+                exactamente un elemento transformado.
+                Es como una cadena de montaje: cada pieza entra, la pintan, y sale pintada. Ni más ni menos piezas.
+            </div>
+
+            <div class="rule-formula">📐 Para cada elemento X → produce f(X)</div>
+
+            <p style="color:var(--text2); margin-bottom:1rem;">
+                <strong>Ejemplo:</strong> Tenemos un stream de temperaturas en Celsius y queremos convertirlas a
+                Fahrenheit.
+            </p>
+
+            <div class="data-flow">
+                <div class="data-col">
+                    <div class="data-col-header in-h">📥 Datos de entrada (°C)</div>
+                    <div class="data-item data-in">0 °C</div>
+                    <div class="data-item data-in">20 °C</div>
+                    <div class="data-item data-in">37 °C</div>
+                    <div class="data-item data-in">100 °C</div>
+                </div>
+                <div class="flow-arrow">→</div>
+                <div class="op-center">
+                    <div class="op-bubble">map()</div>
+                    <div class="op-desc">Aplica la fórmula: F = (C × 9/5) + 32</div>
+                </div>
+                <div class="flow-arrow">→</div>
+                <div class="data-col">
+                    <div class="data-col-header out-h">📤 Datos de salida (°F)</div>
+                    <div class="data-item data-out">32 °F</div>
+                    <div class="data-item data-out">68 °F</div>
+                    <div class="data-item data-out">98.6 °F</div>
+                    <div class="data-item data-out">212 °F</div>
+                </div>
+            </div>
+
+            <div class="analogy-box">
+                🏭 <strong>Analogía:</strong> El cajero de un banco que convierte euros a dólares. Cada billete entra,
+                pasa por la conversión, y sale convertido. El número de billetes no cambia.
+            </div>
+
+            <p style="color:var(--text2); margin-bottom:0.5rem;"><strong>Otro ejemplo:</strong> Extraer solo el nombre
+                de usuario de un stream de emails.</p>
+            <div class="data-flow">
+                <div class="data-col">
+                    <div class="data-col-header in-h">📥 Entrada (email completo)</div>
+                    <div class="data-item data-in">ana@empresa.com</div>
+                    <div class="data-item data-in">luis.garcia@empresa.com</div>
+                    <div class="data-item data-in">sara_2024@empresa.com</div>
+                </div>
+                <div class="flow-arrow">→</div>
+                <div class="op-center">
+                    <div class="op-bubble">map()</div>
+                    <div class="op-desc">Extraer lo que va antes del @</div>
+                </div>
+                <div class="flow-arrow">→</div>
+                <div class="data-col">
+                    <div class="data-col-header out-h">📤 Salida (solo usuario)</div>
+                    <div class="data-item data-out">ana</div>
+                    <div class="data-item data-out">luis.garcia</div>
+                    <div class="data-item data-out">sara_2024</div>
+                </div>
+            </div>
+
+            <div class="code-block">
+                <div class="code-header"><span class="code-lang">python — map en PyFlink</span><button class="copy-btn"
+                        onclick="copyCode(this)">📋 Copiar</button></div>
+                <pre><code><span class="cmt"># Convertir Celsius a Fahrenheit</span>
+stream_celsius.<span class="fn">map</span>(<span class="kw">lambda</span> celsius: (celsius * <span class="num">9</span>/<span class="num">5</span>) + <span class="num">32</span>)
+
+<span class="cmt"># Extraer usuario del email</span>
+stream_emails.<span class="fn">map</span>(<span class="kw">lambda</span> email: email.<span class="fn">split</span>(<span class="str">'@'</span>)[<span class="num">0</span>])
+
+<span class="cmt"># En Java:</span>
+<span class="cmt">// stream.map(celsius -> (celsius * 9.0/5) + 32);</span></code></pre>
+            </div>
+        </div>
+
+        <!-- =========== FLATMAP =========== -->
+        <div class="op-box" id="flatmap">
+            <div class="op-title">
+                <span class="op-icon">🔀</span>
+                <h3>flatMap — Expandir elementos</h3>
+                <span class="op-badge">1 entrada → 0, 1 o N salidas</span>
+            </div>
+
+            <div class="op-explain">
+                <strong>¿Qué hace?</strong> Aplica una función a cada elemento y puede devolver <strong>cero, uno o
+                    varios elementos</strong>.
+                Es como si cogemos una caja de chocolatinas y la abrimos: de una caja salen muchas chocolatinas
+                individuales.
+            </div>
+
+            <div class="rule-formula">📐 Para cada elemento X → produce [f1(X), f2(X), f3(X), ...]</div>
+
+            <p style="color:var(--text2); margin-bottom:1rem;">
+                <strong>Ejemplo:</strong> Tenemos un stream de frases y queremos obtener un stream de palabras
+                individuales.
+            </p>
+
+            <div class="data-flow">
+                <div class="data-col">
+                    <div class="data-col-header in-h">📥 Entrada (frases)</div>
+                    <div class="data-item data-in">"Hola Mundo Flink"</div>
+                    <div class="data-item data-in">"Big Data es genial"</div>
+                </div>
+                <div class="flow-arrow">→</div>
+                <div class="op-center">
+                    <div class="op-bubble">flatMap()</div>
+                    <div class="op-desc">Divide cada frase en palabras individuales</div>
+                </div>
+                <div class="flow-arrow">→</div>
+                <div class="data-col">
+                    <div class="data-col-header out-h">📤 Salida (palabras sueltas)</div>
+                    <div class="data-item data-out">"Hola"</div>
+                    <div class="data-item data-out">"Mundo"</div>
+                    <div class="data-item data-out">"Flink"</div>
+                    <div class="data-item data-out">"Big"</div>
+                    <div class="data-item data-out">"Data"</div>
+                    <div class="data-item data-out">"es"</div>
+                    <div class="data-item data-out">"genial"</div>
+                </div>
+            </div>
+
+            <div class="analogy-box">
+                📬 <strong>Analogía:</strong> Un cartero que reparte cartas. De un sobre con varias hojas (una frase)
+                saca cada hoja individualmente (cada palabra) y las pone en el buzón una a una.
+            </div>
+
+            <p style="color:var(--text2); margin-bottom:0.5rem;"><strong>Otro ejemplo:</strong> Un stream de pedidos con
+                varios productos. Queremos un stream de cada producto individual.</p>
+            <div class="data-flow">
+                <div class="data-col">
+                    <div class="data-col-header in-h">📥 Entrada (pedidos)</div>
+                    <div class="data-item data-in">Pedido A: [🍕 🥤 🍟]</div>
+                    <div class="data-item data-in">Pedido B: [🍔]</div>
+                    <div class="data-item data-in">Pedido C: [🍕 🍰]</div>
+                </div>
+                <div class="flow-arrow">→</div>
+                <div class="op-center">
+                    <div class="op-bubble">flatMap()</div>
+                    <div class="op-desc">Desglosa cada pedido en items individuales</div>
+                </div>
+                <div class="flow-arrow">→</div>
+                <div class="data-col">
+                    <div class="data-col-header out-h">📤 Salida (items)</div>
+                    <div class="data-item data-out">🍕 (de Pedido A)</div>
+                    <div class="data-item data-out">🥤 (de Pedido A)</div>
+                    <div class="data-item data-out">🍟 (de Pedido A)</div>
+                    <div class="data-item data-out">🍔 (de Pedido B)</div>
+                    <div class="data-item data-out">🍕 (de Pedido C)</div>
+                    <div class="data-item data-out">🍰 (de Pedido C)</div>
+                </div>
+            </div>
+
+            <div class="code-block">
+                <div class="code-header"><span class="code-lang">python — flatMap en PyFlink</span><button
+                        class="copy-btn" onclick="copyCode(this)">📋 Copiar</button></div>
+                <pre><code><span class="cmt"># Dividir frases en palabras</span>
+stream_frases.<span class="fn">flat_map</span>(
+    <span class="kw">lambda</span> frase, collector:
+        [collector.<span class="fn">collect</span>(palabra) <span class="kw">for</span> palabra <span class="kw">in</span> frase.<span class="fn">split</span>()]
+)
+
+<span class="cmt"># Expandir pedido en items individuales</span>
+stream_pedidos.<span class="fn">flat_map</span>(
+    <span class="kw">lambda</span> pedido, collector:
+        [collector.<span class="fn">collect</span>(item) <span class="kw">for</span> item <span class="kw">in</span> pedido.<span class="fn">items</span>]
+)</code></pre>
+            </div>
+        </div>
+
+        <!-- =========== FILTER =========== -->
+        <div class="op-box" id="filter">
+            <div class="op-title">
+                <span class="op-icon">🔍</span>
+                <h3>filter — Mantener solo lo que cumple la condición</h3>
+                <span class="op-badge">1 entrada → 0 o 1 salida</span>
+            </div>
+
+            <div class="op-explain">
+                <strong>¿Qué hace?</strong> Evalúa una condición para cada elemento. Si la condición es
+                <strong>verdadera, el elemento pasa</strong>. Si es falsa, se descarta. El número de elementos de salida
+                siempre es ≤ al de entrada.
+            </div>
+
+            <div class="rule-formula">📐 Si condición(X) = TRUE → pasa | Si condición(X) = FALSE → se elimina</div>
+
+            <p style="color:var(--text2); margin-bottom:1rem;">
+                <strong>Ejemplo:</strong> Stream de transacciones bancarias. Solo nos interesan las de más de 1.000 €.
+            </p>
+
+            <div class="data-flow">
+                <div class="data-col">
+                    <div class="data-col-header in-h">📥 Todas las transacciones</div>
+                    <div class="data-item data-in">Tx 1: 50 €</div>
+                    <div class="data-item data-in">Tx 2: 1.500 €</div>
+                    <div class="data-item data-in">Tx 3: 230 €</div>
+                    <div class="data-item data-in">Tx 4: 3.000 €</div>
+                    <div class="data-item data-in">Tx 5: 80 €</div>
+                    <div class="data-item data-in">Tx 6: 2.200 €</div>
+                </div>
+                <div class="flow-arrow">→</div>
+                <div class="op-center">
+                    <div class="op-bubble">filter()</div>
+                    <div class="op-desc">Condición: importe > 1.000 €</div>
+                </div>
+                <div class="flow-arrow">→</div>
+                <div class="data-col">
+                    <div class="data-col-header out-h">📤 Solo las grandes</div>
+                    <div class="data-item data-gone">Tx 1: 50 € ✗</div>
+                    <div class="data-item data-out">Tx 2: 1.500 € ✓</div>
+                    <div class="data-item data-gone">Tx 3: 230 € ✗</div>
+                    <div class="data-item data-out">Tx 4: 3.000 € ✓</div>
+                    <div class="data-item data-gone">Tx 5: 80 € ✗</div>
+                    <div class="data-item data-out">Tx 6: 2.200 € ✓</div>
+                </div>
+            </div>
+
+            <div class="analogy-box">
+                🚪 <strong>Analogía:</strong> El portero de una discoteca. Revisa a cada persona y solo deja pasar a las
+                que cumplen el criterio (edad, vestimenta...). Las que no cumplen se quedan fuera del stream.
+            </div>
+
+            <div class="code-block">
+                <div class="code-header"><span class="code-lang">python — filter en PyFlink</span><button
+                        class="copy-btn" onclick="copyCode(this)">📋 Copiar</button></div>
+                <pre><code><span class="cmt"># Solo transacciones mayores de 1000€</span>
+stream_tx.<span class="fn">filter</span>(<span class="kw">lambda</span> tx: tx[<span class="str">'importe'</span>] > <span class="num">1000</span>)
+
+<span class="cmt"># Solo errores HTTP 500</span>
+stream_logs.<span class="fn">filter</span>(<span class="kw">lambda</span> log: log[<span class="str">'status'</span>] == <span class="num">500</span>)
+
+<span class="cmt"># Solo sensores de zona A con temperatura crítica</span>
+stream_sensores.<span class="fn">filter</span>(<span class="kw">lambda</span> s: s[<span class="str">'zona'</span>] == <span class="str">'A'</span> <span class="kw">and</span> s[<span class="str">'temp'</span>] > <span class="num">80</span>)</code></pre>
+            </div>
+        </div>
+
+        <!-- =========== KEY BY =========== -->
+        <div class="op-box" id="keyby">
+            <div class="op-title">
+                <span class="op-icon">🔑</span>
+                <h3>keyBy — Separar el stream por grupos</h3>
+                <span class="op-badge">1 stream → N grupos paralelos</span>
+            </div>
+
+            <div class="op-explain">
+                <strong>¿Qué hace?</strong> Divide el stream en <strong>substreams independientes</strong> según una
+                clave.
+                Todos los eventos con la misma clave van siempre al mismo "carril". Esencial antes de cualquier
+                operación con estado.
+            </div>
+
+            <div class="rule-formula">📐 Elementos con misma clave → mismo grupo → mismo estado independiente</div>
+
+            <p style="color:var(--text2); margin-bottom:1rem;">
+                <strong>Ejemplo:</strong> Tenemos ventas de distintos productos mezcladas en el stream. Queremos contar
+                las ventas por producto por separado.
+            </p>
+
+            <div class="data-flow">
+                <div class="data-col">
+                    <div class="data-col-header in-h">📥 Stream mezclado</div>
+                    <div class="data-item data-in">venta: Laptop 1200€</div>
+                    <div class="data-item data-in">venta: Móvil 599€</div>
+                    <div class="data-item data-in">venta: Laptop 999€</div>
+                    <div class="data-item data-in">venta: Tablet 349€</div>
+                    <div class="data-item data-in">venta: Móvil 649€</div>
+                    <div class="data-item data-in">venta: Laptop 1450€</div>
+                </div>
+                <div class="flow-arrow">→</div>
+                <div class="op-center">
+                    <div class="op-bubble">keyBy()</div>
+                    <div class="op-desc">clave = nombre del producto</div>
+                </div>
+                <div class="flow-arrow">→</div>
+                <div class="data-col">
+                    <div class="data-col-header out-h">📤 Grupos separados</div>
+                    <div class="data-group">
+                        <div class="data-group-label">🔑 Grupo: Laptop</div>
+                        <div class="data-item data-key">Laptop 1200€</div>
+                        <div class="data-item data-key">Laptop 999€</div>
+                        <div class="data-item data-key">Laptop 1450€</div>
+                    </div>
+                    <div class="data-group">
+                        <div class="data-group-label">🔑 Grupo: Móvil</div>
+                        <div class="data-item data-key2">Móvil 599€</div>
+                        <div class="data-item data-key2">Móvil 649€</div>
+                    </div>
+                    <div class="data-group">
+                        <div class="data-group-label">🔑 Grupo: Tablet</div>
+                        <div class="data-item data-key3">Tablet 349€</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="analogy-box">
+                🏪 <strong>Analogía:</strong> Las cajas registradoras de un supermercado por sección (carnicería,
+                panadería, pescadería). Cada producto va a su caja correspondiente. Las personas en la cola de
+                carnicería no se mezclan con las de panadería.
+            </div>
+
+            <div class="info-box warning">
+                <span class="info-box-icon">⚠️</span>
+                <div class="info-box-text">
+                    <strong>keyBy NO ordena ni agrega por sí solo</strong>: solo <em>separa</em>. Después de keyBy
+                    normalmente aplicas
+                    <code>reduce()</code>, <code>aggregate()</code> o una ventana para calcular algo por cada grupo.
+                </div>
+            </div>
+        </div>
+
+        <!-- =========== REDUCE =========== -->
+        <div class="op-box" id="reduce">
+            <div class="op-title">
+                <span class="op-icon">📉</span>
+                <h3>reduce — Acumular resultados</h3>
+                <span class="op-badge">N elementos → 1 resultado acumulado</span>
+            </div>
+
+            <div class="op-explain">
+                <strong>¿Qué hace?</strong> Va acumulando los resultados de una operación. Combina el resultado anterior
+                con el elemento nuevo y emite el acumulado actualizado.
+                Siempre opera <strong>después de keyBy</strong>, por grupo.
+            </div>
+
+            <div class="rule-formula">📐 resultado_nuevo = combinar(resultado_anterior, elemento_actual)</div>
+
+            <p style="color:var(--text2); margin-bottom:1rem;">
+                <strong>Ejemplo:</strong> Suma acumulada de ventas por producto (running total).
+            </p>
+
+            <div class="data-flow">
+                <div class="data-col">
+                    <div class="data-col-header in-h">📥 Ventas de Laptop (grupo)</div>
+                    <div class="data-item data-in">1.200 €</div>
+                    <div class="data-item data-in">999 €</div>
+                    <div class="data-item data-in">1.450 €</div>
+                    <div class="data-item data-in">750 €</div>
+                </div>
+                <div class="flow-arrow">→</div>
+                <div class="op-center">
+                    <div class="op-bubble">reduce()</div>
+                    <div class="op-desc">acumulado + nuevo = nuevo acumulado</div>
+                </div>
+                <div class="flow-arrow">→</div>
+                <div class="data-col">
+                    <div class="data-col-header out-h">📤 Total acumulado emitido</div>
+                    <div class="data-item data-out">1.200 €</div>
+                    <div class="data-item data-out">2.199 €</div>
+                    <div class="data-item data-out">3.649 €</div>
+                    <div class="data-item data-out">4.399 €</div>
+                </div>
+            </div>
+
+            <div class="analogy-box">
+                🏌️ <strong>Analogía:</strong> El marcador de puntuación en un partido de tenis. Con cada punto que gana
+                un jugador, el marcador se actualiza y muestra el total acumulado. El marcador no espera al final del
+                partido: se actualiza en tiempo real.
+            </div>
+
+            <div class="code-block">
+                <div class="code-header"><span class="code-lang">python — reduce: suma acumulada de ventas</span><button
+                        class="copy-btn" onclick="copyCode(this)">📋 Copiar</button></div>
+                <pre><code><span class="cmt"># Suma acumulada de ventas por producto</span>
+stream_ventas
+    .<span class="fn">key_by</span>(<span class="kw">lambda</span> v: v[<span class="str">'producto'</span>])
+    .<span class="fn">reduce</span>(<span class="kw">lambda</span> acumulado, nuevo: {
+        <span class="str">'producto'</span>: acumulado[<span class="str">'producto'</span>],
+        <span class="str">'total'</span>: acumulado[<span class="str">'total'</span>] + nuevo[<span class="str">'importe'</span>]
+    })</code></pre>
+            </div>
+        </div>
+
+        <!-- =========== WINDOW + AGGREGATE =========== -->
+        <div class="op-box" id="window">
+            <div class="op-title">
+                <span class="op-icon">🪟</span>
+                <h3>window + aggregate — Calcular sobre intervalos de tiempo</h3>
+                <span class="op-badge">N elementos en ventana → 1 resultado por ventana</span>
+            </div>
+
+            <div class="op-explain">
+                <strong>¿Qué hace?</strong> Agrupa los eventos que llegan en un <strong>intervalo de tiempo</strong>
+                (ej: 5 minutos) y los convierte en un único resultado. Perfecto para informes periódicos, medias,
+                sumas... en tiempo real.
+            </div>
+
+            <div class="rule-formula">📐 Eventos del minuto 12:00 → 12:05 → calcular(todos) → 1 resultado a las 12:05
+            </div>
+
+            <p style="color:var(--text2); margin-bottom:1rem;">
+                <strong>Ejemplo:</strong> Contar los clicks en el botón "Comprar" cada minuto para saber cuándo hay más
+                actividad.
+            </p>
+
+            <div class="data-flow">
+                <div class="data-col">
+                    <div class="data-col-header in-h">📥 Stream de clicks</div>
+                    <div class="data-item data-in">Click 12:00:05</div>
+                    <div class="data-item data-in">Click 12:00:23</div>
+                    <div class="data-item data-in">Click 12:00:45</div>
+                    <div class="data-item data-in">Click 12:00:58</div>
+                    <div class="data-item data-in">Click 12:01:10</div>
+                    <div class="data-item data-in">Click 12:01:33</div>
+                </div>
+                <div class="flow-arrow">→</div>
+                <div class="op-center">
+                    <div class="op-bubble">window(1 min)</div>
+                    <div class="op-desc">Tumbling Window de 1 minuto + COUNT</div>
+                </div>
+                <div class="flow-arrow">→</div>
+                <div class="data-col">
+                    <div class="data-col-header out-h">📤 Un resultado por ventana</div>
+                    <div class="data-group">
+                        <div class="data-group-label">🪟 Ventana 12:00 - 12:01</div>
+                        <div class="data-item data-out">4 clicks</div>
+                    </div>
+                    <div class="data-group">
+                        <div class="data-group-label">🪟 Ventana 12:01 - 12:02</div>
+                        <div class="data-item data-out">2 clicks</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="analogy-box">
+                ⏱️ <strong>Analogía:</strong> El taxímetro de un taxi que te muestra la tarifa cada 5 minutos. No te
+                cobra cada segundo individualmente: espera un intervalo de tiempo, suma todo lo acumulado, y te da el
+                resultado del período.
+            </div>
+
+            <div class="code-block">
+                <div class="code-header"><span class="code-lang">python — window aggregate: clicks por
+                        minuto</span><button class="copy-btn" onclick="copyCode(this)">📋 Copiar</button></div>
+                <pre><code><span class="kw">from</span> pyflink.datastream.window <span class="kw">import</span> <span class="type">TumblingEventTimeWindows</span>
+<span class="kw">from</span> pyflink.common.time <span class="kw">import</span> <span class="type">Time</span>
+
+<span class="cmt"># Contar clicks por botón, por minuto</span>
+stream_clicks
+    .<span class="fn">key_by</span>(<span class="kw">lambda</span> c: c[<span class="str">'boton'</span>])
+    .<span class="fn">window</span>(<span class="type">TumblingEventTimeWindows</span>.<span class="fn">of</span>(<span class="type">Time</span>.<span class="fn">minutes</span>(<span class="num">1</span>)))
+    .<span class="fn">reduce</span>(<span class="kw">lambda</span> a, b: {<span class="str">'boton'</span>: a[<span class="str">'boton'</span>], <span class="str">'clicks'</span>: a[<span class="str">'clicks'</span>] + b[<span class="str">'clicks'</span>]})</code></pre>
+            </div>
+        </div>
+
+        <!-- =========== JOIN =========== -->
+        <div class="op-box" id="join">
+            <div class="op-title">
+                <span class="op-icon">🤝</span>
+                <h3>join — Combinar dos streams que se relacionan</h3>
+                <span class="op-badge">2 streams → 1 stream enriquecido</span>
+            </div>
+
+            <div class="op-explain">
+                <strong>¿Qué hace?</strong> Combina eventos de <strong>dos streams diferentes</strong> que comparten una
+                clave común, dentro de una ventana de tiempo.
+                Como un JOIN de SQL entre dos tablas, pero en tiempo real y con datos que están llegando constantemente.
+            </div>
+
+            <div class="rule-formula">📐 Evento A (clave X) + Evento B (clave X) dentro de ventana → Evento combinado
+                (A+B)</div>
+
+            <p style="color:var(--text2); margin-bottom:1rem;">
+                <strong>Ejemplo:</strong> Tenemos un stream de pedidos y un stream de información de usuarios. Queremos
+                combinarlos para saber qué tipo de cliente hace qué pedido.
+            </p>
+
+            <div class="data-flow">
+                <div class="data-col">
+                    <div class="data-col-header in-h">📥 Stream: Pedidos</div>
+                    <div class="data-item data-in">Pedido-1, user_id=42, 99€</div>
+                    <div class="data-item data-in">Pedido-2, user_id=17, 250€</div>
+                    <div class="data-item data-in">Pedido-3, user_id=42, 45€</div>
+                </div>
+                <div class="flow-arrow"
+                    style="flex-direction:column; font-size:0.8rem; gap:0.3rem; align-items:center;">
+                    <span>+</span>
+                    <span style="font-size:1.2rem">🤝</span>
+                    <span>join</span>
+                </div>
+                <div class="data-col">
+                    <div class="data-col-header in-h">📥 Stream: Usuarios</div>
+                    <div class="data-item data-in">user_id=42, "Ana", VIP</div>
+                    <div class="data-item data-in">user_id=17, "Luis", Normal</div>
+                </div>
+                <div class="flow-arrow">→</div>
+                <div class="data-col">
+                    <div class="data-col-header out-h">📤 Pedidos enriquecidos</div>
+                    <div class="data-item data-out">Pedido-1, Ana, VIP, 99€</div>
+                    <div class="data-item data-out">Pedido-2, Luis, Normal, 250€</div>
+                    <div class="data-item data-out">Pedido-3, Ana, VIP, 45€</div>
+                </div>
+            </div>
+
+            <div class="analogy-box">
+                📋 <strong>Analogía:</strong> Como cuando en un hospital combinan el historial médico del paciente con
+                los resultados del análisis. Los dos tienen el DNI del paciente (clave común). Al unirlos, el médico ve
+                la información completa.
+            </div>
+
+            <div class="info-box info">
+                <span class="info-box-icon">💡</span>
+                <div class="info-box-text">
+                    <strong>Diferencia con connect:</strong> <code>join</code> requiere la misma ventana temporal para
+                    los dos streams y genera un único tipo de salida. <code>connect</code> (ver abajo) no necesita
+                    ventana y permite lógica más flexible.
+                </div>
+            </div>
+        </div>
+
+        <!-- =========== CONNECT =========== -->
+        <div class="op-box" id="connect">
+            <div class="op-title">
+                <span class="op-icon">🔗</span>
+                <h3>connect — Unir dos streams para lógica flexible</h3>
+                <span class="op-badge">2 streams de tipos distintos → 1 stream de salida</span>
+            </div>
+
+            <div class="op-explain">
+                <strong>¿Qué hace?</strong> Une dos streams para que puedan <strong>compartir estado</strong> e
+                interactuar entre sí.
+                Útil cuando un stream "controla" o "configura" al otro: por ejemplo, un stream de reglas de fraude que
+                se actualiza en tiempo real y afecta cómo se procesan las transacciones.
+            </div>
+
+            <div class="rule-formula">📐 Stream A (datos) + Stream B (reglas/config) → procesarlos juntos con estado
+                compartido</div>
+
+            <p style="color:var(--text2); margin-bottom:1rem;">
+                <strong>Ejemplo:</strong> Un stream de transacciones y un stream de reglas antifraude que cambian en
+                tiempo real (el banco actualiza sus reglas sin parar el sistema).
+            </p>
+
+            <div class="data-flow">
+                <div class="data-col">
+                    <div class="data-col-header in-h">📥 Stream 1: Transacciones</div>
+                    <div class="data-item data-in">tx: usuario_99, 500€</div>
+                    <div class="data-item data-in">tx: usuario_42, 8.000€</div>
+                    <div class="data-item data-in">tx: usuario_07, 300€</div>
+                </div>
+                <div class="flow-arrow"
+                    style="flex-direction:column; align-items:center; font-size:0.8rem; gap:0.3rem;">
+                    <span>→</span>
+                    <span style="font-size:1.2rem">🔗</span>
+                    <span>←</span>
+                </div>
+                <div class="data-col">
+                    <div class="data-col-header in-h">📥 Stream 2: Reglas antifraude</div>
+                    <div class="data-item data-key">Nueva regla: límite = 5.000€</div>
+                    <div class="data-item data-key">Actualizar: límite = 7.500€</div>
+                </div>
+                <div class="flow-arrow">→</div>
+                <div class="data-col">
+                    <div class="data-col-header out-h">📤 Resultado</div>
+                    <div class="data-item data-out">✅ tx 500€ — OK</div>
+                    <div class="data-item data-out">🚨 tx 8.000€ — ALERTA</div>
+                    <div class="data-item data-out">✅ tx 300€ — OK</div>
+                </div>
+            </div>
+
+            <div class="analogy-box">
+                🎛️ <strong>Analogía:</strong> Como el panel de control de un aeropuerto. El stream de vuelos (datos) y
+                el stream de actualizaciones meteorológicas (config) llegan por separado. Pero los controladores usan
+                ambos juntos para tomar decisiones: si cambia el tiempo, cambia cómo gestionan los vuelos en tiempo
+                real.
+            </div>
+        </div>
+
+        <!-- =========== RESUMEN =========== -->
+        <h2>Resumen Visual: ¿Cuándo usar cada operador?</h2>
+
+        <div class="table-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Si quiero...</th>
+                        <th>Operador</th>
+                        <th>Ejemplo real</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Transformar cada evento en otro evento</td>
+                        <td><code>map</code></td>
+                        <td>Celsius → Fahrenheit, extraer campo</td>
+                    </tr>
+                    <tr>
+                        <td>De 1 evento sacar varios (o ninguno)</td>
+                        <td><code>flatMap</code></td>
+                        <td>Frase → palabras, pedido → items</td>
+                    </tr>
+                    <tr>
+                        <td>Descartar eventos que no me interesan</td>
+                        <td><code>filter</code></td>
+                        <td>Solo tx &gt; 1000€, solo errores 500</td>
+                    </tr>
+                    <tr>
+                        <td>Separar eventos por grupos independientes</td>
+                        <td><code>keyBy</code></td>
+                        <td>Agrupar por usuario, producto, sensor</td>
+                    </tr>
+                    <tr>
+                        <td>Acumular resultados en tiempo real</td>
+                        <td><code>reduce</code></td>
+                        <td>Suma running, máximo acumulado</td>
+                    </tr>
+                    <tr>
+                        <td>Calcular algo cada N minutos/segundos</td>
+                        <td><code>window + aggregate</code></td>
+                        <td>Ventas por hora, clicks por minuto</td>
+                    </tr>
+                    <tr>
+                        <td>Unir dos streams por clave común</td>
+                        <td><code>join</code></td>
+                        <td>Pedidos + datos de usuario</td>
+                    </tr>
+                    <tr>
+                        <td>Un stream "configura" cómo procesar otro</td>
+                        <td><code>connect</code></td>
+                        <td>Reglas antifraude + transacciones</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div style="display:flex; gap:1rem; flex-wrap:wrap; margin-top:2rem">
+            <a href="pyflink.html" class="btn btn-primary">→ Ver PyFlink (ejemplos en Python)</a>
+            <a href="casos-uso.html" class="btn btn-outline">→ Casos de Uso Reales</a>
+        </div>
+    </div>
+
+    <footer class="footer">
+        <div class="footer-inner">
+            <div class="footer-brand">
+                <div class="brand-logo">⚡ Flink Bootcamp</div>
+                <p>Apuntes de Apache Flink para proyectos Big Data.</p>
+            </div>
+            <div class="footer-links">
+                <h5>Secciones</h5>
+                <ul>
+                    <li><a href="index.html">Inicio</a></li>
+                    <li><a href="conceptos.html">Conceptos</a></li>
+                    <li><a href="arquitectura.html">Arquitectura</a></li>
+                    <li><a href="streams.html">Streams &amp; Batch</a></li>
+                    <li><a href="operadores-visual.html">Operadores</a></li>
+                    <li><a href="casos-uso.html">Casos de Uso</a></li>
+                    <li><a href="pyflink.html">PyFlink</a></li>
+                <li><a href="flink-sql.html">Flink SQL</a></li>
+                <li><a href="flink-sql-ejemplos.html">Ejemplos SQL</a></li>
+                <li><a href="sql-vs-datastream.html">SQL vs DataStream</a></li>
+                </ul>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p>Flink Bootcamp — Big Data</p>
+        </div>
+    </footer>
+
+    <script>
+        const navbar = document.getElementById('navbar');
+        window.addEventListener('scroll', () => { navbar.classList.toggle('scrolled', window.scrollY > 50); });
+        document.getElementById('navToggle').addEventListener('click', () => { document.querySelector('.nav-links').classList.toggle('open'); });
+        function copyCode(btn) {
+            const pre = btn.closest('.code-block').querySelector('pre');
+            navigator.clipboard.writeText(pre.innerText).then(() => {
+                btn.textContent = '✅ Copiado'; btn.classList.add('copied');
+                setTimeout(() => { btn.textContent = '📋 Copiar'; btn.classList.remove('copied'); }, 2000);
+            });
+        }
+    </script>
+</body>
+
+</html>

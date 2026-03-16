@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Neo4j en la Práctica — Apuntes de Grafos</title>
+    <meta name="description"
+        content="Neo4j para Big Data: modelo de datos, lenguaje Cypher, consultas básicas y avanzadas, y casos de uso reales.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+
+    <nav class="navbar" id="navbar">
+        <div class="nav-inner">
+            <div class="nav-brand">
+                <span class="brand-icon">🕸️</span>
+                <span class="brand-text">Grafos Bootcamp</span>
+            </div>
+            <ul class="nav-links">
+                <li><a href="index.html">Inicio</a></li>
+                <li><a href="conceptos.html">Conceptos</a></li>
+                <li><a href="tipos.html">Tipos</a></li>
+                <li><a href="propiedades.html">Propiedades</a></li>
+                <li><a href="algoritmos.html">Algoritmos</a></li>
+                <li><a href="problemas.html">Problemas Reales</a></li>
+                <li><a href="neo4j.html" class="active">Neo4j</a></li>
+            </ul>
+            <button class="nav-mobile-btn" id="navToggle">☰</button>
+        </div>
+    </nav>
+
+    <div class="breadcrumb">
+        <div class="breadcrumb-inner">
+            <a href="index.html">Inicio</a>
+            <span class="breadcrumb-sep">›</span>
+            <span>Neo4j en la Práctica</span>
+        </div>
+    </div>
+
+    <div class="page-hero" style="border-top: 3px solid #00b4d8;">
+        <span class="page-hero-icon">🔷</span>
+        <h1>Neo4j en la <span class="gradient-neo">Práctica</span></h1>
+        <p>Cómo se traduce todo lo anterior a Neo4j: el modelo de propiedades de grafo, el lenguaje Cypher y casos de
+            uso reales en Big Data.</p>
+    </div>
+
+    <div class="content">
+
+        <h2>¿Qué es Neo4j?</h2>
+        <p>
+            Neo4j es una <strong>base de datos de grafos nativa</strong>. A diferencia de una base de datos SQL
+            que guarda datos en tablas, Neo4j los guarda directamente como grafos: nodos, relaciones y propiedades.
+        </p>
+        <p>
+            La palabra "nativa" es importante: Neo4j no simula un grafo encima de tablas.
+            Su motor está diseñado <strong>desde cero para navegar relaciones</strong>, lo que lo hace extremadamente
+            eficiente para consultas que involucran muchas conexiones.
+        </p>
+
+        <div class="two-col">
+            <div class="mini-card">
+                <h5>🏦 SQL (Base de datos relacional)</h5>
+                <ul>
+                    <li>Datos en <strong>tablas</strong> con filas y columnas</li>
+                    <li>Relaciones mediante JOINs</li>
+                    <li>Eficiente para datos tabulares</li>
+                    <li>Lento con muchos JOINs encadenados</li>
+                </ul>
+            </div>
+            <div class="mini-card">
+                <h5>🔷 Neo4j (Base de datos de grafos)</h5>
+                <ul>
+                    <li>Datos como <strong>nodos y relaciones</strong></li>
+                    <li>Las relaciones son "ciudadanos de primera clase"</li>
+                    <li>Eficiente para navegar conexiones</li>
+                    <li>Ideal cuando las relaciones SON los datos</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- MODELO DE PROPIEDADES -->
+        <h2>El Modelo de Propiedades de Grafo (LPG)</h2>
+        <p>
+            Neo4j usa el <strong>Labeled Property Graph (LPG)</strong>. Esto significa que:
+        </p>
+        <ul>
+            <li>Los <strong>nodos</strong> pueden tener una o más <strong>etiquetas</strong> (ej: <code>:Persona</code>,
+                <code>:Producto</code>)
+            </li>
+            <li>Las <strong>relaciones</strong> tienen un único <strong>tipo</strong> (ej: <code>:COMPRA</code>,
+                <code>:CONOCE</code>)
+            </li>
+            <li>Tanto nodos como relaciones pueden tener <strong>propiedades</strong> (pares clave-valor)</li>
+            <li>Todas las relaciones tienen una <strong>dirección</strong> (aunque puedes ignorarla en las consultas)
+            </li>
+        </ul>
+
+        <div class="graph-demo">
+            <span class="graph-demo-label">Modelo LPG — Nodos y relaciones con etiquetas y propiedades</span>
+            <svg viewBox="0 0 680 200" style="height:210px">
+                <defs>
+                    <marker id="arr-n" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto">
+                        <path d="M0,0 L0,6 L8,3 z" fill="rgba(0,180,216,0.9)" />
+                    </marker>
+                </defs>
+                <!-- Node: Persona -->
+                <rect x="20" y="60" width="160" height="100" rx="12" fill="rgba(99,102,241,0.15)" stroke="#6366f1"
+                    stroke-width="2" />
+                <rect x="20" y="60" width="160" height="28" rx="12" fill="rgba(99,102,241,0.3)" stroke="#6366f1"
+                    stroke-width="2" />
+                <rect x="20" y="76" width="160" height="12" rx="0" fill="rgba(99,102,241,0.3)" />
+                <text x="100" y="79" text-anchor="middle" fill="#818cf8" font-size="11" font-weight="700"
+                    font-family="Inter">:Persona</text>
+                <text x="35" y="106" fill="#94a3b8" font-size="10" font-family="JetBrains Mono">nombre: "Ana"</text>
+                <text x="35" y="122" fill="#94a3b8" font-size="10" font-family="JetBrains Mono">edad: 29</text>
+                <text x="35" y="138" fill="#94a3b8" font-size="10" font-family="JetBrains Mono">ciudad: "Madrid"</text>
+
+                <!-- Relationship -->
+                <line x1="180" y1="110" x2="350" y2="110" stroke="rgba(0,180,216,0.7)" stroke-width="2"
+                    marker-end="url(#arr-n)" />
+                <rect x="210" y="93" width="110" height="22" rx="5" fill="rgba(0,180,216,0.15)"
+                    stroke="rgba(0,180,216,0.4)" stroke-width="1" />
+                <text x="265" y="108" text-anchor="middle" fill="#00b4d8" font-size="10" font-weight="700"
+                    font-family="JetBrains Mono">:COMPRA</text>
+                <!-- Rel properties -->
+                <text x="214" y="145" fill="#64748b" font-size="9" font-family="JetBrains Mono">fecha: 2024-01-15</text>
+                <text x="214" y="158" fill="#64748b" font-size="9" font-family="JetBrains Mono">precio: 1299</text>
+
+                <!-- Node: Producto -->
+                <rect x="370" y="60" width="165" height="100" rx="12" fill="rgba(16,185,129,0.1)" stroke="#10b981"
+                    stroke-width="2" />
+                <rect x="370" y="60" width="165" height="28" rx="12" fill="rgba(16,185,129,0.25)" stroke="#10b981"
+                    stroke-width="2" />
+                <rect x="370" y="76" width="165" height="12" rx="0" fill="rgba(16,185,129,0.25)" />
+                <text x="453" y="79" text-anchor="middle" fill="#4ade80" font-size="11" font-weight="700"
+                    font-family="Inter">:Producto</text>
+                <text x="385" y="106" fill="#94a3b8" font-size="10" font-family="JetBrains Mono">nombre:
+                    "MacBook"</text>
+                <text x="385" y="122" fill="#94a3b8" font-size="10" font-family="JetBrains Mono">precio: 1299</text>
+                <text x="385" y="138" fill="#94a3b8" font-size="10" font-family="JetBrains Mono">marca: "Apple"</text>
+
+                <!-- Second relation to Ciudad -->
+                <line x1="100" y1="160" x2="100" y2="175" stroke="rgba(0,180,216,0.5)" stroke-width="1.5"
+                    marker-end="url(#arr-n)" />
+                <rect x="30" y="176" width="140" height="22" rx="5" fill="rgba(245,158,11,0.1)"
+                    stroke="rgba(245,158,11,0.4)" stroke-width="1" />
+                <text x="100" y="191" text-anchor="middle" fill="#fbbf24" font-size="9" font-weight="700"
+                    font-family="Inter">:Ciudad nombre: "Madrid"</text>
+            </svg>
+        </div>
+
+        <!-- CYPHER -->
+        <h2>El Lenguaje Cypher</h2>
+        <p>
+            <strong>Cypher</strong> es el lenguaje de consultas de Neo4j, diseñado para leer como un patrón visual.
+            Usa <strong>flechas ASCII</strong> para representar el grafo que quieres encontrar o crear.
+        </p>
+
+        <div class="info-box info">
+            <span class="info-box-icon">🎯</span>
+            <div class="info-box-text">
+                <strong>La idea clave de Cypher:</strong> "<em>Dibuja</em> el patrón que buscas y Neo4j lo encontrará."
+                Si buscas personas que compraron el mismo producto, simplemente "dibujas" ese patrón en Cypher.
+            </div>
+        </div>
+
+        <h3>Sintaxis básica</h3>
+
+        <div class="code-block">
+            <div class="code-header">
+                <span class="code-lang">cypher — Anatomía de una consulta</span>
+                <button class="copy-btn" onclick="copyCode(this)">📋 Copiar</button>
+            </div>
+            <pre><code><span class="cmt">// NODOS: Se representan con paréntesis ()</span>
+<span class="cmt">// (variable:Etiqueta {propiedad: valor})</span>
+
+(persona:<span class="fn">Persona</span> {nombre: <span class="str">"Ana"</span>})
+(p:<span class="fn">Producto</span>)
+()   <span class="cmt">// nodo anónimo (cualquier nodo)</span>
+
+<span class="cmt">// RELACIONES: Se representan con corchetes []</span>
+<span class="cmt">// -[:TIPO {propiedad: valor}]-></span>
+
+-[:<span class="prop">COMPRA</span>]->           <span class="cmt">// relación dirigida</span>
+-[r:<span class="prop">CONOCE</span>]-           <span class="cmt">// sin dirección, con variable r</span>
+-[*1..3]->           <span class="cmt">// hasta 3 saltos (cualquier tipo)</span></code></pre>
+        </div>
+
+        <h3>CRUD básico: Crear, Leer, Actualizar, Eliminar</h3>
+
+        <div class="code-block">
+            <div class="code-header">
+                <span class="code-lang">cypher — CREATE (Crear)</span>
+                <button class="copy-btn" onclick="copyCode(this)">📋 Copiar</button>
+            </div>
+            <pre><code><span class="cmt">// Crear nodos</span>
+<span class="kw">CREATE</span> (:<span class="fn">Persona</span> {nombre: <span class="str">"Ana"</span>, edad: <span class="num">29</span>})
+<span class="kw">CREATE</span> (:<span class="fn">Producto</span> {nombre: <span class="str">"MacBook"</span>, precio: <span class="num">1299</span>})
+
+<span class="cmt">// Crear relación entre nodos existentes</span>
+<span class="kw">MATCH</span> (a:<span class="fn">Persona</span> {nombre: <span class="str">"Ana"</span>}),
+      (p:<span class="fn">Producto</span> {nombre: <span class="str">"MacBook"</span>})
+<span class="kw">CREATE</span> (a)-[:<span class="prop">COMPRA</span> {fecha: <span class="str">"2024-01-15"</span>}]->(p)</code></pre>
+        </div>
+
+        <div class="code-block">
+            <div class="code-header">
+                <span class="code-lang">cypher — MATCH + RETURN (Leer)</span>
+                <button class="copy-btn" onclick="copyCode(this)">📋 Copiar</button>
+            </div>
+            <pre><code><span class="cmt">// Encontrar todos los productos que ha comprado Ana</span>
+<span class="kw">MATCH</span> (a:<span class="fn">Persona</span> {nombre: <span class="str">"Ana"</span>})-[:<span class="prop">COMPRA</span>]->(p:<span class="fn">Producto</span>)
+<span class="kw">RETURN</span> p.nombre, p.precio
+
+<span class="cmt">// Encontrar amigos de amigos de Ana (2 saltos)</span>
+<span class="kw">MATCH</span> (a:<span class="fn">Persona</span> {nombre: <span class="str">"Ana"</span>})-[:<span class="prop">CONOCE</span>*2]->(distante:<span class="fn">Persona</span>)
+<span class="kw">RETURN</span> distante.nombre
+
+<span class="cmt">// Contar cuántos productos tiene cada persona</span>
+<span class="kw">MATCH</span> (p:<span class="fn">Persona</span>)-[:<span class="prop">COMPRA</span>]->(prod:<span class="fn">Producto</span>)
+<span class="kw">RETURN</span> p.nombre, <span class="fn">count</span>(prod) <span class="kw">AS</span> total
+<span class="kw">ORDER BY</span> total <span class="kw">DESC</span></code></pre>
+        </div>
+
+        <div class="code-block">
+            <div class="code-header">
+                <span class="code-lang">cypher — SET y DELETE (Actualizar y Eliminar)</span>
+                <button class="copy-btn" onclick="copyCode(this)">📋 Copiar</button>
+            </div>
+            <pre><code><span class="cmt">// Actualizar una propiedad</span>
+<span class="kw">MATCH</span> (p:<span class="fn">Persona</span> {nombre: <span class="str">"Ana"</span>})
+<span class="kw">SET</span> p.edad = <span class="num">30</span>
+
+<span class="cmt">// Eliminar un nodo y todas sus relaciones</span>
+<span class="kw">MATCH</span> (p:<span class="fn">Persona</span> {nombre: <span class="str">"Ana"</span>})
+<span class="kw">DETACH DELETE</span> p
+<span class="cmt">// DETACH = elimina primero las relaciones</span></code></pre>
+        </div>
+
+        <!-- CASOS DE USO -->
+        <h2>Casos de Uso con Ejemplos Completos</h2>
+
+        <h3>Caso 1: Red Social — ¿Quién tienen amigos en común con Ana?</h3>
+        <div class="code-block">
+            <div class="code-header">
+                <span class="code-lang">cypher</span>
+                <button class="copy-btn" onclick="copyCode(this)">📋 Copiar</button>
+            </div>
+            <pre><code><span class="kw">MATCH</span> (ana:<span class="fn">Persona</span> {nombre: <span class="str">"Ana"</span>})-[:<span class="prop">AMIGO</span>]->(amigo:<span class="fn">Persona</span>)
+                              <-[:<span class="prop">AMIGO</span>]-(otro:<span class="fn">Persona</span>)
+<span class="kw">WHERE</span> otro.nombre <> <span class="str">"Ana"</span>  <span class="cmt">// excluir a Ana misma</span>
+  <span class="kw">AND NOT</span> (ana)-[:<span class="prop">AMIGO</span>]-(otro)  <span class="cmt">// que no sea ya amiga</span>
+<span class="kw">RETURN</span> otro.nombre <span class="kw">AS</span> sugerencia,
+       <span class="fn">count</span>(amigo) <span class="kw">AS</span> amigos_en_comun
+<span class="kw">ORDER BY</span> amigos_en_comun <span class="kw">DESC</span>
+<span class="kw">LIMIT</span> <span class="num">5</span>  <span class="cmt">// Top 5 sugerencias de amistad</span></code></pre>
+        </div>
+
+        <h3>Caso 2: E-commerce — Sistema de recomendación</h3>
+        <div class="code-block">
+            <div class="code-header">
+                <span class="code-lang">cypher</span>
+                <button class="copy-btn" onclick="copyCode(this)">📋 Copiar</button>
+            </div>
+            <pre><code><span class="cmt">// "Los que compraron X también compraron Y"</span>
+<span class="kw">MATCH</span> (yo:<span class="fn">Persona</span> {nombre: <span class="str">"Ana"</span>})-[:<span class="prop">COMPRA</span>]->(p:<span class="fn">Producto</span>)
+                              <-[:<span class="prop">COMPRA</span>]-(otro:<span class="fn">Persona</span>)
+                              -[:<span class="prop">COMPRA</span>]->(recom:<span class="fn">Producto</span>)
+<span class="kw">WHERE NOT</span> (yo)-[:<span class="prop">COMPRA</span>]->(recom)  <span class="cmt">// que Ana no lo haya comprado ya</span>
+<span class="kw">RETURN</span> recom.nombre <span class="kw">AS</span> recomendacion,
+       <span class="fn">count</span>(*) <span class="kw">AS</span> popularidad
+<span class="kw">ORDER BY</span> popularidad <span class="kw">DESC</span>
+<span class="kw">LIMIT</span> <span class="num">10</span></code></pre>
+        </div>
+
+        <h3>Caso 3: Detección de Fraude</h3>
+        <div class="code-block">
+            <div class="code-header">
+                <span class="code-lang">cypher</span>
+                <button class="copy-btn" onclick="copyCode(this)">📋 Copiar</button>
+            </div>
+            <pre><code><span class="cmt">// Detectar cuentas que comparten el mismo teléfono (posible fraude)</span>
+<span class="kw">MATCH</span> (c1:<span class="fn">Cuenta</span>)-[:<span class="prop">USA_TELEFONO</span>]->(t:<span class="fn">Telefono</span>)
+                  <-[:<span class="prop">USA_TELEFONO</span>]-(c2:<span class="fn">Cuenta</span>)
+<span class="kw">WHERE</span> c1 <> c2  <span class="cmt">// que sean cuentas diferentes</span>
+<span class="kw">RETURN</span> t.numero, 
+       <span class="fn">collect</span>(c1.id) <span class="kw">AS</span> cuentas_sospechosas,
+       <span class="fn">count</span>(*) <span class="kw">AS</span> num_cuentas
+<span class="kw">ORDER BY</span> num_cuentas <span class="kw">DESC</span></code></pre>
+        </div>
+
+        <h3>Caso 4: Rutas — Camino más corto entre ciudades</h3>
+        <div class="code-block">
+            <div class="code-header">
+                <span class="code-lang">cypher</span>
+                <button class="copy-btn" onclick="copyCode(this)">📋 Copiar</button>
+            </div>
+            <pre><code><span class="cmt">// Camino más corto (sin pesos)</span>
+<span class="kw">MATCH</span> (origen:<span class="fn">Ciudad</span> {nombre: <span class="str">"Madrid"</span>}),
+      (destino:<span class="fn">Ciudad</span> {nombre: <span class="str">"Alicante"</span>})
+<span class="kw">MATCH</span> ruta = <span class="fn">shortestPath</span>((origen)-[:<span class="prop">CONECTA</span>*]-(destino))
+<span class="kw">RETURN</span> [nodo <span class="kw">IN</span> <span class="fn">nodes</span>(ruta) | nodo.nombre] <span class="kw">AS</span> paradas,
+       <span class="fn">length</span>(ruta) <span class="kw">AS</span> num_conexiones</code></pre>
+        </div>
+
+        <!-- MERGE: UPSERT -->
+        <h2>MERGE: el Upsert de Neo4j</h2>
+        <p>
+            <code>MERGE</code> es uno de los comandos más poderosos de Cypher. Funciona como un "crea si no existe,
+            encuentra si existe". Es perfecto para cargar datos sin crear duplicados.
+        </p>
+
+        <div class="code-block">
+            <div class="code-header">
+                <span class="code-lang">cypher — MERGE</span>
+                <button class="copy-btn" onclick="copyCode(this)">📋 Copiar</button>
+            </div>
+            <pre><code><span class="cmt">// Si la persona existe, la encuentra. Si no, la crea.</span>
+<span class="kw">MERGE</span> (p:<span class="fn">Persona</span> {email: <span class="str">"ana@ejemplo.com"</span>})
+<span class="kw">ON CREATE SET</span> p.nombre = <span class="str">"Ana"</span>, p.creado = <span class="fn">timestamp</span>()
+<span class="kw">ON MATCH SET</span>  p.ultimo_acceso = <span class="fn">timestamp</span>()
+
+<span class="cmt">// Ideal para cargas masivas de datos en Big Data:</span>
+<span class="cmt">// Procesas millones de registros sin preocuparte de duplicados</span></code></pre>
+        </div>
+
+        <!-- NEO4J + BIG DATA -->
+        <h2>Neo4j en el Ecosistema Big Data</h2>
+
+        <div class="concept-grid">
+            <div class="concept-card cyan">
+                <span class="concept-icon">🔄</span>
+                <h3>Ingestión desde Spark</h3>
+                <p>Puedes usar el conector <strong>Neo4j Spark Connector</strong> para cargar datos desde PySpark
+                    directamente a Neo4j con DataFrames.</p>
+            </div>
+            <div class="concept-card purple">
+                <span class="concept-icon">📊</span>
+                <h3>Graph Data Science (GDS)</h3>
+                <p>La librería GDS incluye más de 65 algoritmos de grafos: PageRank, community detection, link
+                    prediction, caminos...</p>
+            </div>
+            <div class="concept-card green">
+                <span class="concept-icon">🧠</span>
+                <h3>Graph ML</h3>
+                <p>GDS incluye <strong>Graph Neural Networks</strong> y embeddings de grafos para usar los grafos como
+                    features en modelos ML.</p>
+            </div>
+            <div class="concept-card amber">
+                <span class="concept-icon">📁</span>
+                <h3>Carga de CSV</h3>
+                <p><code>LOAD CSV</code> permite importar datos desde archivos CSV directamente con Cypher, sin
+                    herramientas externas.</p>
+            </div>
+            <div class="concept-card rose">
+                <span class="concept-icon">🌐</span>
+                <h3>API REST / Bolt</h3>
+                <p>Neo4j tiene un protocolo propio (Bolt) y API REST para integrarlo con cualquier lenguaje: Python,
+                    Java, JS...</p>
+            </div>
+            <div class="concept-card indigo">
+                <span class="concept-icon">☁️</span>
+                <h3>Neo4j AuraDB</h3>
+                <p>La versión cloud de Neo4j. Cero configuración, escalado automático. Ideal para proyectos Big Data en
+                    la nube.</p>
+            </div>
+        </div>
+
+        <!-- CARGA CSV EJEMPLO -->
+        <h2>Ejemplo Completo: Carga de Datos CSV</h2>
+        <p>Un flujo típico para cargar datos de un proyecto Big Data en Neo4j:</p>
+
+        <div class="code-block">
+            <div class="code-header">
+                <span class="code-lang">cypher — LOAD CSV con MERGE</span>
+                <button class="copy-btn" onclick="copyCode(this)">📋 Copiar</button>
+            </div>
+            <pre><code><span class="cmt">// Paso 1: Crear índice para velocidad</span>
+<span class="kw">CREATE INDEX</span> persona_email <span class="kw">IF NOT EXISTS</span>
+<span class="kw">FOR</span> (p:<span class="fn">Persona</span>) <span class="kw">ON</span> (p.email)
+
+<span class="cmt">// Paso 2: Cargar usuarios desde CSV</span>
+<span class="kw">LOAD CSV WITH HEADERS FROM</span> <span class="str">'file:///usuarios.csv'</span> <span class="kw">AS</span> row
+<span class="kw">MERGE</span> (p:<span class="fn">Persona</span> {email: row.email})
+<span class="kw">SET</span> p.nombre = row.nombre,
+    p.edad = <span class="fn">toInteger</span>(row.edad),
+    p.ciudad = row.ciudad
+
+<span class="cmt">// Paso 3: Cargar relaciones de amistad</span>
+<span class="kw">LOAD CSV WITH HEADERS FROM</span> <span class="str">'file:///amistades.csv'</span> <span class="kw">AS</span> row
+<span class="kw">MATCH</span> (a:<span class="fn">Persona</span> {email: row.email_a})
+<span class="kw">MATCH</span> (b:<span class="fn">Persona</span> {email: row.email_b})
+<span class="kw">MERGE</span> (a)-[:<span class="prop">AMIGO</span> {desde: row.fecha}]-(b)</code></pre>
+        </div>
+
+        <!-- CHEATSHEET -->
+        <h2>Cheatsheet de Cypher</h2>
+
+        <div class="table-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Cláusula</th>
+                        <th>Para qué sirve</th>
+                        <th>Equivalente SQL</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>MATCH</code></td>
+                        <td>Buscar patrones en el grafo</td>
+                        <td><code>SELECT ... FROM ... JOIN</code></td>
+                    </tr>
+                    <tr>
+                        <td><code>WHERE</code></td>
+                        <td>Filtrar resultados</td>
+                        <td><code>WHERE</code></td>
+                    </tr>
+                    <tr>
+                        <td><code>RETURN</code></td>
+                        <td>Qué devolver</td>
+                        <td><code>SELECT ...</code></td>
+                    </tr>
+                    <tr>
+                        <td><code>CREATE</code></td>
+                        <td>Crear nodos o relaciones</td>
+                        <td><code>INSERT INTO</code></td>
+                    </tr>
+                    <tr>
+                        <td><code>MERGE</code></td>
+                        <td>Crear si no existe (upsert)</td>
+                        <td><code>INSERT OR UPDATE</code></td>
+                    </tr>
+                    <tr>
+                        <td><code>SET</code></td>
+                        <td>Actualizar propiedades</td>
+                        <td><code>UPDATE ... SET</code></td>
+                    </tr>
+                    <tr>
+                        <td><code>DELETE</code></td>
+                        <td>Eliminar nodos/relaciones</td>
+                        <td><code>DELETE FROM</code></td>
+                    </tr>
+                    <tr>
+                        <td><code>ORDER BY</code></td>
+                        <td>Ordenar resultados</td>
+                        <td><code>ORDER BY</code></td>
+                    </tr>
+                    <tr>
+                        <td><code>LIMIT</code></td>
+                        <td>Limitar resultados</td>
+                        <td><code>LIMIT / TOP</code></td>
+                    </tr>
+                    <tr>
+                        <td><code>WITH</code></td>
+                        <td>Encadenar subconsultas</td>
+                        <td><code>CTE (WITH ...)</code></td>
+                    </tr>
+                    <tr>
+                        <td><code>UNWIND</code></td>
+                        <td>Expandir una lista en filas</td>
+                        <td><code>UNNEST / EXPLODE</code></td>
+                    </tr>
+                    <tr>
+                        <td><code>LOAD CSV</code></td>
+                        <td>Importar datos desde CSV</td>
+                        <td>SQL Bulk Insert</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="info-box neo" style="margin-top:2rem">
+            <span class="info-box-icon">🔷</span>
+            <div class="info-box-text">
+                <strong>Recurso imprescindible:</strong>
+                <a href="https://neo4j.com/docs/cypher-manual/current/clauses/" target="_blank"
+                    style="color:#00b4d8; border-bottom:1px solid rgba(0,180,216,0.3)">Cypher Manual Oficial</a> —
+                tiene la referencia completa de todas las cláusulas, funciones y ejemplos.
+                También hay una <a href="https://graphacademy.neo4j.com/" target="_blank"
+                    style="color:#00b4d8; border-bottom:1px solid rgba(0,180,216,0.3)">GraphAcademy gratuita</a>
+                con cursos interactivos de Neo4j.
+            </div>
+        </div>
+
+        <div style="display:flex; gap:1rem; flex-wrap:wrap; margin-top:2rem">
+            <a href="propiedades.html" class="btn btn-outline">← Propiedades y Métricas</a>
+            <a href="index.html" class="btn btn-neo">🏠 Volver al Inicio</a>
+        </div>
+
+    </div>
+
+    <footer class="footer">
+        <div class="footer-inner">
+            <div class="footer-brand">
+                <div class="brand-logo">🕸️ Grafos Bootcamp</div>
+                <p>Apuntes de teoría de grafos para proyectos Big Data con Neo4j.</p>
+            </div>
+            <div class="footer-links">
+                <h5>Secciones</h5>
+                <ul>
+                    <li><a href="index.html">Inicio</a></li>
+                    <li><a href="conceptos.html">Conceptos</a></li>
+                    <li><a href="tipos.html">Tipos de Grafos</a></li>
+                    <li><a href="propiedades.html">Propiedades</a></li>
+                    <li><a href="algoritmos.html">Algoritmos</a></li>
+                    <li><a href="problemas.html">Problemas Reales</a></li>
+                    <li><a href="neo4j.html">Neo4j</a></li>
+                </ul>
+            </div>
+            <div class="footer-links">
+                <h5>Recursos Neo4j</h5>
+                <ul>
+                    <li><a href="https://neo4j.com/docs/" target="_blank">📘 Neo4j Docs</a></li>
+                    <li><a href="https://neo4j.com/docs/cypher-manual/current/" target="_blank">🔷 Cypher Manual</a>
+                    </li>
+                    <li><a href="https://graphacademy.neo4j.com/" target="_blank">🎓 GraphAcademy (gratis)</a></li>
+                    <li><a href="https://neo4j.com/developer/spark/" target="_blank">⚡ Neo4j + Spark</a></li>
+                </ul>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p>Grafos Bootcamp — Apuntes para proyecto Big Data con Neo4j</p>
+        </div>
+    </footer>
+
+    <script>
+        const navbar = document.getElementById('navbar');
+        window.addEventListener('scroll', () => {
+            navbar.classList.toggle('scrolled', window.scrollY > 50);
+        });
+        document.getElementById('navToggle').addEventListener('click', () => {
+            document.querySelector('.nav-links').classList.toggle('open');
+        });
+        function copyCode(btn) {
+            const pre = btn.closest('.code-block').querySelector('pre');
+            navigator.clipboard.writeText(pre.innerText).then(() => {
+                btn.textContent = '✅ Copiado';
+                btn.classList.add('copied');
+                setTimeout(() => { btn.textContent = '📋 Copiar'; btn.classList.remove('copied'); }, 2000);
+            });
+        }
+    </script>
+</body>
+
+</html>

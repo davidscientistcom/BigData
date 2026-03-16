@@ -1,0 +1,707 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Golang Crash Course for Experienced Programmers</title>
+    <style>
+        :root {
+            --color-bg-base: #0f172a;
+            --color-bg-elevated: #020617;
+            --color-bg-surface: #1e293b;
+            --color-bg-muted: #334155;
+            --color-text-primary: #f1f5f9;
+            --color-text-secondary: #cbd5e1;
+            --color-text-muted: #94a3b8;
+            --color-text-accent: #38bdf8;
+            --color-primary: #38bdf8;
+            --color-primary-foreground: #0f172a;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Courier New', monospace;
+            background-color: var(--color-bg-base);
+            color: var(--color-text-primary);
+        }
+
+        .slide {
+            width: 960px;
+            height: 540px;
+            margin: 0 auto 20px;
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .slide.title-slide {
+            background-color: var(--color-bg-elevated);
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            padding: 4rem;
+        }
+
+        .slide.content-slide {
+            background-color: var(--color-bg-base);
+            padding: 4rem;
+            justify-content: flex-start;
+        }
+
+        h1 {
+            font-size: 3.75rem;
+            color: var(--color-text-accent);
+            margin-bottom: 1rem;
+            font-weight: 600;
+        }
+
+        h2 {
+            font-size: 2.25rem;
+            color: var(--color-text-accent);
+            margin-bottom: 1.5rem;
+            font-weight: 600;
+        }
+
+        h3 {
+            font-size: 1.75rem;
+            color: var(--color-text-accent);
+            margin-top: 1rem;
+            margin-bottom: 0.75rem;
+            font-weight: 600;
+        }
+
+        p {
+            font-size: 1.125rem;
+            color: var(--color-text-secondary);
+            line-height: 1.6;
+            margin-bottom: 1rem;
+        }
+
+        .subtitle {
+            font-size: 1.5rem;
+            color: var(--color-text-secondary);
+            margin-bottom: 2rem;
+        }
+
+        .meta {
+            font-size: 0.875rem;
+            color: var(--color-text-muted);
+            margin-top: 2rem;
+        }
+
+        .code-block {
+            background-color: var(--color-bg-surface);
+            color: #a6e22e;
+            padding: 1rem;
+            border-left: 4px solid var(--color-text-accent);
+            font-size: 0.95rem;
+            margin: 1rem 0;
+            overflow-x: auto;
+            font-family: 'Courier New', monospace;
+            line-height: 1.4;
+        }
+
+        .comparison-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.95rem;
+            margin: 1rem 0;
+        }
+
+        .comparison-table td {
+            padding: 0.75rem;
+            border: 1px solid var(--color-bg-surface);
+            color: var(--color-text-secondary);
+        }
+
+        .comparison-table th {
+            padding: 0.75rem;
+            border: 1px solid var(--color-bg-surface);
+            color: var(--color-text-accent);
+            background-color: var(--color-bg-surface);
+            text-align: left;
+        }
+
+        .comparison-table tr:nth-child(2n) {
+            background-color: rgba(255, 255, 255, 0.02);
+        }
+
+        .feature-list {
+            list-style: none;
+            padding-left: 0;
+            font-size: 1rem;
+        }
+
+        .feature-list li {
+            color: var(--color-text-secondary);
+            margin-bottom: 0.75rem;
+            padding-left: 1.5rem;
+            position: relative;
+        }
+
+        .feature-list li:before {
+            content: "▶";
+            position: absolute;
+            left: 0;
+            color: var(--color-text-accent);
+        }
+
+        .highlight {
+            color: var(--color-text-accent);
+            font-weight: 600;
+        }
+
+        .warning {
+            background-color: rgba(239, 68, 68, 0.1);
+            border-left: 4px solid #ef4444;
+            padding: 1rem;
+            margin: 1rem 0;
+            color: var(--color-text-secondary);
+        }
+
+        .column {
+            display: flex;
+            gap: 1.5rem;
+            margin: 1rem 0;
+        }
+
+        .column > div {
+            flex: 1;
+        }
+
+        .box-highlight {
+            background-color: var(--color-bg-surface);
+            padding: 1.5rem;
+            border-left: 4px solid var(--color-text-accent);
+            margin: 1rem 0;
+        }
+
+        .keyword {
+            color: #ff79c6;
+            font-weight: 600;
+        }
+
+        .vs-arrow {
+            color: var(--color-text-accent);
+            font-weight: bold;
+            margin: 0 0.5rem;
+        }
+    </style>
+</head>
+<body>
+
+<!-- SLIDE 1: Title -->
+<section class="slide title-slide" style="background-color: #020617; color: #f1f5f9;">
+    <h1 style="font-size: 4rem; color: #38bdf8; margin-bottom: 1rem;">Go (Golang)</h1>
+    <p class="subtitle">Crash Course for Experienced Programmers</p>
+    <p class="subtitle" style="color: #94a3b8;">Python • Java • C ➜ Go</p>
+    <p class="meta">Designed for rapid learning • Production-ready patterns • Real-world focus</p>
+</section>
+
+<!-- SLIDE 2: Why Go? -->
+<section class="slide content-slide" style="background-color: #0f172a; color: #f1f5f9; padding: 4rem;">
+    <h2 style="color: #38bdf8;">Why Go? (The Fast Answer)</h2>
+    <div class="column">
+        <div>
+            <h3 style="font-size: 1.5rem; color: #38bdf8;">Go vs Your Languages</h3>
+            <table class="comparison-table">
+                <tr style="background-color: #1e293b;">
+                    <th>Language</th>
+                    <th>Paradigm</th>
+                    <th>Performance</th>
+                </tr>
+                <tr>
+                    <td>Python</td>
+                    <td>Interpreted</td>
+                    <td>10-100x slower</td>
+                </tr>
+                <tr>
+                    <td>Java</td>
+                    <td>VM-based JIT</td>
+                    <td>Comparable*</td>
+                </tr>
+                <tr>
+                    <td>C</td>
+                    <td>Compiled raw</td>
+                    <td>Comparable (10-15% slower)</td>
+                </tr>
+                <tr>
+                    <td style="color: #38bdf8; font-weight: 600;">Go</td>
+                    <td style="color: #38bdf8; font-weight: 600;">Compiled + Runtime</td>
+                    <td style="color: #38bdf8; font-weight: 600;">Fast + Simple</td>
+                </tr>
+            </table>
+        </div>
+    </div>
+    <p style="margin-top: 2rem; font-size: 0.95rem; color: #94a3b8;">*After JVM warmup. Go compiles in milliseconds, Java takes seconds.</p>
+</section>
+
+<!-- SLIDE 3: Go Philosophy -->
+<section class="slide content-slide">
+    <h2 style="color: #38bdf8; margin-bottom: 2rem;">Go Philosophy: Simplicity Over Features</h2>
+    <ul class="feature-list" style="font-size: 1rem;">
+        <li><span class="highlight">No OOP</span> – No classes, no inheritance, no polymorphism magic</li>
+        <li><span class="highlight">No exceptions</span> – Errors are values (explicit &gt; implicit)</li>
+        <li><span class="highlight">Minimal syntax</span> – One way to do things (vs Python's "Zen")</li>
+        <li><span class="highlight">Native concurrency</span> – Goroutines (not threads or async/await)</li>
+        <li><span class="highlight">Static typing + inference</span> – Type safety without verbosity</li>
+        <li><span class="highlight">Batteries included</span> – stdlib covers 80% of needs</li>
+    </ul>
+    <div class="warning" style="margin-top: 1.5rem;">
+        <strong>CRITICAL MINDSET SHIFT:</strong> Go rewards clarity over cleverness. If your Go code looks different from others, you're probably wrong. Embrace conventions.
+    </div>
+</section>
+
+<!-- SLIDE 4: Variables & Types -->
+<section class="slide content-slide">
+    <h2 style="color: #38bdf8;">Variables: The Go Way</h2>
+    <div class="code-block">
+// Explicit type (like Java)
+var edad int = 35
+var nombre string = "David"
+
+// Type inference (like Python)
+edad := 35                    // Only inside functions!
+nombre := "David"
+
+// No implicit conversions (unlike Python)
+var x int = 10
+var y float64 = x             // ❌ COMPILATION ERROR
+var y float64 = float64(x)    // ✓ Explicit cast required
+    </div>
+    <table class="comparison-table" style="margin-top: 1rem; font-size: 0.9rem;">
+        <tr style="background-color: #1e293b;">
+            <th>Python</th>
+            <th>Java</th>
+            <th>Go</th>
+        </tr>
+        <tr>
+            <td>age = 35</td>
+            <td>int age = 35;</td>
+            <td>age := 35</td>
+        </tr>
+        <tr>
+            <td>Dynamic, runtime errors</td>
+            <td>Static, compile-time safe</td>
+            <td>Static + lightweight syntax</td>
+        </tr>
+    </table>
+</section>
+
+<!-- SLIDE 5: Zero Values & Initialization -->
+<section class="slide content-slide">
+    <h2 style="color: #38bdf8;">Zero Values: Go's Safety Net</h2>
+    <p style="font-size: 1rem; color: #cbd5e1;">Unlike Python (None), Go initializes every variable to a "zero value":</p>
+    <div class="code-block">
+var i int                  // 0
+var f float64              // 0.0
+var s string               // "" (empty string, not null)
+var b bool                 // false
+var p *int                 // nil (null for pointers)
+var m map[string]int       // nil
+var sl []int               // nil
+var arr [3]int             // [0, 0, 0]
+    </div>
+    <p style="font-size: 0.95rem; color: #94a3b8; margin-top: 1rem;">
+        <span class="highlight">Why?</span> No "undefined" state. A variable always has a valid value. Safer than Python's None-everywhere.
+    </p>
+</section>
+
+<!-- SLIDE 6: Pointers vs References -->
+<section class="slide content-slide">
+    <h2 style="color: #38bdf8;">Pointers: Explicit Memory Management</h2>
+    <table class="comparison-table" style="font-size: 0.9rem; margin: 1rem 0;">
+        <tr style="background-color: #1e293b;">
+            <th>Language</th>
+            <th>Pointers</th>
+            <th>Example</th>
+        </tr>
+        <tr>
+            <td>Python</td>
+            <td>Hidden (everything is reference)</td>
+            <td>x = [1, 2]; y = x (same object)</td>
+        </tr>
+        <tr>
+            <td>Java</td>
+            <td>Hidden (for objects only)</td>
+            <td>List x = new ArrayList(); List y = x;</td>
+        </tr>
+        <tr>
+            <td>C</td>
+            <td>Explicit, manual management</td>
+            <td>int *p = malloc(...); free(p);</td>
+        </tr>
+        <tr>
+            <td style="color: #38bdf8; font-weight: 600;">Go</td>
+            <td style="color: #38bdf8; font-weight: 600;">Explicit, automatic cleanup</td>
+            <td style="color: #38bdf8; font-weight: 600;">p := &amp;x; defer cleanup()</td>
+        </tr>
+    </table>
+    <div class="code-block" style="margin-top: 1rem;">
+x := 42
+p := &x          // Get address (& operator)
+fmt.Println(*p)  // Dereference (= 42)
+*p = 100         // Modify via pointer
+fmt.Println(x)   // x is now 100
+    </div>
+</section>
+
+<!-- SLIDE 7: Functions & Multiple Returns -->
+<section class="slide content-slide">
+    <h2 style="color: #38bdf8;">Functions: Multiple Returns (No Exceptions)</h2>
+    <div class="column">
+        <div>
+            <p style="font-size: 0.9rem; color: #cbd5e1; font-weight: 600;">Python</p>
+            <div class="code-block" style="font-size: 0.85rem;">
+def divide(a, b):
+    if b == 0:
+        raise ValueError("...")
+    return a / b
+            </div>
+        </div>
+        <div>
+            <p style="font-size: 0.9rem; color: #cbd5e1; font-weight: 600;">Go</p>
+            <div class="code-block" style="font-size: 0.85rem;">
+func divide(a, b float64) (float64, error) {
+    if b == 0 {
+        return 0, errors.New("...")
+    }
+    return a / b, nil
+}
+            </div>
+        </div>
+    </div>
+    <p style="margin-top: 1.5rem; font-size: 0.95rem; color: #cbd5e1;">
+        <span class="highlight">Key difference:</span> Go returns errors as values. No try/catch. 
+        <span class="highlight">Pattern:</span> <code style="background: #1e293b; padding: 0.25rem 0.5rem; border-radius: 3px;">result, err := myFunc()</code>
+    </p>
+    <p style="font-size: 0.9rem; color: #94a3b8;">Idiom: Always check errors immediately. Panic is for programmer bugs, not runtime errors.</p>
+</section>
+
+<!-- SLIDE 8: Structs vs Objects -->
+<section class="slide content-slide">
+    <h2 style="color: #38bdf8;">Structs: Composition Over Inheritance</h2>
+    <div class="column">
+        <div>
+            <p style="font-size: 0.9rem; color: #cbd5e1; font-weight: 600;">Java (OOP)</p>
+            <div class="code-block" style="font-size: 0.8rem;">
+class Animal { }
+class Dog extends Animal { }
+Dog dog = new Dog();
+            </div>
+        </div>
+        <div>
+            <p style="font-size: 0.9rem; color: #cbd5e1; font-weight: 600;">Go (Composition)</p>
+            <div class="code-block" style="font-size: 0.8rem;">
+type Dog struct { }
+type Animal struct { 
+    Dog Dog  // Embed
+}
+            </div>
+        </div>
+    </div>
+    <p style="margin-top: 1.5rem; font-size: 0.95rem; color: #cbd5e1; font-weight: 600;">
+        No inheritance hierarchy. Structs are just data. Methods attached separately.
+    </p>
+    <div class="code-block" style="margin-top: 1rem;">
+type User struct {
+    Name  string
+    Email string
+}
+
+// Method (receiver type, then function name)
+func (u User) IsValid() bool {
+    return u.Name != "" && u.Email != ""
+}
+    </div>
+</section>
+
+<!-- SLIDE 9: Interfaces & Duck Typing -->
+<section class="slide content-slide">
+    <h2 style="color: #38bdf8;">Interfaces: Implicit Satisfaction (Duck Typing)</h2>
+    <div class="code-block">
+// Define interface
+type Reader interface {
+    Read(p []byte) (n int, err error)
+}
+
+// Satisfy interface (no explicit declaration!)
+type File struct { }
+func (f *File) Read(p []byte) (int, error) {
+    // Implementation
+    return 0, nil
+}
+
+// Use it
+var r Reader = &file  // ✓ Works! File satisfies Reader
+    </div>
+    <p style="margin-top: 1rem; font-size: 0.95rem; color: #cbd5e1;">
+        <span class="highlight">Why?</span> Decoupling. Library defines Reader interface. Your code can implement it without importing library. Maximum flexibility.
+    </p>
+    <p style="font-size: 0.9rem; color: #94a3b8;">Compare to Java: <code style="background: #1e293b; padding: 0.25rem 0.5rem;">class File implements Reader {}</code> – explicit coupling.</p>
+</section>
+
+<!-- SLIDE 10: Error Handling -->
+<section class="slide content-slide">
+    <h2 style="color: #38bdf8;">Error Handling: The Go Way</h2>
+    <p style="font-size: 0.9rem; color: #cbd5e1; margin-bottom: 1rem;">Errors are values, not exceptions. Explicit handling is required.</p>
+    <div class="code-block">
+// Pattern 1: Immediate check
+file, err := os.Open("data.txt")
+if err != nil {
+    log.Fatal(err)  // Handle or panic
+}
+defer file.Close()  // Resource cleanup
+
+// Pattern 2: Type assertion for custom errors
+if err != nil {
+    if pathErr, ok := err.(*os.PathError); ok {
+        fmt.Printf("Path error: %s\n", pathErr.Path)
+    }
+}
+    </div>
+    <div class="box-highlight" style="margin-top: 1rem;">
+        <strong>idiom:</strong> Check errors early and often. No "error bubbling" like async/await. Every function with potential failure returns (result, error).
+    </div>
+</section>
+
+<!-- SLIDE 11: Goroutines intro -->
+<section class="slide content-slide">
+    <h2 style="color: #38bdf8;">Concurrency: Goroutines (Not Threads)</h2>
+    <table class="comparison-table" style="font-size: 0.9rem;">
+        <tr style="background-color: #1e293b;">
+            <th>Model</th>
+            <th>Memory per unit</th>
+            <th>Overhead</th>
+            <th>Scaling</th>
+        </tr>
+        <tr>
+            <td>OS Threads (Python, Java)</td>
+            <td>1-2 MB</td>
+            <td>High context switching</td>
+            <td>10,000 max</td>
+        </tr>
+        <tr>
+            <td style="color: #38bdf8; font-weight: 600;">Go Goroutines</td>
+            <td style="color: #38bdf8; font-weight: 600;">~2-8 KB</td>
+            <td style="color: #38bdf8; font-weight: 600;">Low multiplexing</td>
+            <td style="color: #38bdf8; font-weight: 600;">1,000,000+ feasible</td>
+        </tr>
+    </table>
+    <div class="code-block" style="margin-top: 1rem;">
+// Launch goroutine (like "thread" but lighter)
+go myFunction()
+
+// Or anonymous
+go func() {
+    fmt.Println("Running concurrently")
+}()
+    </div>
+    <p style="margin-top: 1rem; font-size: 0.9rem; color: #94a3b8;">Why Go dominates microservices: handle 10K concurrent requests with minimal resources.</p>
+</section>
+
+<!-- SLIDE 12: Channels -->
+<section class="slide content-slide">
+    <h2 style="color: #38bdf8;">Channels: Safe Goroutine Communication</h2>
+    <p style="font-size: 0.9rem; color: #cbd5e1; margin-bottom: 1rem;">Channels = typed "pipes" between goroutines (like message queues).</p>
+    <div class="code-block">
+// Create channel
+ch := make(chan string)
+
+// Send (blocks until received)
+go func() {
+    ch <- "Hello from goroutine"
+}()
+
+// Receive (blocks until sent)
+msg := <-ch
+fmt.Println(msg)
+    </div>
+    <div class="box-highlight" style="margin-top: 1rem;">
+        <strong>vs Threads:</strong> Python/Java need mutexes, atomic ops, complex sync. Go channels make safe communication idiomatic.
+    </div>
+    <p style="font-size: 0.9rem; color: #cbd5e1; margin-top: 1rem;">
+        <span class="highlight">Key:</span> "Share memory by communicating, don't communicate by sharing memory."
+    </p>
+</section>
+
+<!-- SLIDE 13: Packages & Visibility -->
+<section class="slide content-slide">
+    <h2 style="color: #38bdf8;">Packages: Organization & Visibility</h2>
+    <table class="comparison-table" style="font-size: 0.9rem;">
+        <tr style="background-color: #1e293b;">
+            <th>Python</th>
+            <th>Java</th>
+            <th>Go</th>
+        </tr>
+        <tr>
+            <td>public, _private (convention)</td>
+            <td>public, private, protected</td>
+            <td style="color: #38bdf8; font-weight: 600;">Capitalization</td>
+        </tr>
+        <tr>
+            <td style="font-size: 0.85rem;">def public_func() (exported by convention)</td>
+            <td style="font-size: 0.85rem;">public void myMethod() {}</td>
+            <td style="font-size: 0.85rem; color: #38bdf8; font-weight: 600;">func PublicFunc() (exported)
+func privateFunc() (private)</td>
+        </tr>
+    </table>
+    <div class="code-block" style="margin-top: 1rem;">
+package mypackage  // All files in dir are same package
+
+func ExportedFunc() { }    // CAPITAL = exported (public)
+func privateFunc() { }      // lowercase = private to package
+
+const MaxSize = 100         // Exported
+const minSize = 1           // Private
+    </div>
+</section>
+
+<!-- SLIDE 14: Project Structure -->
+<section class="slide content-slide">
+    <h2 style="color: #38bdf8;">Project Structure: Go Modules</h2>
+    <div class="code-block">
+myproject/
+├── go.mod                    # Module definition (like package.json)
+├── go.sum                    # Dependency checksums
+├── main.go                   # Entry point (func main())
+├── utils/
+│   ├── math.go              # Package 'utils'
+│   └── strings.go
+└── models/
+    └── user.go              # Package 'models'
+    </div>
+    <p style="margin-top: 1rem; font-size: 0.9rem; color: #cbd5e1;">
+        <code style="background: #1e293b; padding: 0.25rem 0.5rem; font-weight: 600;">go mod init github.com/david/myproject</code>
+    </p>
+    <p style="font-size: 0.85rem; color: #94a3b8; margin-top: 0.5rem;">
+        Modules (go.sum + go.mod) handle versioning + lock files. No requirements.txt chaos like Python.
+    </p>
+</section>
+
+<!-- SLIDE 15: Defer & Cleanup -->
+<section class="slide content-slide">
+    <h2 style="color: #38bdf8;">Defer: Guaranteed Cleanup</h2>
+    <div class="column">
+        <div>
+            <p style="font-size: 0.9rem; color: #cbd5e1; font-weight: 600;">Python (try/finally)</p>
+            <div class="code-block" style="font-size: 0.8rem;">
+try:
+    file = open('data.txt')
+    # use file
+finally:
+    file.close()
+            </div>
+        </div>
+        <div>
+            <p style="font-size: 0.9rem; color: #cbd5e1; font-weight: 600;">Go (defer)</p>
+            <div class="code-block" style="font-size: 0.8rem;">
+file, _ := os.Open('data.txt')
+defer file.Close()
+// use file
+// Close() ALWAYS runs
+            </div>
+        </div>
+    </div>
+    <p style="margin-top: 1.5rem; font-size: 0.9rem; color: #cbd5e1;">
+        <span class="highlight">defer = LIFO stack.</span> Last defer executes first. Perfect for resource cleanup.
+    </p>
+</section>
+
+<!-- SLIDE 16: Testing -->
+<section class="slide content-slide">
+    <h2 style="color: #38bdf8;">Testing: Built-in, No Dependencies</h2>
+    <div class="code-block">
+package mypackage
+
+import "testing"
+
+func TestAdd(t *testing.T) {
+    result := Add(2, 3)
+    if result != 5 {
+        t.Errorf("Expected 5, got %d", result)
+    }
+}
+    </div>
+    <p style="margin-top: 1rem; font-size: 0.9rem; color: #cbd5e1;">
+        <code style="background: #1e293b; padding: 0.25rem 0.5rem;">go test ./...</code> – Run all tests. No pytest, no unittest imports needed.
+    </p>
+    <p style="font-size: 0.9rem; color: #94a3b8; margin-top: 0.5rem;">
+        Testing is idiomatic in Go. Not optional like in Python shops.
+    </p>
+</section>
+
+<!-- SLIDE 17: Common Gotchas -->
+<section class="slide content-slide">
+    <h2 style="color: #38bdf8;">Common Gotchas: Coming from Python/Java/C</h2>
+    <ul class="feature-list" style="font-size: 0.95rem;">
+        <li><span class="highlight">No implicit type conversion</span> – int + float64 = error. Cast explicitly.</li>
+        <li><span class="highlight">:= only in functions</span> – Package-level needs <code style="background: #1e293b; padding: 0.25rem 0.5rem;">var</code></li>
+        <li><span class="highlight">Arrays vs Slices</span> – [3]int is array (fixed). []int is slice (dynamic).</li>
+        <li><span class="highlight">Nil is sneaky</span> – nil != null. nil slice/map/channel are valid. Check carefully.</li>
+        <li><span class="highlight">Loops are for only</span> – No while. <code style="background: #1e293b; padding: 0.25rem 0.5rem;">for i := 0; i &lt; 10; i++</code></li>
+        <li><span class="highlight">Blank identifier _</span> – <code style="background: #1e293b; padding: 0.25rem 0.5rem;">_, err := func()</code> to ignore return value.</li>
+    </ul>
+</section>
+
+<!-- SLIDE 18: Execution Comparison -->
+<section class="slide content-slide">
+    <h2 style="color: #38bdf8;">Execution: Compile vs Interpret</h2>
+    <table class="comparison-table" style="font-size: 0.9rem;">
+        <tr style="background-color: #1e293b;">
+            <th>Python</th>
+            <th>Java</th>
+            <th>Go</th>
+        </tr>
+        <tr>
+            <td><span style="color: #ef4444;">❌</span> Interpreted → slow</td>
+            <td>Compiled to bytecode → JVM runs (warmup)</td>
+            <td style="color: #38bdf8; font-weight: 600;">✓ Single binary (no runtime)</td>
+        </tr>
+        <tr>
+            <td>python script.py</td>
+            <td>javac Main.java → java Main</td>
+            <td style="color: #38bdf8; font-weight: 600;">go build → ./app</td>
+        </tr>
+        <tr>
+            <td style="font-size: 0.85rem;">Errors at runtime</td>
+            <td style="font-size: 0.85rem;">Errors at compile-time</td>
+            <td style="font-size: 0.85rem; color: #38bdf8; font-weight: 600;">Errors at compile-time, deploy anywhere</td>
+        </tr>
+    </table>
+    <p style="margin-top: 1.5rem; font-size: 0.9rem; color: #cbd5e1;">
+        Go compiles in <span class="highlight">milliseconds</span>. Deploy a single executable to production. No Docker gymnastics needed (but often done anyway).
+    </p>
+</section>
+
+<!-- SLIDE 19: Next Steps -->
+<section class="slide content-slide">
+    <h2 style="color: #38bdf8;">You're Ready! Next Steps:</h2>
+    <ul class="feature-list" style="font-size: 1rem;">
+        <li>Read the <span class="highlight">Go Tour</span> (tour.golang.org) – 30 mins, interactive</li>
+        <li>Build a <span class="highlight">CLI tool</span> – Use flags, read files, parse JSON</li>
+        <li>Study the <span class="highlight">stdlib</span> – net, http, os, io are your friends</li>
+        <li>Write <span class="highlight">concurrent code</span> – Goroutines + channels are Go's superpowers</li>
+        <li>Join the community – Go forums, /r/golang, Golang UK Slack</li>
+    </ul>
+    <div class="box-highlight" style="margin-top: 1.5rem;">
+        <strong>Your advantage:</strong> You know programming. Go is just a new syntax + philosophy. Once you "get" goroutines and channels, you'll love it.
+    </div>
+</section>
+
+<!-- SLIDE 20: Closing -->
+<section class="slide title-slide" style="background-color: #020617; color: #f1f5f9;">
+    <h2 style="font-size: 2.5rem; color: #38bdf8;">Ready to Build?</h2>
+    <p class="subtitle" style="margin-top: 2rem;">Let's do the exercises now.</p>
+    <p class="meta" style="margin-top: 3rem;">Golang: Simple. Fast. Concurrent.</p>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,26 @@
+
+version: '3.8'
+
+services:
+  mongodb:
+    image: mongo:8.0
+    container_name: mongodb_curso
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    environment:
+      # Credenciales del usuario administrador
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: password123
+      # Base de datos inicial (opcional)
+      MONGO_INITDB_DATABASE: tienda_db
+    volumes:
+      # Persistencia de datos
+      - ./mongo_data:/data/db
+      # Scripts de inicialización (opcional)
+      - ./init-scripts:/docker-entrypoint-initdb.d
+    command: ["mongod", "--auth"]
+
+networks:
+  default:
+    name: mongo_network

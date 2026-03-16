@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RabbitMQ - Guía Completa</title>
+    <style>
+        /* Theme Variables */
+        :root {
+            --font-family-display: Arial, sans-serif;
+            --font-weight-display: 600;
+            --font-family-content: Arial, sans-serif;
+            --font-weight-content: 400;
+            --font-size-content: 16px;
+            --line-height-content: 1.4;
+        }
+
+        /* DARK THEME (DEFAULT) */
+        body.theme-dark {
+            --color-bg-base: #0f172a;
+            --color-bg-elevated: #020617;
+            --color-bg-surface: #1e293b;
+            --color-bg-muted: #334155;
+            --color-text-primary: #f1f5f9;
+            --color-text-secondary: #cbd5e1;
+            --color-text-muted: #94a3b8;
+            --color-text-accent: #38bdf8;
+            --color-primary: #38bdf8;
+            --color-primary-foreground: #0f172a;
+        }
+
+        /* Base Styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: var(--font-family-content);
+            font-weight: var(--font-weight-content);
+            font-size: var(--font-size-content);
+            line-height: var(--line-height-content);
+            overflow-x: hidden;
+        }
+
+        /* Slide Container */
+        .slide {
+            width: 960px;
+            height: 540px;
+            margin: 0 auto 20px;
+            display: flex;
+            flex-shrink: 0;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Layout Utilities */
+        .row { flex-direction: row; }
+        .col { flex-direction: column; }
+        .center {
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+        }
+        .space-between { justify-content: space-between; }
+        .items-center { align-items: center; }
+        .items-start { align-items: flex-start; }
+        .items-end { align-items: flex-end; }
+        .fill-width { flex: 1; }
+        .fill-height { flex: 1; display: flex; flex-direction: column; }
+
+        /* Spacing */
+        .gap-sm { gap: 0.5rem; }
+        .gap-md { gap: 1rem; }
+        .gap-lg { gap: 1.5rem; }
+        .gap-xl { gap: 2rem; }
+        .gap-2xl { gap: 3rem; }
+
+        .p-4 { padding: 1rem; }
+        .p-6 { padding: 1.5rem; }
+        .p-8 { padding: 2rem; }
+        .p-12 { padding: 3rem; }
+        .p-16 { padding: 4rem; }
+
+        .mb-2 { margin-bottom: 0.5rem; }
+        .mb-4 { margin-bottom: 1rem; }
+        .mb-6 { margin-bottom: 1.5rem; }
+        .mb-8 { margin-bottom: 2rem; }
+        .mb-12 { margin-bottom: 3rem; }
+
+        .mt-2 { margin-top: 0.5rem; }
+        .mt-4 { margin-top: 1rem; }
+        .mt-6 { margin-top: 1.5rem; }
+        .mt-8 { margin-top: 2rem; }
+        .mt-12 { margin-top: 3rem; }
+
+        /* Typography */
+        h1, h2, h3, h4, h5, h6 {
+            font-family: var(--font-family-display);
+            font-weight: var(--font-weight-display);
+            line-height: 1.2;
+            margin: 0;
+        }
+
+        h1 { font-size: 3rem; }
+        h2 { font-size: 2.25rem; }
+        h3 { font-size: 1.75rem; }
+        h4 { font-size: 1.5rem; }
+        h5 { font-size: 1.25rem; }
+        h6 { font-size: 1rem; }
+
+        .text-6xl { font-size: 3.75rem; }
+        .text-5xl { font-size: 3rem; }
+        .text-4xl { font-size: 2.25rem; }
+        .text-3xl { font-size: 1.875rem; }
+        .text-2xl { font-size: 1.5rem; }
+        .text-xl { font-size: 1.25rem; }
+        .text-lg { font-size: 1.125rem; }
+        .text-base { font-size: 1rem; }
+        .text-sm { font-size: 0.875rem; }
+        .text-xs { font-size: 0.75rem; }
+
+        .font-bold { font-weight: 700; }
+        .font-semibold { font-weight: 600; }
+        .font-medium { font-weight: 500; }
+        .font-normal { font-weight: 400; }
+
+        .text-center { text-align: center; }
+        .text-left { text-align: left; }
+        .text-right { text-align: right; }
+
+        .opacity-90 { opacity: 0.9; }
+        .opacity-80 { opacity: 0.8; }
+        .opacity-70 { opacity: 0.7; }
+        .opacity-60 { opacity: 0.6; }
+
+        /* Lists */
+        ul, ol {
+            margin-left: 2rem;
+            line-height: 1.8;
+        }
+
+        ul li { list-style: disc; }
+        ol li { list-style: decimal; }
+
+        li { margin-bottom: 0.75rem; }
+        li:last-child { margin-bottom: 0; }
+
+        /* Card Styles (Rectangle - no border-radius for PPTX) */
+        .card-rect {
+            padding: 2rem;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+        }
+        
+        /* Actor boxes */
+        .actor-box {
+            padding: 1.5rem;
+            text-align: center;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        }
+        
+        /* Code styling */
+        code {
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body class="theme-dark">
+
+    <!-- SLIDE 1: TITLE -->
+    <section class="slide p-16 col center" style="background-color: #020617; color: #f1f5f9;">
+        <h1 class="text-6xl mb-4" style="color: #38bdf8;">🐰 RabbitMQ</h1>
+        <p class="text-2xl" style="color: #cbd5e1;">Guía Completa desde Cero</p>
+        <p class="text-sm mt-8" style="color: #94a3b8;">Message Broker y Sistema de Colas</p>
+    </section>
+
+    <!-- SLIDE 2: AGENDA -->
+    <section class="slide p-16 col" style="background-color: #0f172a; color: #f1f5f9;">
+        <h2 class="mb-6" style="color: #38bdf8;">Agenda</h2>
+        <ul class="text-lg" style="color: #cbd5e1;">
+            <li>¿Qué problema resuelve RabbitMQ?</li>
+            <li>Conceptos básicos: Producer, Exchange, Queue, Consumer</li>
+            <li>Tipos de Exchange y casos de uso</li>
+            <li>Durabilidad y confirmaciones (ACK)</li>
+        </ul>
+    </section>
+
+    <!-- SLIDE 3: PROBLEMA QUE RESUELVE -->
+    <section class="slide p-16 col" style="background-color: #0f172a; color: #f1f5f9;">
+        <h2 class="mb-6" style="color: #38bdf8;">¿Qué Problema Resuelve?</h2>
+        <p class="text-lg mb-4" style="color: #cbd5e1;">
+            Imagina: usuario sube foto → procesarla tarda 10 segundos
+        </p>
+        <ul class="text-lg" style="color: #cbd5e1;">
+            <li><strong>Sin RabbitMQ:</strong> Usuario espera 10 segundos</li>
+            <li><strong>Con RabbitMQ:</strong> Respuesta inmediata, proceso en background</li>
+            <li>Desacoplamiento entre petición y procesamiento</li>
+        </ul>
+    </section>
+
+    <!-- SLIDE 4: MESSAGE BROKER -->
+    <section class="slide p-16 col" style="background-color: #0f172a; color: #f1f5f9;">
+        <h2 class="mb-6" style="color: #38bdf8;">¿Qué es un Message Broker?</h2>
+        <p class="text-lg mb-4" style="color: #cbd5e1;">
+            Intermediario de mensajes (como una oficina de correos)
+        </p>
+        <ul class="text-lg" style="color: #cbd5e1;">
+            <li>Remitente deposita mensaje</li>
+            <li>Broker almacena y decide destino</li>
+            <li>Destinatario recoge cuando quiere</li>
+            <li>Protocolo: <strong>AMQP 0-9-1</strong></li>
+        </ul>
+    </section>
+
+    <!-- SLIDE 5: LOS 4 ACTORES -->
+    <section class="slide p-16 col" style="background-color: #0f172a; color: #f1f5f9;">
+        <h2 class="mb-8 text-center" style="color: #38bdf8;">Los 4 Actores Principales</h2>
+        <div class="row gap-md" style="justify-content: space-around;">
+            <div class="actor-box" style="background-color: #1e293b; color: #cbd5e1; flex: 1;">
+                <h3 style="color: #22c55e;">📤 Producer</h3>
+                <p>Crea y envía mensajes</p>
+            </div>
+            <div class="actor-box" style="background-color: #1e293b; color: #cbd5e1; flex: 1;">
+                <h3 style="color: #f59e0b;">🔀 Exchange</h3>
+                <p>Clasifica y enruta</p>
+            </div>
+        </div>
+        <div class="row gap-md mt-6" style="justify-content: space-around;">
+            <div class="actor-box" style="background-color: #1e293b; color: #cbd5e1; flex: 1;">
+                <h3 style="color: #8b5cf6;">📦 Queue</h3>
+                <p>Almacena (FIFO)</p>
+            </div>
+            <div class="actor-box" style="background-color: #1e293b; color: #cbd5e1; flex: 1;">
+                <h3 style="color: #ec4899;">📥 Consumer</h3>
+                <p>Procesa mensajes</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- SLIDE 6: PRODUCER -->
+    <section class="slide p-16 col" style="background-color: #0f172a; color: #f1f5f9;">
+        <h2 class="mb-6" style="color: #22c55e;">Producer (Productor)</h2>
+        <ul class="text-lg" style="color: #cbd5e1;">
+            <li>Crea y envía mensajes a RabbitMQ</li>
+            <li>No conoce quién consume los mensajes</li>
+            <li>Siempre envía a un <strong>Exchange</strong>, nunca directamente a cola</li>
+            <li>Puede estar en máquina diferente al broker</li>
+        </ul>
+    </section>
+
+    <!-- SLIDE 7: QUEUE -->
+    <section class="slide p-16 col" style="background-color: #0f172a; color: #f1f5f9;">
+        <h2 class="mb-6" style="color: #8b5cf6;">Queue (Cola)</h2>
+        <ul class="text-lg" style="color: #cbd5e1;">
+            <li>Buffer de mensajes almacenado en RabbitMQ</li>
+            <li>Funciona como fila FIFO (First In, First Out)</li>
+            <li>Múltiples producers → 1 cola</li>
+            <li>1 cola → múltiples consumers (reparten carga)</li>
+        </ul>
+    </section>
+
+    <!-- SLIDE 8: TIPOS DE COLAS -->
+    <section class="slide p-16 col" style="background-color: #0f172a; color: #f1f5f9;">
+        <h2 class="mb-6" style="color: #38bdf8;">Tipos de Colas</h2>
+        <ul class="text-lg" style="color: #cbd5e1;">
+            <li><strong>Durable:</strong> Sobrevive a reinicio de RabbitMQ</li>
+            <li><strong>Transient:</strong> Desaparece al reiniciar</li>
+            <li><strong>Auto-delete:</strong> Se borra cuando último consumer desconecta</li>
+            <li><strong>Exclusive:</strong> Solo para una conexión específica</li>
+        </ul>
+    </section>
+
+    <!-- SLIDE 9: EXCHANGE -->
+    <section class="slide p-16 col" style="background-color: #0f172a; color: #f1f5f9;">
+        <h2 class="mb-6" style="color: #f59e0b;">Exchange (Intercambiador)</h2>
+        <p class="text-xl mb-4" style="color: #ef4444;">
+            ⚠️ IMPORTANTE: Mensajes NUNCA van directamente a colas
+        </p>
+        <ul class="text-lg" style="color: #cbd5e1;">
+            <li>Recibe mensajes del producer</li>
+            <li>Decide a qué cola(s) enviar según reglas</li>
+            <li>Producer no necesita saber las colas existentes</li>
+        </ul>
+    </section>
+
+    <!-- SLIDE 10: BINDING Y ROUTING KEY -->
+    <section class="slide p-16 col" style="background-color: #0f172a; color: #f1f5f9;">
+        <h2 class="mb-6" style="color: #38bdf8;">Binding y Routing Key</h2>
+        <div class="mb-4">
+            <h3 class="text-xl mb-2" style="color: #38bdf8;">Binding</h3>
+            <p class="text-lg" style="color: #cbd5e1;">Enlace que conecta Exchange con Queue</p>
+        </div>
+        <div>
+            <h3 class="text-xl mb-2" style="color: #38bdf8;">Routing Key</h3>
+            <p class="text-lg" style="color: #cbd5e1;">Etiqueta que producer pone en mensaje para dirigir enrutamiento</p>
+        </div>
+    </section>
+
+    <!-- SLIDE 11: FLUJO COMPLETO -->
+    <section class="slide p-16 col" style="background-color: #0f172a; color: #f1f5f9;">
+        <h2 class="mb-6" style="color: #38bdf8;">Flujo Completo de un Mensaje</h2>
+        <ul class="text-lg" style="color: #cbd5e1;">
+            <li>Producer publica mensaje en Exchange con routing key</li>
+            <li>Exchange evalúa sus bindings configurados</li>
+            <li>Enruta a 1 o más queues según tipo de exchange</li>
+            <li>Consumer procesa y envía ACK</li>
+        </ul>
+    </section>
+
+    <!-- SLIDE 12: DEFAULT EXCHANGE -->
+    <section class="slide p-16 col" style="background-color: #0f172a; color: #f1f5f9;">
+        <h2 class="mb-6" style="color: #38bdf8;">Default Exchange ("")</h2>
+        <p class="text-lg mb-4" style="color: #cbd5e1;">
+            Exchange predefinido sin nombre, routing_key = nombre exacto de cola
+        </p>
+        <div style="background-color: #1e293b; padding: 1rem; border-left: 4px solid #38bdf8;">
+            <code style="color: #cbd5e1;">
+                channel.basic_publish(<br>
+                &nbsp;&nbsp;exchange='',<br>
+                &nbsp;&nbsp;routing_key='hello',<br>
+                &nbsp;&nbsp;body='Hola Mundo'<br>
+                )
+            </code>
+        </div>
+        <p class="text-lg mt-4" style="color: #94a3b8;">Uso: Pruebas simples</p>
+    </section>
+
+    <!-- SLIDE 13: DIRECT EXCHANGE -->
+    <section class="slide p-16 col" style="background-color: #0f172a; color: #f1f5f9;">
+        <h2 class="mb-6" style="color: #38bdf8;">Direct Exchange</h2>
+        <p class="text-lg mb-4" style="color: #cbd5e1;">
+            Enruta a cola cuya binding_key coincide exactamente con routing_key
+        </p>
+        <ul class="text-lg" style="color: #cbd5e1;">
+            <li>binding_key="error" → cola_errores</li>
+            <li>binding_key="warning" → cola_warnings</li>
+            <li>routing_key="error" → solo va a cola_errores</li>
+        </ul>
+        <p class="text-lg mt-4" style="color: #94a3b8;">Uso: Logs por nivel, clasificación fija</p>
+    </section>
+
+    <!-- SLIDE 14: FANOUT EXCHANGE -->
+    <section class="slide p-16 col" style="background-color: #0f172a; color: #f1f5f9;">
+        <h2 class="mb-6" style="color: #38bdf8;">Fanout Exchange</h2>
+        <p class="text-lg mb-4" style="color: #cbd5e1;">
+            Ignora routing_key, envía copia a TODAS las colas vinculadas (broadcast)
+        </p>
+        <ul class="text-lg" style="color: #cbd5e1;">
+            <li>pedido_realizado → cola_email</li>
+            <li>pedido_realizado → cola_sms</li>
+            <li>pedido_realizado → cola_historial</li>
+        </ul>
+        <p class="text-lg mt-4" style="color: #94a3b8;">Uso: Notificaciones múltiples, sincronización</p>
+    </section>
+
+    <!-- SLIDE 15: TOPIC EXCHANGE -->
+    <section class="slide p-16 col" style="background-color: #0f172a; color: #f1f5f9;">
+        <h2 class="mb-6" style="color: #38bdf8;">Topic Exchange</h2>
+        <p class="text-lg mb-4" style="color: #cbd5e1;">
+            Enruta según patrones con wildcards (* y #)
+        </p>
+        <ul class="text-lg" style="color: #cbd5e1;">
+            <li><strong>*</strong> sustituye exactamente 1 palabra</li>
+            <li><strong>#</strong> sustituye 0 o más palabras</li>
+            <li>"españa.#" → todo de España</li>
+            <li>"*.*.temperatura" → todas temperaturas</li>
+        </ul>
+    </section>
+
+    <!-- SLIDE 16: TOPIC EXCHANGE EJEMPLO -->
+    <section class="slide p-16 col" style="background-color: #0f172a; color: #f1f5f9;">
+        <h2 class="mb-6" style="color: #38bdf8;">Topic Exchange - Ejemplo</h2>
+        <div style="background-color: #1e293b; padding: 1.5rem;">
+            <p class="text-lg mb-2" style="color: #cbd5e1;">
+                <strong>españa.madrid.temperatura</strong>
+            </p>
+            <ul class="text-base" style="color: #94a3b8;">
+                <li>Coincide con: "españa.#"</li>
+                <li>Coincide con: "*.*.temperatura"</li>
+                <li>Coincide con: "españa.madrid.*"</li>
+            </ul>
+        </div>
+        <p class="text-lg mt-4" style="color: #94a3b8;">
+            Uso: Telemetría, Big Data multidimensional, logging avanzado
+        </p>
+    </section>
+
+    <!-- SLIDE 17: HEADERS EXCHANGE -->
+    <section class="slide p-16 col" style="background-color: #0f172a; color: #f1f5f9;">
+        <h2 class="mb-6" style="color: #38bdf8;">Headers Exchange</h2>
+        <p class="text-lg mb-4" style="color: #cbd5e1;">
+            Enruta basándose en cabeceras del mensaje (no routing_key)
+        </p>
+        <ul class="text-lg" style="color: #cbd5e1;">
+            <li><strong>x-match="all":</strong> TODOS los headers deben coincidir (AND)</li>
+            <li><strong>x-match="any":</strong> Basta con que uno coincida (OR)</li>
+        </ul>
+        <p class="text-lg mt-4" style="color: #94a3b8;">Uso: Routing multidimensional complejo</p>
+    </section>
+
+    <!-- SLIDE 18: COMPARACIÓN EXCHANGES -->
+    <section class="slide p-16 col" style="background-color: #0f172a; color: #f1f5f9;">
+        <h2 class="mb-6" style="color: #38bdf8;">Comparación de Exchanges</h2>
+        <div style="background-color: #1e293b; padding: 1rem;">
+            <ul class="text-base" style="color: #cbd5e1; list-style: none; margin: 0;">
+                <li><strong>Default:</strong> routing_key = nombre cola</li>
+                <li><strong>Direct:</strong> Coincidencia exacta</li>
+                <li><strong>Fanout:</strong> Broadcast a todas</li>
+                <li><strong>Topic:</strong> Patrones con * y #</li>
+                <li><strong>Headers:</strong> Por cabeceras AND/OR</li>
+            </ul>
+        </div>
+    </section>
+
+    <!-- SLIDE 19: PÉRDIDA DE MENSAJES -->
+    <section class="slide p-16 col" style="background-color: #0f172a; color: #f1f5f9;">
+        <h2 class="mb-6" style="color: #ef4444;">⚠️ ¿Se Pueden Perder Mensajes?</h2>
+        <p class="text-2xl mb-4" style="color: #ef4444;">SÍ. Y de varias formas.</p>
+        <ul class="text-lg" style="color: #cbd5e1;">
+            <li>Producer envía y RabbitMQ crashea antes de guardar</li>
+            <li>Consumer crashea sin procesar (con auto-ack)</li>
+            <li>RabbitMQ reinicia y cola no era durable</li>
+            <li>Exchange sin colas vinculadas (descartado silencioso)</li>
+        </ul>
+    </section>
+
+    <!-- SLIDE 20: 3 CAPAS DE PROTECCIÓN -->
+    <section class="slide p-16 col" style="background-color: #0f172a; color: #f1f5f9;">
+        <h2 class="mb-6" style="color: #38bdf8;">Las 3 Capas de Protección</h2>
+        <p class="text-lg mb-4" style="color: #cbd5e1;">
+            Para sobrevivir a reinicio necesitas LAS TRES:
+        </p>
+        <ul class="text-lg" style="color: #cbd5e1;">
+            <li>① <strong>Cola durable:</strong> durable=True</li>
+            <li>② <strong>Mensaje persistente:</strong> delivery_mode=2</li>
+            <li>③ <strong>Exchange durable:</strong> durable=True</li>
+        </ul>
+    </section>
+
+    <!-- SLIDE 21: AUTO-ACK VS MANUAL ACK -->
+    <section class="slide p-16 col" style="background-color: #0f172a; color: #f1f5f9;">
+        <h2 class="mb-6" style="color: #38bdf8;">Auto-ACK vs Manual ACK</h2>
+        <div class="mb-4">
+            <h3 class="text-xl mb-2" style="color: #ef4444;">Auto-ACK ❌</h3>
+            <p style="color: #cbd5e1;">Mensaje se borra al enviarse, si consumer crashea se pierde</p>
+        </div>
+        <div>
+            <h3 class="text-xl mb-2" style="color: #22c55e;">Manual ACK ✅</h3>
+            <p style="color: #cbd5e1;">Mensaje NO se borra hasta confirmar, reencola automático si falla</p>
+        </div>
+    </section>
+
+    <!-- SLIDE 22: COMANDOS ACK -->
+    <section class="slide p-16 col" style="background-color: #0f172a; color: #f1f5f9;">
+        <h2 class="mb-6" style="color: #38bdf8;">Comandos de Confirmación</h2>
+        <ul class="text-lg" style="color: #cbd5e1;">
+            <li><strong>basic_ack():</strong> Confirma procesamiento exitoso</li>
+            <li><strong>basic_nack(requeue=True):</strong> Rechaza y reencola</li>
+            <li><strong>basic_nack(requeue=False):</strong> Rechaza y descarta (DLQ)</li>
+            <li><strong>basic_reject():</strong> Rechaza un solo mensaje</li>
+        </ul>
+    </section>
+
+    <!-- SLIDE 23: PREFETCH QOS -->
+    <section class="slide p-16 col" style="background-color: #0f172a; color: #f1f5f9;">
+        <h2 class="mb-6" style="color: #38bdf8;">Prefetch (QoS)</h2>
+        <p class="text-lg mb-4" style="color: #cbd5e1;">
+            Número máximo de mensajes sin ACK simultáneos
+        </p>
+        <ul class="text-lg" style="color: #cbd5e1;">
+            <li><strong>1:</strong> Máxima distribución equitativa</li>
+            <li><strong>10-50:</strong> Balance seguridad/rendimiento</li>
+            <li><strong>100-300:</strong> Máximo throughput</li>
+            <li><strong>0:</strong> Sin límite (peligroso, riesgo OOM)</li>
+        </ul>
+    </section>
+
+    <!-- SLIDE 24: PUBLISHER CONFIRMS -->
+    <section class="slide p-16 col" style="background-color: #0f172a; color: #f1f5f9;">
+        <h2 class="mb-6" style="color: #38bdf8;">Publisher Confirms</h2>
+        <p class="text-lg mb-4" style="color: #cbd5e1;">
+            Confirmación del broker al producer de que mensaje fue recibido
+        </p>
+        <div style="background-color: #1e293b; padding: 1rem; border-left: 4px solid #38bdf8;">
+            <code style="color: #cbd5e1;">
+                channel.confirm_delivery()<br>
+                try:<br>
+                &nbsp;&nbsp;channel.basic_publish(...)<br>
+                except UnroutableError:<br>
+                &nbsp;&nbsp;print("Sin cola vinculada")
+            </code>
+        </div>
+    </section>
+
+    <!-- SLIDE 25: DEAD LETTER QUEUE -->
+    <section class="slide p-16 col" style="background-color: #0f172a; color: #f1f5f9;">
+        <h2 class="mb-6" style="color: #38bdf8;">Dead Letter Queue (DLQ)</h2>
+        <p class="text-lg mb-4" style="color: #cbd5e1;">
+            Cola especial para mensajes no entregables
+        </p>
+        <ul class="text-lg" style="color: #cbd5e1;">
+            <li>Mensaje rechazado con requeue=False</li>
+            <li>Mensaje expiró por TTL</li>
+            <li>Cola alcanzó límite de tamaño</li>
+        </ul>
+    </section>
+
+    <!-- SLIDE 26: BUCLE INFINITO REQUEUE -->
+    <section class="slide p-16 col" style="background-color: #0f172a; color: #f1f5f9;">
+        <h2 class="mb-6" style="color: #ef4444;">⚠️ Bucle Infinito de Requeue</h2>
+        <p class="text-lg mb-4" style="color: #cbd5e1;">
+            Mensaje siempre causa error → reencola infinitamente
+        </p>
+        <p class="text-lg" style="color: #38bdf8;">Solución: Contador de reintentos</p>
+        <div style="background-color: #1e293b; padding: 1rem; margin-top: 1rem;">
+            <code style="color: #cbd5e1;">
+                if method.redelivered:<br>
+                &nbsp;&nbsp;# Ya falló, a DLQ<br>
+                &nbsp;&nbsp;ch.basic_nack(requeue=False)
+            </code>
+        </div>
+    </section>
+
+    <!-- SLIDE 27: PROBLEMAS COMUNES -->
+    <section class="slide p-16 col" style="background-color: #0f172a; color: #f1f5f9;">
+        <h2 class="mb-6" style="color: #38bdf8;">Problemas Comunes</h2>
+        <ul class="text-lg" style="color: #cbd5e1;">
+            <li><strong>Unknown delivery tag:</strong> ACK dos veces o en canal diferente</li>
+            <li><strong>Consumer OOM:</strong> auto_ack=True sin límite</li>
+            <li><strong>Mensajes duplicados:</strong> Falta idempotencia</li>
+            <li><strong>Pérdida silenciosa:</strong> Exchange sin bindings</li>
+        </ul>
+    </section>
+
+    <!-- SLIDE 28: ORDEN NO GARANTIZADO -->
+    <section class="slide p-16 col" style="background-color: #0f172a; color: #f1f5f9;">
+        <h2 class="mb-6" style="color: #ef4444;">⚠️ Orden NO Garantizado</h2>
+        <p class="text-lg mb-4" style="color: #cbd5e1;">
+            RabbitMQ NO garantiza orden estricto en:
+        </p>
+        <ul class="text-lg" style="color: #cbd5e1;">
+            <li>Múltiples consumers en misma cola</li>
+            <li>Requeue (no vuelve a posición original)</li>
+            <li>Publisher confirms asíncronos</li>
+        </ul>
+    </section>
+
+    <!-- SLIDE 29: CHECKLIST PRODUCCIÓN -->
+    <section class="slide p-16 col" style="background-color: #0f172a; color: #f1f5f9;">
+        <h2 class="mb-6" style="color: #38bdf8;">Checklist de Producción</h2>
+        <ul class="text-lg" style="color: #cbd5e1;">
+            <li>✓ Colas durables (durable=True)</li>
+            <li>✓ Mensajes persistentes (delivery_mode=2)</li>
+            <li>✓ Manual ACK (auto_ack=False)</li>
+            <li>✓ Prefetch configurado (1-300)</li>
+        </ul>
+    </section>
+
+    <!-- SLIDE 30: CHECKLIST PRODUCCIÓN 2 -->
+    <section class="slide p-16 col" style="background-color: #0f172a; color: #f1f5f9;">
+        <h2 class="mb-6" style="color: #38bdf8;">Checklist de Producción (2)</h2>
+        <ul class="text-lg" style="color: #cbd5e1;">
+            <li>✓ Publisher Confirms activado</li>
+            <li>✓ Dead Letter Queue configurado</li>
+            <li>✓ Manejo de reintentos</li>
+            <li>✓ Idempotencia en consumers</li>
+        </ul>
+    </section>
+
+    <!-- SLIDE 31: INSTALACIÓN -->
+    <section class="slide p-16 col" style="background-color: #0f172a; color: #f1f5f9;">
+        <h2 class="mb-6" style="color: #38bdf8;">Instalación con Docker</h2>
+        <div style="background-color: #1e293b; padding: 1rem; border-left: 4px solid #38bdf8;">
+            <code style="color: #cbd5e1; font-size: 0.85rem;">
+                docker run -d --name rabbitmq \<br>
+                &nbsp;&nbsp;-p 5672:5672 \<br>
+                &nbsp;&nbsp;-p 15672:15672 \<br>
+                &nbsp;&nbsp;rabbitmq:3-management
+            </code>
+        </div>
+        <ul class="text-base mt-4" style="color: #cbd5e1;">
+            <li>5672: Puerto AMQP (conexiones)</li>
+            <li>15672: Panel web admin</li>
+        </ul>
+    </section>
+
+    <!-- SLIDE 32: CONFIGURACIÓN MÁXIMA SEGURIDAD -->
+    <section class="slide p-16 col" style="background-color: #0f172a; color: #f1f5f9;">
+        <h2 class="mb-6" style="color: #38bdf8;">Configuración Máxima Seguridad</h2>
+        <ul class="text-lg" style="color: #cbd5e1;">
+            <li>Manual ACK</li>
+            <li>+ Cola durable</li>
+            <li>+ Mensajes persistentes</li>
+            <li>+ Publisher Confirms</li>
+        </ul>
+        <p class="text-lg mt-4" style="color: #22c55e;">
+            = Sin pérdida de mensajes
+        </p>
+    </section>
+
+    <!-- SLIDE 33: ERRORES FATALES -->
+    <section class="slide p-16 col" style="background-color: #0f172a; color: #f1f5f9;">
+        <h2 class="mb-6" style="color: #ef4444;">Errores Fatales que Evitar</h2>
+        <ul class="text-lg" style="color: #cbd5e1;">
+            <li>❌ auto_ack=True en producción</li>
+            <li>❌ No configurar prefetch</li>
+            <li>❌ Mensajes críticos sin delivery_mode=2</li>
+            <li>❌ No implementar Dead Letter Queue</li>
+        </ul>
+    </section>
+
+    <!-- SLIDE 34: RESUMEN -->
+    <section class="slide p-16 col" style="background-color: #0f172a; color: #f1f5f9;">
+        <h2 class="mb-6" style="color: #38bdf8;">Resumen</h2>
+        <ul class="text-lg" style="color: #cbd5e1;">
+            <li>RabbitMQ desacopla producer y consumer</li>
+            <li>Exchanges enrutan según tipo (Direct, Fanout, Topic, Headers)</li>
+            <li>Manual ACK + Durable + Persistent = Seguridad</li>
+            <li>Prefetch controla carga del consumer</li>
+        </ul>
+    </section>
+
+    <!-- SLIDE 35: GRACIAS -->
+    <section class="slide p-16 col center" style="background-color: #020617; color: #f1f5f9;">
+        <h2 class="text-5xl mb-6" style="color: #38bdf8;">¡Gracias!</h2>
+        <p class="text-xl" style="color: #cbd5e1;">¿Preguntas?</p>
+        <p class="text-sm mt-8" style="color: #94a3b8;">RabbitMQ - Guía Completa desde Cero</p>
+    </section>
+
+</body>
+</html>

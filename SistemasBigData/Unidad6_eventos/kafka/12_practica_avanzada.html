@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Lab 03 · Prod Avanzada — Kafka Bootcamp</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', system-ui, sans-serif;
+            background: #0d1117;
+            color: #e6edf3;
+        }
+
+        .topbar {
+            background: #161b22;
+            border-bottom: 1px solid #30363d;
+            padding: 12px 24px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 0.82em;
+        }
+
+        .topbar a {
+            color: #ff6b35;
+            text-decoration: none;
+        }
+
+        .topbar a:hover {
+            color: #ff8c5a;
+        }
+
+        .topbar .sep {
+            color: #484f58;
+        }
+
+        .topbar .cur {
+            color: #e6edf3;
+            font-weight: 600;
+        }
+
+        .hero {
+            background: linear-gradient(135deg, #3a1a0a22, #0d1117);
+            border-bottom: 1px solid #30363d;
+            padding: 36px 24px;
+            text-align: center;
+        }
+
+        .badge {
+            display: inline-block;
+            background: #3a1a0a;
+            color: #ff6b35;
+            font-size: 0.7em;
+            font-weight: 700;
+            padding: 3px 12px;
+            border-radius: 20px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            margin-bottom: 14px;
+        }
+
+        .hero h1 {
+            font-size: 1.9em;
+            font-weight: 900;
+            margin-bottom: 8px;
+        }
+
+        .hero p {
+            color: #8b949e;
+            font-size: 0.88em;
+            max-width: 640px;
+            margin: 0 auto;
+            line-height: 1.6;
+        }
+
+        .content {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 32px 24px;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .grid-wide {
+            grid-column: 1 / -1;
+        }
+
+        .card {
+            background: #161b22;
+            border-radius: 12px;
+            border: 1px solid #30363d;
+            padding: 20px;
+            transition: border-color 0.18s;
+        }
+
+        .card:hover {
+            border-color: #ff6b3544;
+        }
+
+        .card-title {
+            font-weight: 700;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.95em;
+        }
+
+        p {
+            color: #8b949e;
+            line-height: 1.65;
+            margin-bottom: 8px;
+            font-size: 0.85em;
+        }
+
+        pre {
+            background: #010409;
+            border: 1px solid #21262d;
+            border-radius: 8px;
+            padding: 14px 16px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.76em;
+            overflow-x: auto;
+            white-space: pre;
+            line-height: 1.7;
+            margin: 8px 0;
+        }
+
+        code {
+            font-family: monospace;
+            background: #21262d;
+            padding: 1px 5px;
+            border-radius: 4px;
+            font-size: 0.88em;
+            color: #a5d6ff;
+        }
+
+        .hi {
+            margin: 10px 0;
+            background: #3a1a1a33;
+            border: 1px solid #ff7b7244;
+            border-radius: 8px;
+            padding: 10px 14px;
+            font-size: 0.82em;
+            color: #ffa198;
+        }
+        
+        .hi.g {
+           background: #1a3a2a33;
+           border-color: #3fb95044;
+           color: #7ee787;
+        }
+
+        .hi.o {
+            background: #1a0d0533;
+            border-color: #ff6b3544;
+            color: #ff8c5a;
+        }
+
+        .section-title {
+            font-size: 1.1em;
+            font-weight: 700;
+            color: #ff6b35;
+            margin: 32px 0 16px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #21262d;
+        }
+
+        .nav-footer {
+            border-top: 1px solid #30363d;
+            padding: 20px 24px;
+            display: flex;
+            justify-content: space-between;
+            margin-top: 20px;
+        }
+
+        .nav-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            padding: 10px 18px;
+            text-decoration: none;
+            color: #e6edf3;
+            font-size: 0.83em;
+            font-weight: 600;
+            transition: all 0.18s;
+        }
+
+        .nav-btn:hover {
+            border-color: #ff6b35;
+            color: #ff6b35;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="topbar">
+        <a href="index.html">🏠 Kafka Bootcamp</a><span class="sep">›</span>
+        <span class="cur">Lab 03 · Prod Avanzada</span>
+    </div>
+    <div class="hero">
+        <div class="badge">Laboratorio 03</div>
+        <h1>🛡️ Práctica: Entorno Hostil (E-Commerce)</h1>
+        <p>¿Qué pasa si Kafka se reinicia a medio viaje o si tu Microservicio explota insertando en tu BD? Vamos a asegurar <strong>CERO pérdida de pedidos</strong> fusionando Avro, Acks=All, Idempotencia y Commits Manuales.</p>
+    </div>
+
+    <div class="content">
+
+        <div class="section-title">El Producer Blindado (Exactly-Once)</div>
+        <div class="grid">
+            <div class="card grid-wide">
+                <div class="card-title">Paso 1: Schema Registry, Idempotencia y Acks=all</div>
+                <p>En este escenario crítico bancario o de e-commerce, enviar datos con JSON ya no es aceptable (Schema Registry al rescate). Además, tenemos que obligar al clúster entero de Kafka a guardar el recibo en <strong>todas las réplicas</strong> (<code>acks=all</code>) sin permitir reintentos duplicados en red (<code>enable.idempotence=true</code>).</p>
+
+                <div style="display: flex; gap: 15px; margin-top: 15px;">
+                    <div style="flex: 1;">
+                        <h4 style="color: #ffb95e; margin-bottom: 8px;">🐍 Python (Producer con Avro y Garantías)</h4>
+                        <pre>from confluent_kafka import Producer
+from confluent_kafka.schema_registry import SchemaRegistryClient
+from confluent_kafka.schema_registry.avro import AvroSerializer
+from confluent_kafka.serialization import SerializationContext, MessageField
+
+# 1. Configuración CRÍTICA
+conf = {
+    'bootstrap.servers': 'localhost:9094',
+    'acks': 'all',                  # <- Espera respuesta de todas las particiones hijas
+    'enable.idempotence': True,     # <- Kafka detecta TIDs descartando duplicados (Exactly-once)
+    'retries': 5                    # <- Se auto-reintenta si la red parpadea 
+}
+producer = Producer(conf)
+
+# 2. Esquema Validado Central (Pydantic a Nivel Red)
+schema_str = '{"type": "record", "name": "Venta", "fields": [{"name": "id", "type": "int"}]}'
+sr_client = SchemaRegistryClient({'url': 'http://localhost:8081'})
+serializer_avro = AvroSerializer(sr_client, schema_str)
+
+# 3. Envío blindado
+venta = {"id": 105}
+ctx = SerializationContext('ventas_criticas', MessageField.VALUE)
+
+producer.produce('ventas_criticas', value=serializer_avro(venta, ctx))
+producer.flush()</pre>
+                    </div>
+
+                    <div style="flex: 1;">
+                        <h4 style="color: #ffb95e; margin-bottom: 8px;">☕ Java (KafkaProducer Blindado)</h4>
+                        <pre>import org.apache.kafka.clients.producer.*;
+import io.confluent.kafka.serializers.KafkaAvroSerializer;
+import java.util.Properties;
+
+Properties p = new Properties();
+p.put("bootstrap.servers", "localhost:9094");
+
+// GARANTÍAS DE PRODUCCIÓN HOSTIL
+p.put("acks", "all");
+p.put("enable.idempotence", "true");
+p.put("retries", Integer.toString(Integer.MAX_VALUE));
+
+// CONEXIÓN A SCHEMA REGISTRY
+p.put("key.serializer", "org.apache.kafka.common.serialization.StringSerializer");
+p.put("value.serializer", KafkaAvroSerializer.class.getName());
+p.put("schema.registry.url", "http://localhost:8081");
+
+KafkaProducer&lt;String, Venta&gt; producer = new KafkaProducer<>(p);
+
+// Venta auto-generada por Maven .avsc
+Venta v = Venta.newBuilder().setId(105).build();
+
+producer.send(new ProducerRecord&lt;&gt;("ventas_criticas", v));
+producer.close();</pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="section-title">El Consumer Seguro (Manual Commits)</div>
+        <div class="grid">
+            <div class="card grid-wide">
+                <div class="card-title">Paso 2: Confirmar Offset 'SÓLO' tras procesar (At-Least Once)</div>
+                <div class="hi r">⚠️ <strong>El mayor error en Kafka:</strong> Usar <code>enable.auto.commit=true</code> en entornos donde interactúas con una Base de Datos. Si Kafka guarda tu offset pero la DB tira una Excepción de Timeout... ¡Pierdes la Orden porque Kafka "ya cree" que la procesaste!</div>
+                <p>La solución en Producción real es apagar los <em>Auto Commits</em>, e invocar nosotros la confirmación del marcador (<code>commit_sync()</code>) explícitamente y de manera segura bajo nuestro bloque de éxito.</p>
+
+                <div style="display: flex; gap: 15px; margin-top: 15px;">
+                    <div style="flex: 1;">
+                        <h4 style="color: #79c0ff; margin-bottom: 8px;">🐍 Python (Commits Manuales)</h4>
+                        <pre>from confluent_kafka import Consumer
+
+conf = {
+    'bootstrap.servers': 'localhost:9094',
+    'group.id': 'micro_bd',
+    'enable.auto.commit': False  # <- APAGADO. Toma de control manual.
+}
+consumer = Consumer(conf)
+consumer.subscribe(['ventas_criticas'])
+
+while True:
+    msg = consumer.poll(1.0)
+    if not msg or msg.error():
+        continue
+    
+    try:
+        # 1. Tu lógica peligrosa (Ej. Inserción SQL, Llamada REST Externa)
+        venta = descodificador_avro(msg.value())
+        insertar_en_postgres(venta)
+        
+        # 2. SÓLO si todo salió perfecto, le avisas a Kafka que mueva la marca
+        consumer.commit(msg) # Confirmación síncrona/manual
+        
+    except Exception as e:
+        # Si la BD explotó, NO ejecutamos "commit". 
+        # A los pocos segundos/reinicio Kafka re-enviará este offset 
+        # impidiendo que la venta se evapore.
+        print("La BD está caída, reintentaremos...")
+        continue</pre>
+                    </div>
+
+                    <div style="flex: 1;">
+                        <h4 style="color: #79c0ff; margin-bottom: 8px;">☕ Java (Manual CommitSync)</h4>
+                        <pre>import org.apache.kafka.clients.consumer.*;
+import java.time.Duration;
+import java.util.*;
+
+Properties p = new Properties();
+p.put("bootstrap.servers", "localhost:9094");
+p.put("group.id", "micro_bd");
+p.put("enable.auto.commit", "false"); // <- APAGADO.
+
+KafkaConsumer&lt;String, Venta&gt; consumer = new KafkaConsumer<>(p);
+consumer.subscribe(Arrays.asList("ventas_criticas"));
+
+while (true) {
+    ConsumerRecords&lt;String, Venta&gt; batch = consumer.poll(Duration.ofMillis(500));
+    
+    for (ConsumerRecord&lt;String, Venta&gt; r : batch) {
+        try {
+            // Lógica Pelirosa: Guardado SQL
+            insertDataIntoDatabase(r.value());
+            
+            // Confirmar Individualmente a Kafka que este evento es "HECHO"
+            consumer.commitSync();
+
+        } catch (Exception e) {
+            System.err.println("Falla crítica. Abortando commit.");
+            // Al no hacer commitSync, el consumer volverá a jalar este registro
+        }
+    }
+}</pre>
+                    </div>
+                </div>
+                <div class="hi o">💡 <strong>Nota del Experto:</strong> Esta es la base arquitectónica ("At-least-once") que usan gigantes como Netflix. Si el proceso crashea, Kafka te reenvía lo repetido. Tan solo debes asegurar que tu Base de Datos sea Idempotente usando '<code>ON CONFLICT DO NOTHING</code>' para no registrar un pago de $50 dos veces.</div>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="nav-footer">
+        <a href="11_practica_grupos.html" class="nav-btn">← Lab 02 · Clústers</a>
+        <a href="index.html" class="nav-btn">Finalizar Bootcamp →</a>
+    </div>
+</body>
+
+</html>

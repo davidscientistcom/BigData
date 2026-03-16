@@ -1,0 +1,12 @@
+[
+  { "name": "Juan López", "email": "juan.lopez@example.com", "age": 34, "country": "Chile", "active": true, "hobbies": ["futbol", "cocina"], "loginCount": 5 },
+  { "name": "Ana Gómez", "email": "ana.gomez@example.com", "age": 22, "country": "Perú", "active": false, "hobbies": ["ajedrez"] },
+  { "name": "Carlos Ruiz", "email": "carlos.ruiz@example.com", "age": 45, "country": "España", "active": true, "hobbies": ["senderismo", "fotografia"], "loginCount": 12 },
+  { "name": "Lucía Fernández", "email": "lucia@example.com", "age": 30, "country": "México", "active": true, "hobbies": ["cine"] },
+  { "name": "Pedro Martínez", "email": "pedro@example.com", "age": 17, "country": "Argentina", "active": false, "hobbies": ["videojuegos"], "minor": true },
+  { "name": "Sofía Torres", "email": "sofia.t@example.com", "age": 27, "country": "Chile", "active": true, "hobbies": ["lectura", "yoga"], "loginCount": 3 },
+  { "name": "Diego Vega", "email": "diego@example.com", "age": 40, "country": "Perú", "active": true, "hobbies": ["ciclismo"] },
+  { "name": "Mariana Rojas", "email": "mariana@example.com", "age": 19, "country": "Colombia", "active": false, "hobbies": [] },
+  { "name": "Carlos Perez", "email": "c.perez@example.com", "age": 29, "country": "España", "active": true, "hobbies": ["tenis", "viajes"] },
+  { "name": "Valentina Ruiz", "email": "valentina@example.com", "age": 35, "country": "Argentina", "active": true, "hobbies": ["cocina", "pintura"] }
+]

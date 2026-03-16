@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <title>13 · Masterclass: Apache Avro — Kafka Bootcamp</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', system-ui, sans-serif;
+            background: #0d1117;
+            color: #e6edf3;
+            line-height: 1.6;
+        }
+
+        .topbar {
+            background: #161b22;
+            border-bottom: 1px solid #30363d;
+            padding: 12px 24px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 0.82em;
+        }
+
+        .topbar a {
+            color: #63a9ff;
+            text-decoration: none;
+        }
+
+        .topbar a:hover {
+            color: #79c0ff;
+        }
+
+        .topbar .sep {
+            color: #484f58;
+        }
+
+        .topbar .cur {
+            color: #e6edf3;
+            font-weight: 600;
+        }
+
+        .hero {
+            background: linear-gradient(135deg, #0d1a3a22, #0d1117);
+            border-bottom: 1px solid #30363d;
+            padding: 40px 24px;
+            text-align: center;
+        }
+
+        .badge {
+            display: inline-block;
+            background: #0d1a3a;
+            color: #63a9ff;
+            font-size: 0.7em;
+            font-weight: 700;
+            padding: 4px 14px;
+            border-radius: 20px;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            margin-bottom: 16px;
+        }
+
+        .hero h1 {
+            font-size: 2.4em;
+            font-weight: 900;
+            margin-bottom: 12px;
+            color: #ffffff;
+        }
+
+        .hero p {
+            color: #8b949e;
+            font-size: 1.05em;
+            max-width: 760px;
+            margin: 0 auto;
+        }
+
+        .content {
+            max-width: 1000px;
+            margin: 40px auto;
+            padding: 0 24px;
+        }
+
+        h2 {
+            font-size: 1.6em;
+            color: #63a9ff;
+            margin: 48px 0 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #30363d;
+        }
+
+        h3 {
+            font-size: 1.2em;
+            color: #e6edf3;
+            margin: 32px 0 16px;
+        }
+
+        p {
+            margin-bottom: 18px;
+            font-size: 0.95em;
+        }
+
+        .card {
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 24px;
+        }
+
+        pre {
+            background: #010409;
+            border: 1px solid #21262d;
+            border-radius: 8px;
+            padding: 16px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85em;
+            overflow-x: auto;
+            margin: 16px 0;
+            color: #e6edf3;
+        }
+
+        code {
+            font-family: monospace;
+            background: #21262d;
+            padding: 2px 6px;
+            border-radius: 4px;
+            color: #a5d6ff;
+            font-size: 0.9em;
+        }
+
+        .hi {
+            padding: 16px 20px;
+            border-radius: 8px;
+            margin: 24px 0;
+            font-size: 0.95em;
+            border-left: 4px solid;
+            background: #161b22;
+        }
+
+        .hi.warn {
+            border-color: #ffb95e;
+            background: #3a2a0a33;
+            color: #ffb95e;
+        }
+
+        .hi.info {
+            border-color: #63a9ff;
+            background: #0d1a3a33;
+            color: #a5d6ff;
+        }
+
+        .diagram-box {
+            background: #010409;
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            padding: 24px;
+            margin: 24px 0;
+            font-family: monospace;
+            text-align: center;
+        }
+
+        .binary-byte {
+            display: inline-block;
+            background: #21262d;
+            color: #7ee787;
+            padding: 8px 12px;
+            border-radius: 6px;
+            margin: 0 4px;
+            border: 1px solid #3fb95044;
+            font-weight: bold;
+        }
+
+        .binary-meta {
+            color: #8b949e;
+            font-size: 0.8em;
+            display: block;
+            margin-top: 6px;
+        }
+
+        .nav-footer {
+            border-top: 1px solid #30363d;
+            padding: 30px 24px;
+            display: flex;
+            justify-content: space-between;
+            margin-top: 60px;
+            max-width: 1000px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .nav-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            padding: 12px 24px;
+            text-decoration: none;
+            color: #e6edf3;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        .nav-btn:hover {
+            border-color: #63a9ff;
+            color: #63a9ff;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="topbar">
+        <a href="index.html">🏠 Menú Principal</a><span class="sep">›</span>
+        <span class="cur">13 · Masterclass: Avro</span>
+    </div>
+
+    <div class="hero">
+        <div class="badge">Ecosistema Data — Deep Dive</div>
+        <h1>🧬 Apache Avro en Profundidad</h1>
+        <p>Binarización matemática, omisión de metadatos y la respuesta arquitectónica a por qué JSON y Pydantic fallan catastróficamente a gran escala en Big Data.</p>
+    </div>
+
+    <div class="content">
+
+        <h2>1. El Archienemigo del Big Data: El Texto Plano (JSON)</h2>
+        <p>En el mundo del desarrollo web (FastAPI, Express.js), usar JSON es el estándar de oro. Si unes JSON con validadores robustos como <strong>Pydantic</strong> en Python, obtienes APIs seguras y legibles para humanos.</p>
+        
+        <div class="hi warn">
+            <strong>¿Por qué no podemos usar Pydantic + JSON en Kafka?</strong><br>
+            Porque Pydantic es una validación que ocurre en la Memoria (RAM) de <em>tu</em> aplicación (el Microservicio A). Una vez que tu código aprueba el objeto, lo traduce a un string de texto plano y lo manda por la red.
+        </div>
+
+        <p>Observa el siguiente JSON, que representa un simple click de un usuario:</p>
+        <pre>{
+  "event_type": "CLICK_BUTTON",
+  "user_id": 9845123,
+  "timestamp": 1710345600000,
+  "is_premium_user": true
+}</pre>
+
+        <div class="card">
+            <h3>El Overhead del Formato Legible</h3>
+            <p>Ese pequeño JSON, codificado en UTF-8, pesa aproximadamente <strong>98 Bytes</strong> en la red. Analicemos esos 98 bytes:</p>
+            <ul>
+                <li><strong>Los Datos Reales:</strong> <code>CLICK_BUTTON</code>, <code>9845123</code>, <code>1710345600000</code>, <code>true</code> (Unos 20 bytes de carga útil real).</li>
+                <li><strong>La Grasa (Metadata):</strong> Las comillas, los dos puntos, los saltos de línea y, lo peor de todo, <strong>los nombres de las claves repetidos infinitamente</strong> (<code>"event_type"</code>, <code>"user_id"</code>...).</li>
+            </ul>
+            <p>Si envías 1 evento, no importa. Pero Kafka fue diseñado en LinkedIn para enviar <strong>10 millones de eventos por segundo</strong>. Enviar 10 millones de veces la palabra <code>"is_premium_user"</code> por segundo a través de una tarjeta de red y que el Disco Duro del servidor la escriba físicamente 10 millones de veces, es un <strong>cuello de botella térmico y económico masivo</strong>. Desperdicias el 80% de tu red enviando diccionarios de texto conocidos.</p>
+        </div>
+
+        <h2>2. La Solución: "Binarizar" la Información con Avro</h2>
+        <p>Aquí es donde entra la Ingeniería de Datos dura. <strong>Apache Avro</strong> es un framework de serialización que separa estrictamente el <em>Esquema</em> (la definición de los campos) de los <em>Datos</em> (los bytes puros).</p>
+        <p>En lugar de que Pydantic valide y mande JSON, usamos Avro y Schema Registry. El Productor define el esquema (el pacto) y se lo manda al Schema Registry. <strong>Una vez.</strong> Luego, por la tubería de Kafka, solo viaja la información condensada a nivel matemático (binario).</p>
+
+        <div class="diagram-box">
+            <h4 style="color: #8b949e; margin-bottom: 20px;">Anatomía de un Payload Binario Avro transitando por la Red</h4>
+            <div>
+                <div style="display: inline-block; text-align: center;">
+                    <span class="binary-byte" style="border-color: #ff6b35; color: #ff6b35;">0x00</span>
+                    <span class="binary-meta">Magic Byte</span>
+                </div>
+                <div style="display: inline-block; text-align: center; margin: 0 10px;">
+                    <span class="binary-byte" style="border-color: #63a9ff; color: #63a9ff;">[4 Bytes]</span>
+                    <span class="binary-meta">Schema ID</span>
+                </div>
+                <div style="display: inline-block; text-align: center;">
+                    <span class="binary-byte">[0x18]</span>
+                    <span class="binary-byte">[0x82 0xB4...]</span>
+                    <span class="binary-byte">[0x01]</span>
+                    <span class="binary-meta">Raw Payload (Valores puros, sin claves)</span>
+                </div>
+            </div>
+        </div>
+
+        <h3>Cómo descifra el Consumer este galimatías:</h3>
+        <ol>
+            <li>El Consumer (en Java o Python) lee de Kafka y ve el <strong>Magic Byte (0x00)</strong>. Esto le grita: "¡Oye, esto no es JSON, esto es un mensaje de Confluent Schema Registry!".</li>
+            <li>Inmediatamente lee los siguientes <strong>4 Bytes</strong>, que componen un número entero (pongamos, el ID <code>42</code>).</li>
+            <li>El Consumer llama por HTTP al Schema Registry: <em>"Oye, dame la definición arquitectónica del esquema número 42"</em> (y guarda esta definición en memoria caché para nunca más volver a pedirla).</li>
+            <li>El esquema descargado le dice al Consumer: "El primer dato será un String (event_type), luego un Long (user_id), luego un Long (timestamp) y al final un Boolean (is_premium)".</li>
+            <li>Sabiendo la regla de oro, el Consumer ataca el <strong>Raw Payload</strong>. Si el esquema dice boolean, sabe que el byte <code>0x01</code> significa <code>True</code>. Ni rastro de la palabra <code>"is_premium_user"</code>.</li>
+        </ol>
+
+        <div class="hi info">
+            <strong>Resultado Físico:</strong> El mismo mensaje que en JSON pesaba 98 Bytes, en Avro con Schema Registry pesa en torno a <strong>15 Bytes</strong>. Has comprimido tu red y almacenamiento de Kafka en más de un 80% sin usar algoritmos de compresión CPU-intensivos como GZIP. Pura matemática topológica.
+        </div>
+
+        <h2>3. El Fichero `.avsc` y la Evolución (Schema Evolution)</h2>
+        <p>Como no viajan las claves (keys), la estrictez es inquebrantable. El esquema se escribe típicamente en un archivo JSON llamado <code>.avsc</code> (Avro Schema).</p>
+        
+        <pre>{
+  "type": "record",
+  "name": "ClickEvent",
+  "fields": [
+    {"name": "event_type", "type": "string"},
+    {"name": "user_id", "type": "long"},
+    {"name": "timestamp", "type": {"type": "long", "logicalType": "timestamp-millis"}}
+  ]
+}</pre>
+
+        <p><strong>Logical Types:</strong> Ojo al tipo <code>timestamp-millis</code>. Avro es agnóstico del lenguaje. En el cable viaja un inmenso número entero (Long). Pero esta etiqueta matemática (LogicalType) instruye al <code>confluent_kafka</code> de Python para que te instancie un objeto <code>datetime</code> automáticamente, o a Java para darte un <code>Instant</code>.</p>
+
+        <h3>El pánico de la Evolución (Añadiendo columnas)</h3>
+        <p>¿Qué ocurre si Negocio pide que a partir de mañana, todos los <em>ClickEvents</em> manden también el "Sistema Operativo" del usuario?</p>
+        <p>En el mundo JSON, añadirías el campo al Producer y rezarías. En Avro, esto se rige por reglas de compatibilidad (Backward / Forward Compatibility).</p>
+
+        <div class="hi warn">
+            <strong>🔥 REGLA DE SUPERVIVENCIA:</strong> Si modificas tu archivo <code>.avsc</code> para añadir un campo nuevo (<code>os_type</code>), <strong>ESTÁS OBLIGADO A PONERLE UN VALOR POR DEFECTO</strong>. Si no lo haces, romperás toda la compañía.
+        </div>
+
+        <pre>// CORRECTA FORMA DE EVOLUCIONAR EL ESQUEMA:
+{
+  "name": "os_type", 
+  "type": ["null", "string"], 
+  "default": null 
+}</pre>
+        
+        <p><strong>Por qué es Obligatorio el Default:</strong> Imagina que el Producer de Clicks Frontend_v1 todavía no ha sido actualizado, pero el Consumer Backend_v2 acaba de arrancar con el nuevo esquema.</p>
+        <ul>
+            <li>El Producer manda 2 String y 1 Long (payload antiguo).</li>
+            <li>El Consumer usa su mapa nuevo: "Espero leer String, Long, String y... ¿otro String (os_type)?".</li>
+            <li>Como sabe que el Productor usó el "Schema_ID Antiguo" (v1), el Consumer detectará que el campo <code>os_type</code> no viajó fisiológicamente en la red.</li>
+            <li>Al tener configurado <code>"default": null</code>, el Consumer inyecta silenciosamente un `null` en la RAM, sanando el choque de versiones y permitiendo la retrocompatibilidad perfecta (Forward Compatibility).</li>
+        </ul>
+
+    </div>
+
+    <div class="nav-footer">
+        <a href="index.html" class="nav-btn">← Volver al Menú Principal</a>
+        <a href="14_formato_protobuf.html" class="nav-btn">Siguiente: Protobuf vs Avro →</a>
+    </div>
+</body>
+
+</html>

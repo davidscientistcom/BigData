@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Casos de Uso Reales — Flink Bootcamp</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+
+    <nav class="navbar" id="navbar">
+        <div class="nav-inner">
+            <div class="nav-brand"><span class="brand-icon">⚡</span><span class="brand-text">Flink Bootcamp</span></div>
+                        <ul class="nav-links">
+                <li><a href="index.html">Inicio</a></li>
+                <li><a href="conceptos.html">Conceptos</a></li>
+                <li><a href="arquitectura.html">Arquitectura</a></li>
+                <li><a href="streams.html">Streams &amp; Batch</a></li>
+                <li><a href="operadores-visual.html">Operadores</a></li>
+                <li><a href="casos-uso.html" class="active">Casos de Uso</a></li>
+                <li><a href="pyflink.html">PyFlink</a></li>
+                <li><a href="flink-sql.html">Flink SQL</a></li>
+                <li><a href="flink-sql-ejemplos.html">Ejemplos SQL</a></li>
+                <li><a href="sql-vs-datastream.html">SQL vs DataStream</a></li>
+            </ul>
+            <button class="nav-mobile-btn" id="navToggle">☰</button>
+        </div>
+    </nav>
+
+    <div class="breadcrumb">
+        <div class="breadcrumb-inner">
+            <a href="index.html">Inicio</a><span class="breadcrumb-sep">›</span><span>Casos de Uso Reales</span>
+        </div>
+    </div>
+
+    <div class="page-hero">
+        <span class="page-hero-icon">🌍</span>
+        <h1>Casos de Uso <span class="gradient-text">Reales</span></h1>
+        <p>Arquitecturas completas: detección de fraude, análisis de logs, IoT, e-commerce en tiempo real. Así usan
+            Flink las grandes empresas.</p>
+    </div>
+
+    <div class="content">
+
+        <!-- CASO 1: DETECCIÓN DE FRAUDE -->
+        <h2>1. Detección de Fraude Bancario en Tiempo Real</h2>
+        <p>Este es el caso de uso más popular de Flink. Los bancos procesan millones de transacciones al día y necesitan
+            detectar fraude <strong>antes de que el dinero salga de la cuenta</strong>. Cada segundo cuenta.</p>
+
+        <div class="info-box flink">
+            <span class="info-box-icon">🏦</span>
+            <div class="info-box-text">
+                <strong>Empresas que lo usan:</strong> Alibaba (AliPay), PayPal, ING Bank, Banco Santander. El sistema
+                de Alibaba procesa más de <strong>1 millón de transacciones por segundo</strong> durante el Single's Day
+                usando Apache Flink.
+            </div>
+        </div>
+
+        <h3>Señales de fraude que detecta Flink:</h3>
+        <ul>
+            <li><strong>Velocidad inusual:</strong> Más de 5 transacciones en 1 minuto</li>
+            <li><strong>Importe atípico:</strong> Transacción muy superior a la media histórica del usuario</li>
+            <li><strong>Localización imposible:</strong> Compra en Madrid y 10 minutos después en Tokyo</li>
+            <li><strong>Patrón de prueba:</strong> Varias transacciones pequeñas rápidas (testeo de tarjeta robada)</li>
+        </ul>
+
+        <div class="diagram-demo">
+            <span class="diagram-demo-label">Arquitectura: Sistema de detección de fraude con Flink</span>
+            <svg viewBox="0 0 700 160" style="height:160px">
+                <defs>
+                    <marker id="af" markerWidth="7" markerHeight="7" refX="6" refY="3" orient="auto">
+                        <path d="M0,0 L0,6 L8,3 z" fill="rgba(232,66,26,0.8)" />
+                    </marker>
+                </defs>
+                <!-- TPV/App -->
+                <rect x="10" y="55" width="80" height="50" rx="8" fill="rgba(6,182,212,0.2)" stroke="#06b6d4"
+                    stroke-width="1.5" />
+                <text x="50" y="76" text-anchor="middle" fill="#22d3ee" font-size="9" font-weight="700"
+                    font-family="Inter">TPV / App</text>
+                <text x="50" y="90" text-anchor="middle" fill="#64748b" font-size="8"
+                    font-family="Inter">Transacción</text>
+                <!-- Arrow -->
+                <line x1="90" y1="80" x2="135" y2="80" stroke="rgba(232,66,26,0.5)" stroke-width="1.5"
+                    marker-end="url(#af)" />
+                <!-- Kafka -->
+                <rect x="135" y="55" width="80" height="50" rx="8" fill="rgba(245,158,11,0.2)" stroke="#f59e0b"
+                    stroke-width="1.5" />
+                <text x="175" y="76" text-anchor="middle" fill="#fbbf24" font-size="9" font-weight="700"
+                    font-family="Inter">Kafka</text>
+                <text x="175" y="90" text-anchor="middle" fill="#64748b" font-size="8"
+                    font-family="Inter">transactions</text>
+                <!-- Arrow -->
+                <line x1="215" y1="80" x2="260" y2="80" stroke="rgba(232,66,26,0.5)" stroke-width="1.5"
+                    marker-end="url(#af)" />
+                <!-- Flink -->
+                <rect x="260" y="30" width="130" height="100" rx="10" fill="rgba(232,66,26,0.2)" stroke="#e8421a"
+                    stroke-width="2" />
+                <text x="325" y="60" text-anchor="middle" fill="#ff6b47" font-size="11" font-weight="800"
+                    font-family="Inter">Apache Flink</text>
+                <rect x="272" y="68" width="106" height="16" rx="4" fill="rgba(232,66,26,0.3)" />
+                <text x="325" y="79" text-anchor="middle" fill="#fca5a5" font-size="8" font-family="Inter">Pattern
+                    Detection</text>
+                <rect x="272" y="90" width="106" height="16" rx="4" fill="rgba(232,66,26,0.3)" />
+                <text x="325" y="101" text-anchor="middle" fill="#fca5a5" font-size="8" font-family="Inter">Risk
+                    Scoring</text>
+                <rect x="272" y="112" width="106" height="12" rx="4" fill="rgba(232,66,26,0.3)" />
+                <text x="325" y="121" text-anchor="middle" fill="#fca5a5" font-size="8" font-family="Inter">Alert
+                    Generation</text>
+                <!-- Arrows out -->
+                <line x1="390" y1="70" x2="440" y2="50" stroke="rgba(232,66,26,0.5)" stroke-width="1.5"
+                    marker-end="url(#af)" />
+                <line x1="390" y1="100" x2="440" y2="110" stroke="rgba(16,185,129,0.5)" stroke-width="1.5"
+                    marker-end="url(#af)" />
+                <!-- Alert -->
+                <rect x="440" y="25" width="100" height="40" rx="8" fill="rgba(239,68,68,0.2)" stroke="#ef4444"
+                    stroke-width="1.5" />
+                <text x="490" y="43" text-anchor="middle" fill="#f87171" font-size="9" font-weight="700"
+                    font-family="Inter">🚨 Bloquear</text>
+                <text x="490" y="57" text-anchor="middle" fill="#64748b" font-size="8"
+                    font-family="Inter">Tarjeta/Cuenta</text>
+                <!-- Approved -->
+                <rect x="440" y="92" width="100" height="40" rx="8" fill="rgba(16,185,129,0.2)" stroke="#10b981"
+                    stroke-width="1.5" />
+                <text x="490" y="110" text-anchor="middle" fill="#4ade80" font-size="9" font-weight="700"
+                    font-family="Inter">✅ Aprobar</text>
+                <text x="490" y="124" text-anchor="middle" fill="#64748b" font-size="8"
+                    font-family="Inter">Transacción</text>
+                <!-- DB -->
+                <rect x="555" y="25" width="90" height="40" rx="8" fill="rgba(139,92,246,0.2)" stroke="#8b5cf6"
+                    stroke-width="1.5" />
+                <text x="600" y="43" text-anchor="middle" fill="#a78bfa" font-size="9" font-weight="700"
+                    font-family="Inter">Cassandra</text>
+                <text x="600" y="57" text-anchor="middle" fill="#64748b" font-size="8"
+                    font-family="Inter">Historial</text>
+                <line x1="540" y1="45" x2="555" y2="45" stroke="rgba(139,92,246,0.5)" stroke-width="1.5"
+                    marker-end="url(#af)" />
+            </svg>
+        </div>
+
+        <div class="code-block">
+            <div class="code-header">
+                <span class="code-lang">java — Detección: más de 3 transacciones pequeñas seguidas (card testing)</span>
+                <button class="copy-btn" onclick="copyCode(this)">📋 Copiar</button>
+            </div>
+            <pre><code><span class="cmt">// Detecta el patrón: varias transacciones &lt; 5€ en 2 minutos (prueba de tarjeta)</span>
+transactions
+    .<span class="fn">keyBy</span>(<span class="type">Transaction</span>::<span class="fn">getCardNumber</span>)
+    .<span class="fn">window</span>(<span class="fn">TumblingEventTimeWindows</span>.<span class="fn">of</span>(<span class="type">Time</span>.<span class="fn">minutes</span>(<span class="num">2</span>)))
+    .<span class="fn">aggregate</span>(<span class="kw">new</span> <span class="type">AggregateFunction</span>&lt;&gt;() {
+        <span class="kw">public</span> <span class="type">List</span>&lt;<span class="type">Transaction</span>&gt; <span class="fn">add</span>(<span class="type">Transaction</span> tx, <span class="type">List</span>&lt;<span class="type">Transaction</span>&gt; acc) {
+            <span class="kw">if</span> (tx.<span class="fn">getAmount</span>() &lt; <span class="num">5.0</span>) acc.<span class="fn">add</span>(tx);
+            <span class="kw">return</span> acc;
+        }
+        <span class="kw">public</span> <span class="type">CardTestAlert</span> <span class="fn">getResult</span>(<span class="type">List</span>&lt;<span class="type">Transaction</span>&gt; acc) {
+            <span class="kw">if</span> (acc.<span class="fn">size</span>() &gt;= <span class="num">3</span>) <span class="kw">return new</span> <span class="fn">CardTestAlert</span>(acc);
+            <span class="kw">return null</span>;
+        }
+    })
+    .<span class="fn">filter</span>(alert -&gt; alert != <span class="kw">null</span>)
+    .<span class="fn">addSink</span>(fraudAlertSink);</code></pre>
+        </div>
+
+        <!-- CASO 2: IOT -->
+        <h2>2. Monitorización IoT Industrial</h2>
+        <p>Las fábricas modernas tienen miles de sensores que envían datos continuamente: temperatura, presión,
+            vibración, consumo eléctrico. Flink procesa estos streams para detectar anomalías y predecir fallos antes de
+            que ocurran.</p>
+
+        <div class="info-box info">
+            <span class="info-box-icon">🏭</span>
+            <div class="info-box-text">
+                <strong>Caso real:</strong> Volkswagen usa Apache Flink para monitorizar sus líneas de producción en
+                tiempo real. Procesan datos de <strong>más de 10.000 sensores simultáneamente</strong> y detectan
+                problemas antes de que la pieza defectuosa llegue al siguiente proceso.
+            </div>
+        </div>
+
+        <div class="code-block">
+            <div class="code-header">
+                <span class="code-lang">java — Flink IoT: detectar temperatura anómala y correlacionar con
+                    vibración</span>
+                <button class="copy-btn" onclick="copyCode(this)">📋 Copiar</button>
+            </div>
+            <pre><code><span class="type">DataStream</span>&lt;<span class="type">SensorReading</span>&gt; sensorStream = env
+    .<span class="fn">addSource</span>(<span class="kw">new</span> <span class="fn">MQTTSource</span>(<span class="str">"factory/sensors/#"</span>));
+
+<span class="cmt">// 1. Filtrar solo sensores de temperatura de zona A</span>
+<span class="type">DataStream</span>&lt;<span class="type">SensorReading</span>&gt; tempZoneA = sensorStream
+    .<span class="fn">filter</span>(s -&gt; s.<span class="fn">getType</span>().<span class="fn">equals</span>(<span class="str">"TEMP"</span>) &amp;&amp; s.<span class="fn">getZone</span>().<span class="fn">equals</span>(<span class="str">"A"</span>));
+
+<span class="cmt">// 2. Media de temperatura por máquina en ventana de 30 segundos</span>
+<span class="type">DataStream</span>&lt;<span class="type">MachineStats</span>&gt; tempStats = tempZoneA
+    .<span class="fn">keyBy</span>(<span class="type">SensorReading</span>::<span class="fn">getMachineId</span>)
+    .<span class="fn">window</span>(<span class="fn">TumblingEventTimeWindows</span>.<span class="fn">of</span>(<span class="type">Time</span>.<span class="fn">seconds</span>(<span class="num">30</span>)))
+    .<span class="fn">aggregate</span>(<span class="kw">new</span> <span class="fn">AvgTempAggregator</span>());
+
+<span class="cmt">// 3. Alerta si temperatura media supera 85°C</span>
+tempStats
+    .<span class="fn">filter</span>(stats -&gt; stats.<span class="fn">getAvgTemp</span>() > <span class="num">85.0</span>)
+    .<span class="fn">map</span>(stats -&gt; <span class="kw">new</span> <span class="fn">CriticalAlert</span>(
+        stats.<span class="fn">getMachineId</span>(),
+        <span class="str">"TEMPERATURA CRÍTICA: "</span> + stats.<span class="fn">getAvgTemp</span>() + <span class="str">"°C"</span>,
+        <span class="type">AlertLevel</span>.<span class="prop">CRITICAL</span>
+    ))
+    .<span class="fn">addSink</span>(alertingSink);</code></pre>
+        </div>
+
+        <!-- CASO 3: E-COMMERCE -->
+        <h2>3. Dashboard de Ventas en Tiempo Real (E-commerce)</h2>
+        <p>Las grandes tiendas online necesitan dashboards actualizados en tiempo real: ventas por producto, categoría,
+            región, comparación con el año anterior... Todo calculado mientras los usuarios compran.</p>
+
+        <div class="info-box tip">
+            <span class="info-box-icon">🛒</span>
+            <div class="info-box-text">
+                <strong>Caso real:</strong> Durante el Black Friday de 2023, Amazon procesó más de <strong>350.000
+                    pedidos por hora</strong>. Sistemas basados en Flink actualizan en tiempo real los rankings de
+                productos más vendidos, el inventario y las recomendaciones.
+            </div>
+        </div>
+
+        <div class="code-block">
+            <div class="code-header">
+                <span class="code-lang">sql — Flink SQL: ranking de productos en tiempo real</span>
+                <button class="copy-btn" onclick="copyCode(this)">📋 Copiar</button>
+            </div>
+            <pre><code><span class="cmt">-- Tabla fuente: pedidos llegando de Kafka</span>
+<span class="kw">CREATE TABLE</span> <span class="fn">orders</span> (
+    order_id    <span class="type">BIGINT</span>,
+    product_id  <span class="type">STRING</span>,
+    category    <span class="type">STRING</span>,
+    amount      <span class="type">DECIMAL</span>(<span class="num">10</span>, <span class="num">2</span>),
+    quantity    <span class="type">INT</span>,
+    order_ts    <span class="type">TIMESTAMP</span>(<span class="num">3</span>),
+    <span class="kw">WATERMARK FOR</span> order_ts <span class="kw">AS</span> order_ts - <span class="type">INTERVAL</span> <span class="str">'10'</span> <span class="type">SECOND</span>
+) <span class="kw">WITH</span> (<span class="str">'connector'</span> = <span class="str">'kafka'</span>, <span class="str">'topic'</span> = <span class="str">'orders'</span>, <span class="str">'format'</span> = <span class="str">'json'</span>);
+
+<span class="cmt">-- Top 5 productos más vendidos en la última hora</span>
+<span class="kw">SELECT</span> product_id, <span class="fn">SUM</span>(quantity) <span class="kw">AS</span> total_units, <span class="fn">SUM</span>(amount) <span class="kw">AS</span> revenue
+<span class="kw">FROM</span> orders
+<span class="kw">WHERE</span> order_ts &gt;= <span class="fn">CURRENT_TIMESTAMP</span> - <span class="type">INTERVAL</span> <span class="str">'1'</span> <span class="type">HOUR</span>
+<span class="kw">GROUP BY</span> product_id
+<span class="kw">ORDER BY</span> total_units <span class="kw">DESC</span>
+<span class="kw">LIMIT</span> <span class="num">5</span>;
+
+<span class="cmt">-- Ventas por categoría en ventana tumbling de 5 minutos</span>
+<span class="kw">SELECT</span>
+    category,
+    <span class="fn">TUMBLE_START</span>(order_ts, <span class="type">INTERVAL</span> <span class="str">'5'</span> <span class="type">MINUTE</span>) <span class="kw">AS</span> window_start,
+    <span class="fn">SUM</span>(amount)   <span class="kw">AS</span> total_revenue,
+    <span class="fn">COUNT</span>(*)      <span class="kw">AS</span> num_orders
+<span class="kw">FROM</span> orders
+<span class="kw">GROUP BY</span> category, <span class="fn">TUMBLE</span>(order_ts, <span class="type">INTERVAL</span> <span class="str">'5'</span> <span class="type">MINUTE</span>);</code></pre>
+        </div>
+
+        <!-- CASO 4: LOG ANALYTICS -->
+        <h2>4. Análisis de Logs en Tiempo Real</h2>
+        <p>Plataformas como Netflix, Uber y Spotify generan terabytes de logs al día. Flink procesa estos logs en tiempo
+            real para detectar errores, monitorizar el rendimiento y generar alertas.</p>
+
+        <div class="code-block">
+            <div class="code-header">
+                <span class="code-lang">java — Detectar pico de errores 500 en microservicios</span>
+                <button class="copy-btn" onclick="copyCode(this)">📋 Copiar</button>
+            </div>
+            <pre><code><span class="type">DataStream</span>&lt;<span class="type">LogEvent</span>&gt; logs = env
+    .<span class="fn">addSource</span>(<span class="kw">new</span> <span class="fn">FlinkKafkaConsumer</span>(<span class="str">"app-logs"</span>, schema, props));
+
+<span class="cmt">// Contar errores 500 por servicio en ventanas de 1 minuto</span>
+logs
+    .<span class="fn">filter</span>(log -&gt; log.<span class="fn">getStatusCode</span>() == <span class="num">500</span>)
+    .<span class="fn">map</span>(log -&gt; <span class="type">Tuple2</span>.<span class="fn">of</span>(log.<span class="fn">getServiceName</span>(), <span class="num">1</span>))
+    .<span class="fn">keyBy</span>(t -&gt; t.f0)
+    .<span class="fn">window</span>(<span class="fn">TumblingEventTimeWindows</span>.<span class="fn">of</span>(<span class="type">Time</span>.<span class="fn">minutes</span>(<span class="num">1</span>)))
+    .<span class="fn">sum</span>(<span class="num">1</span>)
+    .<span class="fn">filter</span>(t -&gt; t.f1 > <span class="num">100</span>)   <span class="cmt">// más de 100 errores en 1 minuto</span>
+    .<span class="fn">map</span>(t -&gt; <span class="kw">new</span> <span class="fn">ServiceAlert</span>(
+        t.f0,
+        <span class="str">"PICO DE ERRORES: "</span> + t.f1 + <span class="str">" errores en el último minuto"</span>
+    ))
+    .<span class="fn">addSink</span>(pagerDutySink);  <span class="cmt">// notificar al equipo de guardia</span></code></pre>
+        </div>
+
+        <!-- GRANDES EMPRESAS -->
+        <h2>5. Quién usa Apache Flink en Producción</h2>
+
+        <div class="concept-grid">
+            <div class="concept-card orange">
+                <span class="concept-icon">🛍️</span>
+                <h3>Alibaba</h3>
+                <p>Principal contribuidor de Flink. Lo usan para procesar <strong>más de 1 billón de eventos al
+                        día</strong>: detección de fraude, recomendaciones, gestión de inventario.</p>
+            </div>
+            <div class="concept-card amber">
+                <span class="concept-icon">🎵</span>
+                <h3>Uber</h3>
+                <p>Usa Flink para <strong>predicción de demanda de taxis</strong>, detección de fraude en pagos y
+                    análisis en tiempo real de la flota de conductores.</p>
+            </div>
+            <div class="concept-card green">
+                <span class="concept-icon">🎬</span>
+                <h3>Netflix</h3>
+                <p>Usa Flink para <strong>análisis de logs en tiempo real</strong>, monitorización de la calidad de
+                    streaming y detección de problemas en su infraestructura CDN.</p>
+            </div>
+            <div class="concept-card cyan">
+                <span class="concept-icon">🚖</span>
+                <h3>Didi (China)</h3>
+                <p>El mayor servicio de ride-sharing del mundo usa Flink para <strong>optimizar el matching
+                        conductor-pasajero</strong> en tiempo real con baja latencia.</p>
+            </div>
+            <div class="concept-card purple">
+                <span class="concept-icon">📱</span>
+                <h3>LinkedIn</h3>
+                <p>Usa Flink para <strong>personalización en tiempo real</strong> del feed de noticias, notificaciones y
+                    recomendaciones de conexiones.</p>
+            </div>
+            <div class="concept-card rose">
+                <span class="concept-icon">🏦</span>
+                <h3>ING Bank</h3>
+                <p>Uno de los bancos pioneros en usar Flink para <strong>detección de fraude en tiempo real</strong> con
+                    latencias inferiores a 100 milisegundos.</p>
+            </div>
+        </div>
+
+        <h2>6. Resumen: ¿Cuándo elegir Flink?</h2>
+
+        <div class="table-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Necesidad</th>
+                        <th>¿Flink?</th>
+                        <th>Alternativa</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Latencia &lt; 100ms</td>
+                        <td><span class="badge badge-green">✅ Ideal</span></td>
+                        <td>Solo Flink lo garantiza</td>
+                    </tr>
+                    <tr>
+                        <td>Procesamiento stateful complejo</td>
+                        <td><span class="badge badge-green">✅ Ideal</span></td>
+                        <td>Spark (con más código)</td>
+                    </tr>
+                    <tr>
+                        <td>Event Time y eventos tardíos</td>
+                        <td><span class="badge badge-green">✅ Ideal</span></td>
+                        <td>Spark Streaming (limitado)</td>
+                    </tr>
+                    <tr>
+                        <td>Batch + ML + SQL familiar</td>
+                        <td><span class="badge badge-amber">⚠️ Posible</span></td>
+                        <td>Spark (más maduro para esto)</td>
+                    </tr>
+                    <tr>
+                        <td>Latencia de segundos aceptable</td>
+                        <td><span class="badge badge-amber">⚠️ Posible</span></td>
+                        <td>Spark Streaming suficiente</td>
+                    </tr>
+                    <tr>
+                        <td>Solo procesamiento batch histórico</td>
+                        <td><span class="badge badge-red">❌ No ideal</span></td>
+                        <td>Spark, Hive, Trino</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="info-box tip">
+            <span class="info-box-icon">🎓</span>
+            <div class="info-box-text">
+                <strong>Para los alumnos:</strong> Apache Flink es una de las herramientas más demandadas en el mercado
+                de Big Data en 2024. Dominar Flink abre puertas a roles como <strong>Data Engineer Senior</strong>,
+                <strong>Streaming Architect</strong> y <strong>Platform Engineer</strong> en empresas top. El salario
+                medio de un Data Engineer con experiencia en Flink en España supera los <strong>60.000€
+                    anuales</strong>.
+            </div>
+        </div>
+
+        <div style="display:flex; gap:1rem; flex-wrap:wrap; margin-top:2rem">
+            <a href="index.html" class="btn btn-primary">← Volver al Inicio</a>
+            <a href="operadores.html" class="btn btn-outline">← Operadores</a>
+        </div>
+    </div>
+
+    <footer class="footer">
+        <div class="footer-inner">
+            <div class="footer-brand">
+                <div class="brand-logo">⚡ Flink Bootcamp</div>
+                <p>Apuntes de Apache Flink para proyectos Big Data. Ejemplos reales de las empresas más grandes del
+                    mundo.</p>
+            </div>
+            <div class="footer-links">
+                <h5>Secciones</h5>
+                <ul>
+                    <li><a href="index.html">Inicio</a></li>
+                    <li><a href="conceptos.html">Conceptos</a></li>
+                    <li><a href="arquitectura.html">Arquitectura</a></li>
+                    <li><a href="streams.html">Streams &amp; Batch</a></li>
+                    <li><a href="operadores-visual.html">Operadores</a></li>
+                    <li><a href="casos-uso.html">Casos de Uso</a></li>
+                    <li><a href="pyflink.html">PyFlink</a></li>
+                <li><a href="flink-sql.html">Flink SQL</a></li>
+                <li><a href="flink-sql-ejemplos.html">Ejemplos SQL</a></li>
+                <li><a href="sql-vs-datastream.html">SQL vs DataStream</a></li>
+                </ul>
+            </div>
+            <div class="footer-links">
+                <h5>Recursos</h5>
+                <ul>
+                    <li><a href="https://flink.apache.org/docs/" target="_blank">📘 Flink Docs</a></li>
+                    <li><a href="https://nightlies.apache.org/flink/flink-docs-stable/" target="_blank">🔷 API
+                            Reference</a></li>
+                    <li><a href="https://flink.apache.org/what-is-flink/use-cases/" target="_blank">🎓 Casos de Uso
+                            Oficiales</a></li>
+                </ul>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p>Flink Bootcamp — Big Data · Apache Flink Stream Processing</p>
+        </div>
+    </footer>
+
+    <script>
+        const navbar = document.getElementById('navbar');
+        window.addEventListener('scroll', () => { navbar.classList.toggle('scrolled', window.scrollY > 50); });
+        document.getElementById('navToggle').addEventListener('click', () => { document.querySelector('.nav-links').classList.toggle('open'); });
+        function copyCode(btn) {
+            const pre = btn.closest('.code-block').querySelector('pre');
+            navigator.clipboard.writeText(pre.innerText).then(() => {
+                btn.textContent = '✅ Copiado'; btn.classList.add('copied');
+                setTimeout(() => { btn.textContent = '📋 Copiar'; btn.classList.remove('copied'); }, 2000);
+            });
+        }
+    </script>
+</body>
+
+</html>

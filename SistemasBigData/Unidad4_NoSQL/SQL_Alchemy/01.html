@@ -1,0 +1,293 @@
+<!doctype html>
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+    <title>Introducción a SQLAlchemy - Parte 1</title>
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/5.0.4/reset.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/5.0.4/reveal.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/5.0.4/theme/dracula.min.css" id="theme">
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+
+    <style>
+        :root {
+            --neon-green: #39ff14;
+            --neon-blue: #04d9ff;
+            --db-red: #ff5555;
+            --db-orange: #ffb86c;
+            --db-blue: #8be9fd;
+        }
+
+        .reveal {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 30px; /* Tamaño base ajustado para mejor escalado */
+        }
+
+        .reveal h1, .reveal h2, .reveal h3, .reveal h4, .reveal h5, .reveal h6 {
+            text-transform: none;
+            font-family: 'Montserrat', sans-serif;
+        }
+
+        .reveal h1 { color: var(--neon-green); font-size: 2.5em; }
+        .accent { color: var(--neon-blue); font-weight: bold; }
+        .danger { color: var(--db-red); }
+
+        /* Mejoras en los bloques de código para que no se salgan */
+        .reveal pre {
+            box-shadow: 0 0 15px rgba(0,0,0,0.5);
+            border-radius: 8px;
+            width: 90%; /* Reducido un poco para evitar bordes */
+            margin: 20px auto;
+        }
+        .reveal pre code {
+            padding: 15px;
+            font-family: 'Fira Code', 'Consolas', monospace;
+            font-size: 0.9em; /* Letra de código un pelín más pequeña para que quepa más */
+            line-height: 1.3;
+            max-height: 500px; /* Evita que el código sea más alto que la pantalla */
+        }
+
+        /* Estilos para comparativas de SQL */
+        .sql-comparison {
+            display: flex;
+            justify-content: space-between;
+            gap: 15px;
+            margin-top: 20px;
+            align-items: flex-start;
+        }
+        .sql-block {
+            flex: 1;
+            font-size: 0.65em; /* Ajuste para que las 3 columnas quepan bien */
+            background: rgba(255, 255, 255, 0.05);
+            padding: 10px;
+            border-radius: 8px;
+        }
+        .sql-block pre {
+            width: 100%;
+            margin: 10px 0;
+            box-shadow: none;
+        }
+        .sql-block h4 { color: var(--db-orange); margin-bottom: 5px; font-size: 1.2em; }
+        .sql-block.maria h4 { color: var(--db-orange); }
+        .sql-block.postgres h4 { color: var(--db-blue); }
+        .sql-block.sqlserver h4 { color: var(--db-red); }
+
+        /* Listas con estilo */
+        .reveal ul.custom-list li {
+            list-style-type: none;
+            padding-left: 20px;
+            position: relative;
+            margin-bottom: 10px;
+        }
+        .reveal ul.custom-list li::before {
+            content: '⚡';
+            position: absolute;
+            left: -20px;
+            color: var(--neon-green);
+        }
+    </style>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+<div class="reveal">
+    <div class="slides">
+
+        <section data-background-gradient="linear-gradient(to bottom right, #282a36, #1a1c2c)">
+            <h1>SQLAlchemy</h1>
+            <h3>El Alquimista de Datos en Python</h3>
+            <p><small>Parte 1: El Problema de SQL y la Introducción</small></p>
+            <div style="font-size: 3em; margin-top: 20px;">🐍 ⚗️ 🛢️</div>
+        </section>
+
+        <section>
+            <h2>La "Mentira" Universal</h2>
+            <p>Nos dicen que SQL es un estándar (ANSI SQL).</p>
+            <p class="fragment danger"><strong>Spoiler: NO LO ES.</strong></p>
+            <p class="fragment">Cada motor de base de datos (RDBMS) tiene su propio "dialecto".</p>
+            <ul class="custom-list fragment">
+                <li>Distintas formas de entrecomillar identificadores.</li>
+                <li>Diferentes funciones para fechas y cadenas.</li>
+                <li>Sintaxis incompatible para paginación (LIMIT/OFFSET).</li>
+            </ul>
+        </section>
+
+        <section>
+            <h3>Problema 1: La pesadilla de las comillas</h3>
+            <p>Queremos seleccionar la tabla `usuario` y la columna `orden`.</p>
+            <p><small><em>(Palabras que a veces son reservadas)</em></small></p>
+
+            <div class="sql-comparison">
+                <div class="sql-block maria fragment fade-up">
+                    <h4>MariaDB / MySQL</h4>
+                    <pre><code class="language-sql">
+SELECT `orden` 
+FROM `usuario` 
+WHERE `id` = 1;
+                    </code></pre>
+                    <small>Usa backticks (`)</small>
+                </div>
+
+                <div class="sql-block postgres fragment fade-up">
+                    <h4>PostgreSQL / Oracle</h4>
+                    <pre><code class="language-sql">
+SELECT "orden" 
+FROM "usuario" 
+WHERE "id" = 1;
+                    </code></pre>
+                    <small>Usa comillas dobles (")</small>
+                </div>
+
+                <div class="sql-block sqlserver fragment fade-up">
+                    <h4>SQL Server (T-SQL)</h4>
+                    <pre><code class="language-sql">
+SELECT [orden] 
+FROM [usuario] 
+WHERE [id] = 1;
+                    </code></pre>
+                    <small>Usa corchetes ([ ])</small>
+                </div>
+            </div>
+            <p class="fragment danger" style="margin-top: 1em;">Si ejecutas el SQL de uno en otro, 💥 error de sintaxis.</p>
+        </section>
+
+        <section>
+            <h3>Problema 2: "Solo quiero 10 filas"</h3>
+            <p>Algo tan simple como limitar resultados varía drásticamente.</p>
+
+            <div style="font-size: 0.8em;">
+            <div class="fragment">
+                <span class="accent">MySQL / PostgreSQL / SQLite:</span>
+                <pre><code class="language-sql" style="width: 100%">SELECT * FROM usuarios LIMIT 10;</code></pre>
+            </div>
+
+            <div class="fragment">
+                <span class="accent">SQL Server (Antiguo/T-SQL):</span>
+                <pre><code class="language-sql" style="width: 100%">SELECT TOP 10 * FROM usuarios;</code></pre>
+            </div>
+
+            <div class="fragment">
+                <span class="accent">Oracle (Moderno) / Estándar ANSI reciente:</span>
+                <pre><code class="language-sql" style="width: 100%">SELECT * FROM usuarios FETCH FIRST 10 ROWS ONLY;</code></pre>
+            </div>
+            </div>
+            <p class="fragment">¿Vas a llenar tu código Python de <code>if db == 'oracle': ... elif db == 'mysql': ...</code>?</p>
+        </section>
+
+        <section data-background-gradient="linear-gradient(to bottom right, #1a1c2c, #282a36)">
+            <h2>La Solución: <span class="accent">SQLAlchemy</span></h2>
+            <p>Es el <strong>kit de herramientas SQL</strong> y <strong>ORM</strong> (Object Relational Mapper) más potente para Python.</p>
+
+            <div class="fragment fade-in" style="background: rgba(255,255,255,0.05); padding: 20px; border-radius: 10px; margin-top: 30px;">
+                <h4>¿Qué hace?</h4>
+                <ul class="custom-list">
+                    <li>Actúa como un <strong>traductor universal</strong> entre tu código Python y la base de datos.</li>
+                    <li>Abstrae las diferencias de los dialectos SQL.</li>
+                    <li>Te permite escribir consultas en Python puro, no en cadenas de texto SQL.</li>
+                </ul>
+            </div>
+        </section>
+
+        <section>
+            <h3>La manera del Alquimista</h3>
+            <p>Tú escribes esto una sola vez en Python:</p>
+            <pre><code class="language-python" data-trim data-noescape>
+# Definimos la estructura abstracta
+from sqlalchemy import table, column, select
+
+user_table = table("usuario", column("id"), column("orden"))
+
+# Creamos la consulta en Python
+stmt = select(user_table).where(user_table.c.id == 1)
+
+# ¡Alchemy genera el SQL correcto según la DB conectada!
+# print(stmt)
+            </code></pre>
+
+            <div class="fragment fade-up" style="background: #212330; padding: 15px; border-radius: 8px; border-left: 5px solid var(--neon-green)">
+                <p style="margin: 0; font-size: 0.8em;">
+                    Si te conectas a MySQL, genera los backticks (`).<br>
+                    Si te conectas a Postgres, genera comillas dobles (").<br>
+                    <strong>Automáticamente.</strong>
+                </p>
+            </div>
+        </section>
+
+        <section>
+            <h3>No es solo un ORM</h3>
+            <p>SQLAlchemy tiene dos capas principales:</p>
+            <div style="display: flex; gap: 20px; margin-top: 30px;">
+                <div style="flex: 1; background: rgba(4, 217, 255, 0.1); padding: 20px; border-radius: 10px;">
+                    <h4 class="accent">El Core (Núcleo)</h4>
+                    <p style="font-size: 0.7em;">Es la capa base. Maneja la conexión, los dialectos y te permite construir consultas SQL usando objetos de Python (como vimos en la diapositiva anterior). Es más cercano al SQL puro.</p>
+                </div>
+                <div style="flex: 1; background: rgba(57, 255, 20, 0.1); padding: 20px; border-radius: 10px;">
+                    <h4 style="color: var(--neon-green)">El ORM</h4>
+                    <p style="font-size: 0.7em;">Construido sobre el Core. Mapea tus *clases* de Python a *tablas* de base de datos. Trabajas con objetos de dominio, no con filas y columnas directamente.</p>
+                </div>
+            </div>
+        </section>
+
+        <section>
+            <h2>Instalación</h2>
+            <p>Es tan fácil como cualquier paquete de Python.</p>
+            <pre><code class="language-bash">
+# Instalar SQLAlchemy
+pip install SQLAlchemy
+
+# PERO, también necesitas el "driver" para tu base de datos.
+# Por ejemplo:
+
+# Para PostgreSQL
+pip install psycopg2-binary
+
+# Para MySQL/MariaDB
+pip install pymysql
+            </code></pre>
+            <p class="fragment"><small>SQLAlchemy no incluye los drivers de conexión, los usa.</small></p>
+        </section>
+
+        <section>
+            <h2>Resumen Parte 1</h2>
+            <ul>
+                <li>El SQL "estándar" es un mito problemático en la práctica.</li>
+                <li>Los dialectos difieren en comillas, paginación y tipos de datos.</li>
+                <li>SQLAlchemy es el traductor que unifica estas diferencias usando Python.</li>
+            </ul>
+            <h4 class="accent" style="margin-top: 40px;">En la Parte 2: Conectándonos y nuestra primera consulta "Core".</h4>
+        </section>
+
+    </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/5.0.4/reveal.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/5.0.4/plugin/highlight/highlight.min.js"></script>
+
+<script>
+    // Inicialización de Reveal.js CON CORRECCIÓN DE TAMAÑO
+    Reveal.initialize({
+        controls: true,
+        progress: true,
+        center: true,
+        hash: true,
+        
+        // CONFIGURACIÓN DE ESCALADO AÑADIDA
+        // Esto asegura que la presentación quepa en cualquier pantalla
+        width: 960,
+        height: 700,
+        margin: 0.1, // Margen alrededor del contenido
+        minScale: 0.2, // Permite hacerse muy pequeña si es necesario
+        maxScale: 2.0, // Limita cuánto puede crecer
+
+        transition: 'slide', 
+
+        // Plugins
+        plugins: [ RevealHighlight ]
+    });
+</script>
+
+</body>
+</html>

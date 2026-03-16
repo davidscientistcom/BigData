@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flink SQL desde Cero — Apache Flink Bootcamp</title>
+    <meta name="description"
+        content="Aprende cómo funciona Flink SQL desde cero. Tablas dinámicas, consultas continuas y cómo usar SQL estándar para procesar streams infinitos en tiempo real con Apache Flink.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+    <!-- Prism.js for syntax highlighting -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet" />
+</head>
+
+<body>
+
+    <!-- NAVBAR -->
+    <nav class="navbar" id="navbar">
+        <div class="nav-inner">
+            <div class="nav-brand">
+                <span class="brand-icon">⚡</span>
+                <span class="brand-text">Flink Bootcamp</span>
+            </div>
+            <ul class="nav-links">
+                <li><a href="index.html">Inicio</a></li>
+                <li><a href="conceptos.html">Conceptos</a></li>
+                <li><a href="arquitectura.html">Arquitectura</a></li>
+                <li><a href="streams.html">Streams &amp; Batch</a></li>
+                <li><a href="operadores-visual.html">Operadores</a></li>
+                <li><a href="casos-uso.html">Casos de Uso</a></li>
+                <li><a href="pyflink.html">PyFlink</a></li>
+                <li><a href="flink-sql.html" class="active">Flink SQL</a></li>
+                <li><a href="flink-sql-ejemplos.html">Ejemplos SQL</a></li>
+                <li><a href="sql-vs-datastream.html">SQL vs DataStream</a></li>
+            </ul>
+            <button class="nav-mobile-btn" id="navToggle">☰</button>
+        </div>
+    </nav>
+
+    <!-- HEADER / HERO -->
+    <header class="section section-dark" style="padding-top: 8rem; padding-bottom: 4rem;">
+        <div class="container">
+            <div class="hero-badge">
+                <span class="badge-dot" style="background-color: var(--primary);"></span>
+                SQL Relacional en Tiempo Real
+            </div>
+            <h1 class="hero-title" style="font-size: 3rem; margin-bottom: 1rem;">
+                Entendiendo <span class="gradient-text">Flink SQL</span>
+            </h1>
+            <p class="hero-desc" style="max-width: 800px; text-align: left; margin: 0;">
+                El DataStream API es potente, pero a veces escribir código en Java o Python es excesivo. Flink ofrece la <strong>Table API</strong> y <strong>Flink SQL</strong>, permitiéndote escribir consultas SQL estándar que se ejecutan <strong>continuamente</strong> sobre flujos infinitos de datos.
+            </p>
+        </div>
+    </header>
+
+    <div class="content">
+            
+            <section class="content-section reveal" id="intro">
+                <h2>¿Por qué SQL para Streaming?</h2>
+                <p>SQL es el lenguaje universal para manipular datos. Originalmente fue diseñado para bases de datos estáticas (datos en reposo), pero Flink ha conseguido adaptarlo para procesar <strong>datos en movimiento (streams)</strong>.</p>
+                
+                <div class="info-box success">
+                    <span class="info-box-icon">🎯</span>
+                    <div class="info-box-text">
+                        <strong>La magia de Flink SQL:</strong> Escribes la <strong>misma consulta SQL</strong> que harías en PostgreSQL o MySQL, pero Flink se encarga de que devuelva resultados que se van actualizando en tiempo real a medida que entran nuevos eventos.
+                    </div>
+                </div>
+
+                <h3>Las ventajas principales</h3>
+                <ul>
+                    <li><strong>Declarativo:</strong> Dices <em>qué</em> quieres (ej: "suma de ventas por país"), no <em>cómo</em> calcularlo (usando bucles, estados, triggers...).</li>
+                    <li><strong>Optimizador integrado:</strong> Flink tiene un motor llamado <em>Catalyst</em> (heredado de Calcite) que optimiza las consultas SQL automáticamente antes de ejecutarlas, a menudo logrando mejor rendimiento que el código manual.</li>
+                    <li><strong>Accesibilidad:</strong> Accesible para Analistas de Datos y Data Engineers sin experiencia en programación funcional recursiva de bajo nivel.</li>
+                    <li><strong>Unificación Batch/Stream:</strong> La misma consulta sirve para procesar meses históricos (batch) y para conectarse al topic de Kafka en directo (stream) sin tocar una coma.</li>
+                </ul>
+            </section>
+
+            <section class="content-section reveal" id="tablas-dinamicas">
+                <h2>El Concepto Clave: Tablas Dinámicas</h2>
+                <p>En una base de datos normal, haces una consulta sobre los datos que existen en <em>ese exacto momento</em> y obtienes un resultado estático. ¿Pero cómo aplicamos SQL a una cola infinita de mensajes (como Apache Kafka)?</p>
+                
+                <p>Flink resuelve esto introduciendo las <strong>Tablas Dinámicas (Dynamic Tables)</strong> y las <strong>Consultas Continuas (Continuous Queries)</strong>.</p>
+
+                <div class="table-responsive">
+                    <table class="comparison-table">
+                        <thead>
+                            <tr>
+                                <th>El Mundo Batch Discreto</th>
+                                <th>El Mundo Streaming de Flink SQL</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Datos almacenados en disco y terminados.</td>
+                                <td>Una cola infinita de eventos entrando (Stream).</td>
+                            </tr>
+                            <tr>
+                                <td>La tabla es una "foto" de un instante.</td>
+                                <td>La <strong>Tabla Dinámica</strong> cambia a cada milisegundo.</td>
+                            </tr>
+                            <tr>
+                                <td>Haces SELECT -> Ejecuta -> Termina.</td>
+                                <td>Haces SELECT -> Empieza a escuchar -> <strong>Nunca termina</strong>.</td>
+                            </tr>
+                            <tr>
+                                <td>El resultado es otra tabla estática.</td>
+                                <td>El resultado es un <strong>Stream de Cambios (Changelog stream)</strong>.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="pipeline" style="margin: 2rem 0; font-size: 0.9rem;">
+                    <div class="pipeline-step">
+                        <span class="ps-icon">🌊</span>
+                        <strong>1. Stream</strong>
+                        <span class="ps-sub">Llegan eventos (Kafka)</span>
+                    </div>
+                    <div class="pipeline-arrow">🔄</div>
+                    <div class="pipeline-step">
+                        <span class="ps-icon">📊</span>
+                        <strong>2. Tabla Dinámica</strong>
+                        <span class="ps-sub">Flink lo ve como Tabla</span>
+                    </div>
+                    <div class="pipeline-arrow">⚙️</div>
+                    <div class="pipeline-step">
+                        <span class="ps-icon">🔍</span>
+                        <strong>3. Continuous Query</strong>
+                        <span class="ps-sub">Se ejecuta tu SQL</span>
+                    </div>
+                    <div class="pipeline-arrow">🔄</div>
+                    <div class="pipeline-step" style="background: rgba(16, 185, 129, 0.1); border-color: rgba(16, 185, 129, 0.3);">
+                        <span class="ps-icon">✨</span>
+                        <strong>4. Stream de Salida</strong>
+                        <span class="ps-sub">Resultados actualizados</span>
+                    </div>
+                </div>
+
+                <h3>¿Qué es el Changelog Stream (Retracciones)?</h3>
+                <p>Imagina que escribes esta consulta SQL en Flink:</p>
+                <pre><code class="language-sql">SELECT pais, COUNT(*) AS visitas FROM Clicks GROUP BY pais;</code></pre>
+                
+                <p>A medida que entran clicks en tiempo real, el conteo por país cambia constantemente. Para emitir este resultado a un sistema externo (como otro topic de Kafka o una base de datos PostgreSQL), Flink genera un <strong>Stream de Cambios</strong> que no solo "inserta" eventos, sino que tiene mensajes especiales de <strong>Retracción (Delete/Update Antes)</strong> y mensajes de <strong>Inserción (Update Después)</strong>.</p>
+                
+                <ul>
+                    <li><strong>Append-only stream:</strong> Si haces un simple <code>SELECT * WHERE pais='ES'</code>, Flink simplemente empuja cada evento válido hacia adelante. Nunca cambia eventos anteriores.</li>
+                    <li><strong>Retract stream:</strong> Si usas <code>GROUP BY</code>, <code>COUNT</code> o <code>SUM</code>, cuando llega un nuevo evento Flink "deshace" el resultado anterior enviando un mensaje <code>-U</code> (Update Before) y envía el nuevo con <code>+U</code> (Update After).</li>
+                </ul>
+            </section>
+
+            <section class="content-section reveal" id="tiempo">
+                <h2>El Tiempo en SQL (Time Attributes)</h2>
+                <p>Cuando trabajamos en SQL con datos estáticos, agrupar por mes o año es sencillo porque las fechas ya están fijas en una columna varchar o timestamp. En Streaming, el <strong>Tiempo</strong> dicta cuándo comienza y cierra una "ventana temporal" sobre el flujo infinito.</p>
+
+                <p>Para hacer agrupaciones de tiempo (como "cuenta de clicks de los últimos 5 minutos"), Flink SQL requiere que declares una columna especial en la creación de tu tabla (DDL) que actúe como <strong>Time Attribute</strong>.</p>
+
+                <p>Hay dos formas de definir el tiempo en Flink SQL:</p>
+
+                <div class="mini-card" style="margin-bottom: 1rem;">
+                    <h5 style="color: var(--primary); margin-top: 0;">1. Event Time (Tiempo del Evento)</h5>
+                    <p style="margin-bottom: 0.5rem; font-size: 0.95rem;">El tiempo real en que ocurrió la acción en el dispositivo o aplicación de origen, extraído del propio objeto JSON o mensaje. Requiere el uso de <strong>Watermarks</strong>.</p>
+                    <pre style="margin: 0;"><code class="language-sql">CREATE TABLE logs (
+  usuario_id INT,
+  evento STRING,
+  tiempo_accion TIMESTAMP(3),
+  WATERMARK FOR tiempo_accion AS tiempo_accion - INTERVAL '5' SECOND
+) ...</code></pre>
+                    <p style="font-size: 0.85rem; margin-top: 0.5rem; color: #64748b;"><em>Aquí le decimos a Flink SQL que use 'tiempo_accion' como Event Time y que tolere retrasos (desorden de red) de hasta 5 segundos.</em></p>
+                </div>
+
+                <div class="mini-card">
+                    <h5 style="color: var(--warning); margin-top: 0;">2. Processing Time (Tiempo de Procesamiento)</h5>
+                    <p style="margin-bottom: 0.5rem; font-size: 0.95rem;">El momento exacto en el servidor en el que el registro es ingerido por Flink. Se usa cuando el tiempo del dispositivo no importa, se genera artificialmente añadiendo una pseudo-columna.</p>
+                    <pre style="margin: 0;"><code class="language-sql">CREATE TABLE logs (
+  usuario_id INT,
+  evento STRING,
+  tiempo_proc AS PROCTIME() -- pseudo columna mágica
+) ...</code></pre>
+                </div>
+            </section>
+
+            <section class="content-section reveal" id="clientes">
+                <h2>¿Cómo usar Flink SQL en la práctica?</h2>
+                <p>A diferencia de escribir código Java/Python, Flink ofrece clientes interactivos para ejecutar SQL directamente sin compilar archivos JAR.</p>
+
+                <ul>
+                    <li><strong>1. Flink SQL Client (CLI):</strong> Viene integrado con Flink. Abres la terminal, escribes <code>./bin/sql-client.sh</code> y se abre una consola similar a la de MySQL donde escribes <code>CREATE TABLE</code> y <code>SELECT</code>, viendo el resultado en tiempo real en consola.</li>
+                    <li><strong>2. Embebido en Java/Python:</strong> Puedes instanciar un entorno de tablas y pasar strings SQL por código. <code>tableEnv.executeSql("SELECT * FROM ...")</code>. Muy usado para pipelines en producción.</li>
+                    <li><strong>3. Flink SQL Gateway / Plataformas (Confluent, Ververica):</strong> Ofrecen interfaces visuales web o endpoints REST para enviar consultas SQL a procesar.</li>
+                </ul>
+
+                <a href="flink-sql-ejemplos.html" class="btn btn-primary" style="margin-top: 1.5rem;">Siguiente: Ver Ejemplos Prácticos de Flink SQL ➡️</a>
+            </section>
+
+        </div>
+
+    <!-- FOOTER -->
+    <footer class="footer">
+        <div class="footer-inner">
+            <div class="footer-brand">
+                <div class="brand-logo">⚡ Flink Bootcamp</div>
+                <p>Apuntes de Apache Flink para proyectos Big Data. Teoría práctica con ejemplos reales.</p>
+            </div>
+            <div class="footer-links">
+                <h5>Secciones</h5>
+                <ul>
+                    <li><a href="index.html">Inicio</a></li>
+                    <li><a href="conceptos.html">Conceptos</a></li>
+                    <li><a href="arquitectura.html">Arquitectura</a></li>
+                    <li><a href="streams.html">Streams &amp; Batch</a></li>
+                    <li><a href="operadores-visual.html">Operadores</a></li>
+                    <li><a href="casos-uso.html">Casos de Uso</a></li>
+                    <li><a href="pyflink.html">PyFlink</a></li>
+                    <li><a href="flink-sql.html">Flink SQL</a></li>
+                    <li><a href="flink-sql-ejemplos.html">Ejemplos SQL</a></li>
+                <li><a href="sql-vs-datastream.html">SQL vs DataStream</a></li>
+                </ul>
+            </div>
+            <div class="footer-links">
+                <h5>Recursos</h5>
+                <ul>
+                    <li><a href="https://flink.apache.org/docs/" target="_blank">📘 Flink Docs</a></li>
+                </ul>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        const navbar = document.getElementById('navbar');
+        window.addEventListener('scroll', () => { navbar.classList.toggle('scrolled', window.scrollY > 50); });
+        document.getElementById('navToggle').addEventListener('click', () => { document.querySelector('.nav-links').classList.toggle('open'); });
+        
+        const reveals = document.querySelectorAll('.reveal');
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('animate-in'); observer.unobserve(e.target); } });
+        }, { threshold: 0.1 });
+        reveals.forEach(el => observer.observe(el));
+    </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-sql.min.js"></script>
+</body>
+
+</html>

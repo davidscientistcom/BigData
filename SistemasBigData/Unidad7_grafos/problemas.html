@@ -1,0 +1,928 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Problemas Reales con Grafos — Apuntes de Grafos</title>
+    <meta name="description"
+        content="Problemas reales resueltos con grafos: rutas, redes sociales, fraude, recomendaciones, logística y más.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        .problem-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            margin-bottom: 3rem;
+            overflow: hidden;
+        }
+
+        .problem-header {
+            display: flex;
+            align-items: center;
+            gap: 1.2rem;
+            padding: 1.5rem 2rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .problem-num {
+            width: 48px;
+            height: 48px;
+            border-radius: var(--radius);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            flex-shrink: 0;
+        }
+
+        .problem-header h3 {
+            font-size: 1.2rem;
+            font-weight: 800;
+            margin-bottom: 0.2rem;
+        }
+
+        .problem-header p {
+            font-size: 0.88rem;
+            color: var(--text2);
+            margin: 0;
+        }
+
+        .problem-body {
+            padding: 1.8rem 2rem;
+        }
+
+        .problem-body p {
+            color: var(--text2);
+            line-height: 1.75;
+            margin-bottom: 1rem;
+        }
+
+        .problem-body ul {
+            color: var(--text2);
+            padding-left: 1.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .problem-body li {
+            margin-bottom: 0.4rem;
+            line-height: 1.7;
+        }
+
+        .problem-body li strong {
+            color: var(--text);
+        }
+
+        .problem-body strong {
+            color: var(--text);
+        }
+
+        .answer-toggle {
+            background: none;
+            border: 1px solid var(--border2);
+            border-radius: 8px;
+            color: var(--text2);
+            padding: 0.5rem 1rem;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 0.88rem;
+            font-weight: 600;
+            transition: all 0.2s;
+            margin-top: 1rem;
+        }
+
+        .answer-toggle:hover {
+            background: rgba(99, 102, 241, 0.1);
+            color: var(--primary-light);
+            border-color: rgba(99, 102, 241, 0.4);
+        }
+
+        .answer-content {
+            display: none;
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid var(--border);
+        }
+
+        .answer-content.open {
+            display: block;
+        }
+
+        .answer-content p {
+            color: var(--text2);
+            font-size: 0.9rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .answer-content ul {
+            color: var(--text2);
+            font-size: 0.9rem;
+            padding-left: 1.5rem;
+        }
+
+        .tech-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.4rem;
+            margin-bottom: 1.2rem;
+        }
+
+        .tech-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border2);
+            border-radius: 6px;
+            padding: 0.2rem 0.7rem;
+            font-size: 0.78rem;
+            color: var(--text3);
+            font-weight: 500;
+        }
+
+        .real-world-box {
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.06), rgba(6, 182, 212, 0.04));
+            border: 1px solid rgba(16, 185, 129, 0.2);
+            border-radius: var(--radius);
+            padding: 1rem 1.2rem;
+            margin: 1rem 0;
+            font-size: 0.9rem;
+            color: var(--text2);
+        }
+
+        .real-world-box strong {
+            color: #4ade80;
+        }
+    </style>
+</head>
+
+<body>
+
+    <nav class="navbar" id="navbar">
+        <div class="nav-inner">
+            <div class="nav-brand">
+                <span class="brand-icon">🕸️</span>
+                <span class="brand-text">Grafos Bootcamp</span>
+            </div>
+            <ul class="nav-links">
+                <li><a href="index.html">Inicio</a></li>
+                <li><a href="conceptos.html">Conceptos</a></li>
+                <li><a href="tipos.html">Tipos</a></li>
+                <li><a href="propiedades.html">Propiedades</a></li>
+                <li><a href="algoritmos.html">Algoritmos</a></li>
+                <li><a href="problemas.html" class="active">Problemas Reales</a></li>
+                <li><a href="neo4j.html">Neo4j</a></li>
+            </ul>
+            <button class="nav-mobile-btn" id="navToggle">☰</button>
+        </div>
+    </nav>
+
+    <div class="breadcrumb">
+        <div class="breadcrumb-inner">
+            <a href="index.html">Inicio</a>
+            <span class="breadcrumb-sep">›</span>
+            <span>Problemas Reales con Grafos</span>
+        </div>
+    </div>
+
+    <div class="page-hero">
+        <span class="page-hero-icon">🌍</span>
+        <h1>Problemas <span class="gradient-text">Reales</span></h1>
+        <p>Problemas concretos del mundo real modelados como grafos. Cada uno con el planteamiento, el modelo en Neo4j y
+            las preguntas que puedes responder.</p>
+    </div>
+
+    <div class="content">
+
+        <div class="info-box tip">
+            <span class="info-box-icon">🎯</span>
+            <div class="info-box-text">
+                <strong>Cómo usar esta sección:</strong> Para cada problema, primero intenta imaginar cómo lo modelarías
+                como grafo
+                (¿qué son los nodos? ¿qué son las aristas?) antes de ver la solución.
+                Es el razonamiento más importante en proyectos de grafos reales.
+            </div>
+        </div>
+
+        <!-- ======== PROBLEMA 1: RUTAS ======== -->
+        <div class="problem-card reveal">
+            <div class="problem-header">
+                <div class="problem-num" style="background:rgba(99,102,241,0.2); border:2px solid #6366f1;">🗺️</div>
+                <div>
+                    <h3>Problema 1 — Red Ferroviaria de España</h3>
+                    <p>Planificación de rutas óptimas entre ciudades con trenes de alta velocidad</p>
+                </div>
+            </div>
+            <div class="problem-body">
+                <div class="tech-tags">
+                    <span class="tech-tag">Grafo ponderado</span>
+                    <span class="tech-tag">Dirigido</span>
+                    <span class="tech-tag">Dijkstra</span>
+                    <span class="tech-tag">MST (Kruskal/Prim)</span>
+                </div>
+
+                <p><strong>Situación:</strong> Renfe tiene estaciones en Madrid, Barcelona, Valencia, Sevilla, Bilbao y
+                    Zaragoza.
+                    Cada trayecto directo tiene un tiempo en minutos. No todas las ciudades tienen trayecto directo
+                    entre sí.</p>
+
+                <div class="graph-demo">
+                    <span class="graph-demo-label">Red simplificada de AVE — tiempos en minutos</span>
+                    <svg viewBox="0 0 680 240" style="height:240px">
+                        <defs>
+                            <marker id="train-arr" markerWidth="7" markerHeight="7" refX="6" refY="3" orient="auto">
+                                <path d="M0,0 L0,6 L7,3 z" fill="rgba(99,102,241,0.7)" />
+                            </marker>
+                        </defs>
+                        <!-- Edges with times -->
+                        <line x1="180" y1="120" x2="306" y2="70" stroke="rgba(99,102,241,0.5)" stroke-width="2" />
+                        <line x1="180" y1="120" x2="306" y2="170" stroke="rgba(99,102,241,0.5)" stroke-width="2" />
+                        <line x1="180" y1="120" x2="130" y2="195" stroke="rgba(99,102,241,0.4)" stroke-width="1.5" />
+                        <line x1="330" y1="70" x2="480" y2="70" stroke="rgba(6,182,212,0.5)" stroke-width="2" />
+                        <line x1="330" y1="70" x2="330" y2="170" stroke="rgba(99,102,241,0.3)" stroke-width="1.5"
+                            stroke-dasharray="4,3" />
+                        <line x1="330" y1="170" x2="480" y2="170" stroke="rgba(6,182,212,0.4)" stroke-width="1.5" />
+                        <line x1="480" y1="70" x2="580" y2="120" stroke="rgba(16,185,129,0.5)" stroke-width="2" />
+                        <line x1="480" y1="170" x2="580" y2="120" stroke="rgba(16,185,129,0.4)" stroke-width="1.5" />
+
+                        <!-- Weight labels -->
+                        <rect x="218" y="75" width="48" height="16" rx="4" fill="rgba(0,0,0,0.75)" />
+                        <text x="242" y="87" text-anchor="middle" fill="#818cf8" font-size="11" font-weight="700"
+                            font-family="JetBrains Mono">90 min</text>
+                        <rect x="218" y="138" width="48" height="16" rx="4" fill="rgba(0,0,0,0.75)" />
+                        <text x="242" y="150" text-anchor="middle" fill="#818cf8" font-size="11" font-weight="700"
+                            font-family="JetBrains Mono">75 min</text>
+                        <rect x="388" y="53" width="48" height="16" rx="4" fill="rgba(0,0,0,0.75)" />
+                        <text x="412" y="65" text-anchor="middle" fill="#22d3ee" font-size="11" font-weight="700"
+                            font-family="JetBrains Mono">60 min</text>
+                        <rect x="388" y="153" width="48" height="16" rx="4" fill="rgba(0,0,0,0.75)" />
+                        <text x="412" y="165" text-anchor="middle" fill="#22d3ee" font-size="11" font-weight="700"
+                            font-family="JetBrains Mono">70 min</text>
+                        <rect x="507" y="78" width="48" height="16" rx="4" fill="rgba(0,0,0,0.75)" />
+                        <text x="531" y="90" text-anchor="middle" fill="#4ade80" font-size="11" font-weight="700"
+                            font-family="JetBrains Mono">35 min</text>
+                        <rect x="507" y="138" width="48" height="16" rx="4" fill="rgba(0,0,0,0.75)" />
+                        <text x="531" y="150" text-anchor="middle" fill="#4ade80" font-size="11" font-weight="700"
+                            font-family="JetBrains Mono">55 min</text>
+                        <rect x="112" y="145" width="140" height="16" rx="4" fill="rgba(0,0,0,0.75)" />
+                        <text x="182" y="157" text-anchor="middle" fill="#818cf8" font-size="11" font-weight="700"
+                            font-family="JetBrains Mono">150 min</text>
+
+                        <!-- Nodes -->
+                        <circle cx="180" cy="120" r="35" fill="rgba(99,102,241,0.25)" stroke="#6366f1"
+                            stroke-width="2.5" />
+                        <text x="180" y="115" text-anchor="middle" fill="#818cf8" font-size="12" font-weight="700"
+                            font-family="Inter">Madrid</text>
+                        <text x="180" y="129" text-anchor="middle" fill="#64748b" font-size="9" font-family="Inter">🏙️
+                            origen</text>
+
+                        <circle cx="320" cy="70" r="32" fill="rgba(6,182,212,0.2)" stroke="#06b6d4" stroke-width="2" />
+                        <text x="320" y="65" text-anchor="middle" fill="#22d3ee" font-size="11" font-weight="700"
+                            font-family="Inter">Zaragoza</text>
+                        <text x="320" y="79" text-anchor="middle" fill="#64748b" font-size="9"
+                            font-family="Inter">🏙️</text>
+
+                        <circle cx="320" cy="170" r="30" fill="rgba(99,102,241,0.2)" stroke="#6366f1"
+                            stroke-width="2" />
+                        <text x="320" y="165" text-anchor="middle" fill="#818cf8" font-size="11" font-weight="700"
+                            font-family="Inter">Valencia</text>
+                        <text x="320" y="179" text-anchor="middle" fill="#64748b" font-size="9"
+                            font-family="Inter">🏙️</text>
+
+                        <circle cx="120" cy="205" r="30" fill="rgba(245,158,11,0.2)" stroke="#f59e0b"
+                            stroke-width="2" />
+                        <text x="120" y="200" text-anchor="middle" fill="#fbbf24" font-size="11" font-weight="700"
+                            font-family="Inter">Sevilla</text>
+                        <text x="120" y="214" text-anchor="middle" fill="#64748b" font-size="9"
+                            font-family="Inter">🏙️</text>
+
+                        <circle cx="480" cy="70" r="30" fill="rgba(6,182,212,0.2)" stroke="#06b6d4" stroke-width="2" />
+                        <text x="480" y="65" text-anchor="middle" fill="#22d3ee" font-size="11" font-weight="700"
+                            font-family="Inter">Bilbao</text>
+                        <text x="480" y="79" text-anchor="middle" fill="#64748b" font-size="9"
+                            font-family="Inter">🏙️</text>
+
+                        <circle cx="480" cy="170" r="32" fill="rgba(16,185,129,0.2)" stroke="#10b981"
+                            stroke-width="2" />
+                        <text x="480" y="165" text-anchor="middle" fill="#4ade80" font-size="11" font-weight="700"
+                            font-family="Inter">Barcelona</text>
+                        <text x="480" y="179" text-anchor="middle" fill="#64748b" font-size="9"
+                            font-family="Inter">🏙️</text>
+
+                        <circle cx="580" cy="120" r="30" fill="rgba(245,158,11,0.2)" stroke="#f59e0b"
+                            stroke-width="2" />
+                        <text x="580" y="115" text-anchor="middle" fill="#fbbf24" font-size="11" font-weight="700"
+                            font-family="Inter">Lleida</text>
+                        <text x="580" y="129" text-anchor="middle" fill="#64748b" font-size="9"
+                            font-family="Inter">🏙️</text>
+                    </svg>
+                </div>
+
+                <div class="real-world-box">
+                    🚄 <strong>Caso real:</strong> Renfe y Google Maps usan exactamente este modelo. Las estaciones son
+                    nodos, las rutas directas son aristas ponderadas con tiempo/precio, y se usa Dijkstra para encontrar
+                    el viaje óptimo.
+                </div>
+
+                <h4>Preguntas:</h4>
+                <ul>
+                    <li>¿Cuál es la ruta más rápida de <strong>Madrid a Lleida</strong>?</li>
+                    <li>Si quisiéramos conectar todas las ciudades con rutas AVE nuevas <strong>minimizando el total de
+                            km de vía</strong> a construir, ¿qué algoritmo usaríamos y por qué?</li>
+                    <li>Si la ruta Madrid-Zaragoza se cierra por obras, ¿cómo afecta a los viajes a Bilbao?</li>
+                </ul>
+
+                <button class="answer-toggle" onclick="toggleAnswer(this)">👁️ Ver respuestas</button>
+                <div class="answer-content">
+                    <ul>
+                        <li><strong>Madrid → Lleida más rápida:</strong> Madrid→Zaragoza(90) → Bilbao(60) → Lleida(35) =
+                            <strong>185 min</strong> u otras combinaciones. Necesitas Dijkstra para calcularlo con todos
+                            los pesos.</li>
+                        <li><strong>Minimizar km de vía:</strong> <strong>Kruskal o Prim</strong> (Árbol de Expansión
+                            Mínima). No hay que llegar al destino más rápido, sino conectar todos con el menor coste
+                            total de infraestructura.</li>
+                        <li><strong>Si cierran Madrid-Zaragoza:</strong> Para ir a Bilbao desde Madrid solo queda
+                            Madrid→Valencia→Barcelona→Lleida→Bilbao si existen esas conexiones, o
+                            Madrid→Sevilla(150)→... Puede que no haya ruta directa. BFS/Dijkstra sobre el grafo sin esa
+                            arista respondería.</li>
+                    </ul>
+                    <div class="code-block" style="margin-top:1rem">
+                        <div class="code-header"><span class="code-lang">cypher</span><button class="copy-btn"
+                                onclick="copyCode(this)">📋 Copiar</button></div>
+                        <pre><code><span class="cmt">// ¿Qué pasa si quitamos Madrid-Zaragoza? Ruta a Bilbao:</span>
+<span class="kw">MATCH</span> (o:<span class="fn">Estacion</span> {nombre: <span class="str">"Madrid"</span>}),
+      (d:<span class="fn">Estacion</span> {nombre: <span class="str">"Bilbao"</span>})
+<span class="kw">MATCH</span> p = <span class="fn">shortestPath</span>((o)-[r:<span class="prop">RUTA</span>*]-(d))
+<span class="cmt">// Filtramos la arista cerrada por obras</span>
+<span class="kw">WHERE NONE</span>(rel <span class="kw">IN</span> relationships(p)
+  <span class="kw">WHERE</span> (startNode(rel).nombre=<span class="str">"Madrid"</span>
+    <span class="kw">AND</span> endNode(rel).nombre=<span class="str">"Zaragoza"</span>))
+<span class="kw">RETURN</span> [n <span class="kw">IN</span> nodes(p) | n.nombre] <span class="kw">AS</span> ruta_alternativa</code></pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ======== PROBLEMA 2: RED SOCIAL ======== -->
+        <div class="problem-card reveal">
+            <div class="problem-header">
+                <div class="problem-num" style="background:rgba(16,185,129,0.2); border:2px solid #10b981;">👥</div>
+                <div>
+                    <h3>Problema 2 — Red de Influencers de Instagram</h3>
+                    <p>Detectar comunidades, influencers clave y propagar mensajes virales</p>
+                </div>
+            </div>
+            <div class="problem-body">
+                <div class="tech-tags">
+                    <span class="tech-tag">Dígrafo</span>
+                    <span class="tech-tag">PageRank</span>
+                    <span class="tech-tag">Betweenness centrality</span>
+                    <span class="tech-tag">Community detection</span>
+                </div>
+
+                <p>Una empresa quiere lanzar una campaña de marketing en Instagram. Tienen un grafo de <strong>10.000
+                        cuentas</strong>
+                    con relaciones de "sigue" entre ellas. Quieren maximizar el alcance de la campaña contratando solo 5
+                    influencers.</p>
+
+                <p><strong>Modelo del grafo:</strong></p>
+                <ul>
+                    <li><strong>Nodos:</strong> <code>(:Cuenta {username, seguidores, categoria})</code></li>
+                    <li><strong>Aristas:</strong> <code>-[:SIGUE {fecha}]-></code> (dirigido — A sigue a B no implica
+                        que B siga a A)</li>
+                </ul>
+
+                <div class="real-world-box">
+                    📱 <strong>Caso real:</strong> Twitter/X, Instagram y TikTok tienen equipos de Data Science que
+                    modelan su plataforma exactamente así.
+                    Detectar "comunidades" (grupos de cuentas muy conectadas entre sí) es clave para el algoritmo de
+                    recomendación de follows.
+                </div>
+
+                <h4>Preguntas y abordaje:</h4>
+                <ul>
+                    <li>¿Qué métrica usarías para identificar los 5 influencers más importantes? ¿PageRank o grado de
+                        entrada (in-degree)?</li>
+                    <li>Dos influencers en la misma "comunidad" pueden tener audiencias solapadas. ¿Cómo detectaría
+                        Neo4j esas comunidades?</li>
+                    <li>Si quieres que el mensaje llegue a los grupos más desconectados entre sí, ¿qué métrica de
+                        centralidad usas?</li>
+                </ul>
+
+                <button class="answer-toggle" onclick="toggleAnswer(this)">👁️ Ver respuestas</button>
+                <div class="answer-content">
+                    <ul>
+                        <li><strong>PageRank vs In-degree:</strong> PageRank es mejor: no solo cuenta cuántos te siguen,
+                            sino si quienes te siguen son a su vez influyentes. Un influencer con 50.000 seguidores muy
+                            activos puede valer más que uno con 500.000 bots.</li>
+                        <li><strong>Detección de comunidades:</strong> Algoritmo de Louvain (en Neo4j GDS:
+                            <code>gds.louvain</code>). Agrupa nodos que tienen muchas conexiones entre sí y pocas con el
+                            exterior.</li>
+                        <li><strong>Alcanzar grupos desconectados:</strong> <strong>Betweenness centrality</strong>. Los
+                            influencers puente conectan diferentes "burbujas" de Instagram y pueden llevar tu mensaje a
+                            comunidades que de otra forma quedarían fuera.</li>
+                    </ul>
+                    <div class="code-block" style="margin-top:1rem">
+                        <div class="code-header"><span class="code-lang">cypher — Detectar comunidades con
+                                Louvain</span><button class="copy-btn" onclick="copyCode(this)">📋 Copiar</button></div>
+                        <pre><code><span class="cmt">// Proyectar el grafo e identificar comunidades</span>
+<span class="kw">CALL</span> gds.louvain.stream(<span class="str">'instagram-graph'</span>)
+<span class="kw">YIELD</span> nodeId, communityId
+<span class="kw">WITH</span> communityId, <span class="fn">collect</span>(gds.util.asNode(nodeId).username)
+     <span class="kw">AS</span> miembros
+<span class="kw">RETURN</span> communityId, <span class="fn">size</span>(miembros) <span class="kw">AS</span> tamaño,
+       miembros[<span class="num">0</span>..<span class="num">5</span>] <span class="kw">AS</span> muestra
+<span class="kw">ORDER BY</span> tamaño <span class="kw">DESC</span> <span class="kw">LIMIT</span> <span class="num">10</span></code></pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ======== PROBLEMA 3: LOGÍSTICA ======== -->
+        <div class="problem-card reveal">
+            <div class="problem-header">
+                <div class="problem-num" style="background:rgba(245,158,11,0.2); border:2px solid #f59e0b;">🚚</div>
+                <div>
+                    <h3>Problema 3 — Cadena de Suministro de Amazon</h3>
+                    <p>Optimizar las rutas de entrega y detectar cuellos de botella en la red logística</p>
+                </div>
+            </div>
+            <div class="problem-body">
+                <div class="tech-tags">
+                    <span class="tech-tag">Grafo ponderado</span>
+                    <span class="tech-tag">Dirigido</span>
+                    <span class="tech-tag">Dijkstra</span>
+                    <span class="tech-tag">Betweenness</span>
+                    <span class="tech-tag">MST</span>
+                </div>
+
+                <p>Amazon tiene almacenes, centros de distribución, y puntos de entrega final.
+                    Cada ruta tiene un coste (tiempo + distancia + coste de transporte).
+                    El objetivo es <strong>entregar en el mínimo tiempo minimizando costes</strong>.</p>
+
+                <p><strong>Modelo del grafo:</strong></p>
+                <ul>
+                    <li><strong>Nodos tipos:</strong> <code>(:Almacen)</code>, <code>(:CentroDistribucion)</code>,
+                        <code>(:PuntoEntrega)</code></li>
+                    <li><strong>Aristas:</strong> <code>-[:ENVIO {tiempo_h, coste_eur, distancia_km}]-></code></li>
+                    <li><strong>Propiedades extra de nodos:</strong> capacidad máxima, stock disponible</li>
+                </ul>
+
+                <div class="real-world-box">
+                    📦 <strong>Caso real:</strong> Amazon, Mercadona, FedEx y UPS tienen departamentos enteros dedicados
+                    a grafos de logística.
+                    UPS estima que optimizar solo 1 km por conductor al día les ahorra <strong>50 millones de dólares al
+                        año</strong>.
+                </div>
+
+                <h4>Preguntas y ejercicios:</h4>
+                <ul>
+                    <li>¿Qué algoritmo encuentra el camino más rápido de un almacén a varios puntos de entrega
+                        simultáneamente?</li>
+                    <li>¿Qué nodo del grafo es el "cuello de botella" más crítico? ¿Qué algoritmo lo detecta?</li>
+                    <li>Si cae un centro de distribución (por inundación, huelga...), ¿cómo calculas rutas alternativas?
+                    </li>
+                    <li>¿Cómo detectarías si hay dependencias <strong>circulares</strong> en la cadena de suministro (A
+                        necesita B, B necesita C, C necesita A)?</li>
+                </ul>
+
+                <button class="answer-toggle" onclick="toggleAnswer(this)">👁️ Ver respuestas</button>
+                <div class="answer-content">
+                    <ul>
+                        <li><strong>Un almacén → múltiples destinos:</strong> Dijkstra de fuente única (single-source
+                            shortest path). En GDS: <code>gds.allShortestPaths</code> o Dijkstra con múltiples targets.
+                        </li>
+                        <li><strong>Cuello de botella crítico:</strong> <strong>Betweenness centrality</strong> — el
+                            nodo que aparece en más caminos mínimos. Si falla, más rutas se ven afectadas.</li>
+                        <li><strong>Ruta alternativa si cae un nodo:</strong> Eliminar ese nodo del grafo en memoria
+                            (<code>nodeFilter</code> en GDS) y recalcular shortest path. Neo4j ya tiene soporte para
+                            esto.</li>
+                        <li><strong>Ciclos en cadena de suministro:</strong> DFS para detectar ciclos en el dígrafo. En
+                            Cypher: <code>MATCH path=(a)-[:NECESITA*]->(a)</code></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- ======== PROBLEMA 4: FRAUDE ======== -->
+        <div class="problem-card reveal">
+            <div class="problem-header">
+                <div class="problem-num" style="background:rgba(239,68,68,0.2); border:2px solid #ef4444;">🔍</div>
+                <div>
+                    <h3>Problema 4 — Detección de Fraude Bancario</h3>
+                    <p>Identificar redes de cuentas coordinadas para el blanqueo de dinero</p>
+                </div>
+            </div>
+            <div class="problem-body">
+                <div class="tech-tags">
+                    <span class="tech-tag">Multigrafo</span>
+                    <span class="tech-tag">Detección de ciclos</span>
+                    <span class="tech-tag">Community detection</span>
+                    <span class="tech-tag">Anomaly detection</span>
+                </div>
+
+                <p>Un banco tiene millones de transacciones entre cuentas. Quiere detectar patrones fraudulentos como
+                    dinero que circula en bucle entre cuentas, o grupos de cuentas aparentemente independientes
+                    que comparten información (mismo teléfono, misma IP, misma dirección).</p>
+
+                <p><strong>Modelo multi-tipo:</strong></p>
+                <ul>
+                    <li><code>(:Cuenta)-[:TRANSACCION {importe, fecha}]->(:Cuenta)</code></li>
+                    <li><code>(:Cuenta)-[:USA_TELEFONO]->(:Telefono)</code></li>
+                    <li><code>(:Cuenta)-[:USA_IP]->(:DireccionIP)</code></li>
+                    <li><code>(:Cuenta)-[:TITULAR]->(:Persona)</code></li>
+                </ul>
+
+                <div class="real-world-box">
+                    🏦 <strong>Caso real:</strong> BBVA, Santander y PayPal usan Neo4j específicamente para detección de
+                    fraude.
+                    Lo que en SQL requeriría horas de JOINs anidados, Neo4j lo resuelve en segundos navegando el grafo.
+                </div>
+
+                <h4>Patrones fraudulentos a detectar:</h4>
+
+                <div class="code-block">
+                    <div class="code-header"><span class="code-lang">cypher — Patrón 1: Dinero en círculo (Money Mule
+                            Ring)</span><button class="copy-btn" onclick="copyCode(this)">📋 Copiar</button></div>
+                    <pre><code><span class="cmt">// Detectar ciclos de transacciones entre 3 y 5 cuentas</span>
+<span class="kw">MATCH</span> path = (c:<span class="fn">Cuenta</span>)-[:<span class="prop">TRANSACCION</span>*3..5]->(c)
+<span class="kw">WHERE ALL</span>(r <span class="kw">IN</span> relationships(path)
+  <span class="kw">WHERE</span> r.importe > <span class="num">5000</span>)  <span class="cmt">// solo transacciones grandes</span>
+<span class="kw">RETURN</span> [n <span class="kw">IN</span> nodes(path) | n.numero] <span class="kw">AS</span> anillo,
+       <span class="fn">length</span>(path) <span class="kw">AS</span> pasos</code></pre>
+                </div>
+
+                <div class="code-block">
+                    <div class="code-header"><span class="code-lang">cypher — Patrón 2: Cuentas que comparten
+                            identidad</span><button class="copy-btn" onclick="copyCode(this)">📋 Copiar</button></div>
+                    <pre><code><span class="cmt">// Cuentas conectadas por teléfono, IP o persona — sospechosa red</span>
+<span class="kw">MATCH</span> (c1:<span class="fn">Cuenta</span>)-[:<span class="prop">USA_TELEFONO</span>|<span class="prop">USA_IP</span>|<span class="prop">TITULAR</span>]->
+      (elemento)
+      <-[:<span class="prop">USA_TELEFONO</span>|<span class="prop">USA_IP</span>|<span class="prop">TITULAR</span>]-(c2:<span class="fn">Cuenta</span>)
+<span class="kw">WHERE</span> c1 <> c2
+  <span class="kw">AND</span> c1.estado = <span class="str">"activa"</span>
+  <span class="kw">AND</span> c2.estado = <span class="str">"activa"</span>
+<span class="kw">RETURN</span> c1.numero, c2.numero,
+       <span class="fn">type</span>(elemento) <span class="kw">AS</span> elemento_compartido,
+       elemento.valor</code></pre>
+                </div>
+
+                <h4>Ejercicio: Diseña el modelo</h4>
+                <p>Un banco tiene los siguientes datos en CSV: transacciones con importe/fecha/origen/destino, listado
+                    de clientes con su DNI/email/teléfono, y listado de IPs de acceso con fecha.
+                    ¿Cómo montarías el modelo de grafo? ¿Qué nodos, qué aristas, qué propiedades? ¿Qué patrones
+                    buscarías primero?</p>
+
+                <button class="answer-toggle" onclick="toggleAnswer(this)">👁️ Ver propuesta de solución</button>
+                <div class="answer-content">
+                    <p><strong>Nodos:</strong> <code>:Cuenta</code>, <code>:Cliente</code>, <code>:Telefono</code>,
+                        <code>:Email</code>, <code>:DireccionIP</code></p>
+                    <p><strong>Relaciones:</strong></p>
+                    <ul>
+                        <li><code>-[:TRANSACCION {importe, fecha, concepto}]-></code> entre Cuentas</li>
+                        <li><code>-[:TITULAR]-></code> entre Cuenta y Cliente</li>
+                        <li><code>-[:USA_TELEFONO]-></code> entre Cliente y Telefono</li>
+                        <li><code>-[:ACCESO_DESDE {fecha}]-></code> entre Cuenta y DireccionIP</li>
+                    </ul>
+                    <p><strong>Patrones prioritarios:</strong></p>
+                    <ul>
+                        <li>Ciclos de 3-7 cuentas con transacciones altas → blanqueo</li>
+                        <li>Cuentas distintas con mismo teléfono/email → identidades robadas</li>
+                        <li>Múltiples cuentas accediendo desde la misma IP → un operador controlando varias cuentas</li>
+                        <li>Componentes aisladas que de repente se conectan → mulas de dinero nuevas</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- ======== PROBLEMA 5: RECOMENDACIONES ======== -->
+        <div class="problem-card reveal">
+            <div class="problem-header">
+                <div class="problem-num" style="background:rgba(6,182,212,0.2); border:2px solid #06b6d4;">🎬</div>
+                <div>
+                    <h3>Problema 5 — Sistema de Recomendación tipo Netflix</h3>
+                    <p>Recomendar contenido usando patrones de visualización en un grafo bipartito</p>
+                </div>
+            </div>
+            <div class="problem-body">
+                <div class="tech-tags">
+                    <span class="tech-tag">Grafo bipartito</span>
+                    <span class="tech-tag">Collaborative filtering</span>
+                    <span class="tech-tag">Similitud de coseno</span>
+                    <span class="tech-tag">Link prediction</span>
+                </div>
+
+                <p>Netflix, Spotify y Amazon Prime tienen millones de usuarios y contenidos. El grafo representa
+                    <strong>quién vio qué</strong>. El objetivo es predecir qué contenido querrá ver un usuario que aún
+                    no ha visto.
+                </p>
+
+                <p><strong>Modelo:</strong></p>
+                <ul>
+                    <li><strong>Nodos:</strong> <code>(:Usuario {id, pais})</code> y
+                        <code>(:Pelicula {titulo, genero, año})</code></li>
+                    <li><strong>Aristas:</strong> <code>-[:VIO {rating, fecha, completada}]-></code></li>
+                </ul>
+
+                <div class="graph-demo">
+                    <span class="graph-demo-label">Grafo bipartito Usuario-Película. ¿Qué debería ver Ana?</span>
+                    <svg viewBox="0 0 640 190" style="height:190px">
+                        <!-- Connections -->
+                        <line x1="110" y1="50" x2="290" y2="40" stroke="rgba(99,102,241,0.4)" stroke-width="1.5" />
+                        <line x1="110" y1="50" x2="290" y2="95" stroke="rgba(99,102,241,0.4)" stroke-width="1.5" />
+                        <line x1="110" y1="100" x2="290" y2="95" stroke="rgba(16,185,129,0.4)" stroke-width="1.5" />
+                        <line x1="110" y1="100" x2="290" y2="145" stroke="rgba(16,185,129,0.4)" stroke-width="1.5" />
+                        <line x1="110" y1="150" x2="290" y2="145" stroke="rgba(245,158,11,0.4)" stroke-width="1.5" />
+                        <line x1="110" y1="150" x2="290" y2="40" stroke="rgba(245,158,11,0.4)" stroke-width="1.5" />
+
+                        <!-- Usuarios -->
+                        <circle cx="110" cy="50" r="30" fill="rgba(99,102,241,0.2)" stroke="#6366f1" stroke-width="2" />
+                        <text x="110" y="46" text-anchor="middle" fill="#818cf8" font-size="12" font-weight="700"
+                            font-family="Inter">Ana</text>
+                        <text x="110" y="60" text-anchor="middle" fill="#64748b" font-size="9"
+                            font-family="Inter">Usuario</text>
+
+                        <circle cx="110" cy="100" r="30" fill="rgba(16,185,129,0.2)" stroke="#10b981"
+                            stroke-width="2" />
+                        <text x="110" y="96" text-anchor="middle" fill="#4ade80" font-size="12" font-weight="700"
+                            font-family="Inter">Luis</text>
+                        <text x="110" y="110" text-anchor="middle" fill="#64748b" font-size="9"
+                            font-family="Inter">Usuario</text>
+
+                        <circle cx="110" cy="150" r="30" fill="rgba(245,158,11,0.2)" stroke="#f59e0b"
+                            stroke-width="2" />
+                        <text x="110" y="146" text-anchor="middle" fill="#fbbf24" font-size="12" font-weight="700"
+                            font-family="Inter">Sara</text>
+                        <text x="110" y="160" text-anchor="middle" fill="#64748b" font-size="9"
+                            font-family="Inter">Usuario</text>
+
+                        <!-- Películas -->
+                        <circle cx="290" cy="40" r="30" fill="rgba(99,102,241,0.15)" stroke="#818cf8"
+                            stroke-width="1.5" />
+                        <text x="290" y="35" text-anchor="middle" fill="#a5b4fc" font-size="10" font-weight="700"
+                            font-family="Inter">Inception</text>
+                        <text x="290" y="49" text-anchor="middle" fill="#64748b" font-size="8" font-family="Inter">🎬
+                            Película</text>
+
+                        <circle cx="290" cy="95" r="30" fill="rgba(99,102,241,0.15)" stroke="#818cf8"
+                            stroke-width="1.5" />
+                        <text x="290" y="90" text-anchor="middle" fill="#a5b4fc" font-size="10" font-weight="700"
+                            font-family="Inter">Interstellar</text>
+                        <text x="290" y="104" text-anchor="middle" fill="#64748b" font-size="8" font-family="Inter">🎬
+                            Película</text>
+
+                        <circle cx="290" cy="150" r="30" fill="rgba(99,102,241,0.15)" stroke="#818cf8"
+                            stroke-width="1.5" />
+                        <text x="290" y="145" text-anchor="middle" fill="#a5b4fc" font-size="10" font-weight="700"
+                            font-family="Inter">Oppenheimer</text>
+                        <text x="290" y="159" text-anchor="middle" fill="#64748b" font-size="8" font-family="Inter">🎬
+                            Película</text>
+
+                        <!-- Recomendación -->
+                        <circle cx="490" cy="95" r="34" fill="rgba(16,185,129,0.2)" stroke="#10b981" stroke-width="2.5"
+                            stroke-dasharray="6,3" />
+                        <text x="490" y="90" text-anchor="middle" fill="#4ade80" font-size="10" font-weight="700"
+                            font-family="Inter">Tenet</text>
+                        <text x="490" y="103" text-anchor="middle" fill="#4ade80" font-size="9" font-family="Inter">←
+                            recomendar</text>
+                        <text x="490" y="115" text-anchor="middle" fill="#64748b" font-size="8" font-family="Inter">a
+                            Ana?</text>
+
+                        <!-- Arrow suggestion -->
+                        <line x1="290" y1="95" x2="453" y2="95" stroke="rgba(16,185,129,0.5)" stroke-width="1.5"
+                            stroke-dasharray="6,3" />
+                        <text x="370" y="87" text-anchor="middle" fill="#4ade80" font-size="9" font-weight="600"
+                            font-family="Inter">Luis y Sara la vieron</text>
+                    </svg>
+                </div>
+
+                <h4>La lógica de recomendación:</h4>
+                <ul>
+                    <li>Ana y Luis vieron <strong>Inception</strong> e <strong>Interstellar</strong> → tienen gustos
+                        similares</li>
+                    <li>Sara y Luis vieron <strong>Oppenheimer</strong> e <strong>Inception</strong></li>
+                    <li>Luis vio <strong>Tenet</strong> (que Ana no ha visto) → recomendarla a Ana tiene sentido</li>
+                    <li>En grafos: encontrar nodos similares a Ana (mismos vecinos-películas) y mirar qué más han visto
+                    </li>
+                </ul>
+
+                <div class="code-block">
+                    <div class="code-header"><span class="code-lang">cypher — Collaborative Filtering
+                            básico</span><button class="copy-btn" onclick="copyCode(this)">📋 Copiar</button></div>
+                    <pre><code><span class="cmt">// Para Ana: recomendar lo que vieron usuarios con gustos similares</span>
+<span class="kw">MATCH</span> (ana:<span class="fn">Usuario</span> {nombre: <span class="str">"Ana"</span>})-[:<span class="prop">VIO</span>]->(pelicula:<span class="fn">Pelicula</span>)
+                              <-[:<span class="prop">VIO</span>]-(similar:<span class="fn">Usuario</span>)
+                              -[:<span class="prop">VIO</span>]->(recomendacion:<span class="fn">Pelicula</span>)
+<span class="kw">WHERE NOT</span> (ana)-[:<span class="prop">VIO</span>]->(recomendacion)
+<span class="kw">RETURN</span> recomendacion.titulo,
+       recomendacion.genero,
+       <span class="fn">count</span>(*) <span class="kw">AS</span> popularidad_entre_similares
+<span class="kw">ORDER BY</span> popularidad_entre_similares <span class="kw">DESC</span>
+<span class="kw">LIMIT</span> <span class="num">10</span></code></pre>
+                </div>
+            </div>
+        </div>
+
+        <!-- ======== PROBLEMA 6: INFRAESTRUCTURA TI ======== -->
+        <div class="problem-card reveal">
+            <div class="problem-header">
+                <div class="problem-num" style="background:rgba(139,92,246,0.2); border:2px solid #8b5cf6;">🖥️</div>
+                <div>
+                    <h3>Problema 6 — Monitorización de Infraestructura IT</h3>
+                    <p>Análisis de impacto: si un servidor falla, ¿qué servicios se caen?</p>
+                </div>
+            </div>
+            <div class="problem-body">
+                <div class="tech-tags">
+                    <span class="tech-tag">Dígrafo</span>
+                    <span class="tech-tag">DFS</span>
+                    <span class="tech-tag">Componentes</span>
+                    <span class="tech-tag">Análisis de impacto</span>
+                </div>
+
+                <p>Una empresa tiene servidores, servicios web, bases de datos y APIs.
+                    Cada servicio <strong>depende</strong> de otros (bases de datos, servicios de autenticación, etc.).
+                    Si un servidor falla, ¿qué servicios en cascada dejan de funcionar?</p>
+
+                <p><strong>Modelo:</strong></p>
+                <ul>
+                    <li><code>(:Servidor {nombre, ip, datacenter})</code></li>
+                    <li><code>(:Servicio {nombre, tipo, SLA})</code></li>
+                    <li><code>-[:EJECUTA_EN]-></code> (Servicio → Servidor)</li>
+                    <li><code>-[:DEPENDE_DE {critico: true/false}]-></code> (Servicio → Servicio)</li>
+                </ul>
+
+                <div class="code-block">
+                    <div class="code-header"><span class="code-lang">cypher — Análisis de impacto en
+                            cascada</span><button class="copy-btn" onclick="copyCode(this)">📋 Copiar</button></div>
+                    <pre><code><span class="cmt">// ¿Qué servicios se caen si el servidor "prod-db-01" falla?</span>
+<span class="kw">MATCH</span> (servidor:<span class="fn">Servidor</span> {nombre: <span class="str">"prod-db-01"</span>})
+<span class="kw">MATCH</span> (servidor)<-[:<span class="prop">EJECUTA_EN</span>]-(servicio_caido:<span class="fn">Servicio</span>)
+<span class="kw">MATCH</span> (servicio_caido)<-[:<span class="prop">DEPENDE_DE</span>*1..5]-(afectado:<span class="fn">Servicio</span>)
+<span class="kw">RETURN</span> DISTINCT afectado.nombre <span class="kw">AS</span> servicio_afectado,
+       afectado.SLA <span class="kw">AS</span> criticidad,
+       afectado.propietario <span class="kw">AS</span> equipo_a_alertar
+<span class="kw">ORDER BY</span> afectado.SLA <span class="kw">DESC</span></code></pre>
+                </div>
+
+                <div class="real-world-box">
+                    🏢 <strong>Caso real:</strong> LinkedIn usa Neo4j para exactamente esto en su infraestructura
+                    interna.
+                    Cuando van a hacer un despliegue, consultan el grafo de dependencias para saber qué equipos deben
+                    estar en guardia.
+                </div>
+
+                <div style="margin-top:1rem">
+                    <h4>Ejercicio de diseño:</h4>
+                    <p>Imagina que tienes una app web con: frontend (React), API REST (Node.js), base de datos
+                        PostgreSQL, servicio de autenticación (OAuth), y servicio de emails (SendGrid). Dibuja el grafo
+                        de dependencias. ¿Cuál es el servicio más crítico (el que más cosas dependen de él)? ¿Qué
+                        pasaría si OAuth falla?</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- RESUMEN FINAL -->
+        <h2>Resumen: Qué algoritmo para qué problema</h2>
+
+        <div class="table-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Problema</th>
+                        <th>Nodos</th>
+                        <th>Aristas</th>
+                        <th>Algoritmo/Enfoque</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Ruta más rápida A→B con pesos</strong></td>
+                        <td>Ciudades, nodos de red</td>
+                        <td>Conexiones con distancia/tiempo</td>
+                        <td>Dijkstra / A*</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Grados de separación</strong></td>
+                        <td>Personas</td>
+                        <td>Relaciones sociales</td>
+                        <td>BFS</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Red mínima de infraestructura</strong></td>
+                        <td>Ciudades, edificios</td>
+                        <td>Posibles conexiones</td>
+                        <td>Kruskal / Prim</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Influencers más importantes</strong></td>
+                        <td>Cuentas, páginas web</td>
+                        <td>Follows, enlaces</td>
+                        <td>PageRank</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Puentes críticos de la red</strong></td>
+                        <td>Cualquier entidad</td>
+                        <td>Cualquier relación</td>
+                        <td>Betweenness Centrality</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Detectar comunidades / clusters</strong></td>
+                        <td>Usuarios, cuentas</td>
+                        <td>Interacciones</td>
+                        <td>Louvain, Label Propagation</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Detección de fraude / ciclos</strong></td>
+                        <td>Cuentas, transacciones</td>
+                        <td>Transferencias</td>
+                        <td>DFS + detección de ciclos</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Recomendaciones</strong></td>
+                        <td>Usuarios + Items</td>
+                        <td>Interacciones (visto, comprado)</td>
+                        <td>Collaborative Filtering</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Análisis de impacto IT</strong></td>
+                        <td>Servicios, servidores</td>
+                        <td>Dependencias</td>
+                        <td>DFS + alcanzabilidad</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div style="display:flex; gap:1rem; flex-wrap:wrap; margin-top:2rem">
+            <a href="algoritmos.html" class="btn btn-outline">← Algoritmos</a>
+            <a href="neo4j.html" class="btn btn-neo">🔷 Neo4j en la Práctica</a>
+            <a href="index.html" class="btn btn-primary">🏠 Inicio</a>
+        </div>
+
+    </div>
+
+    <footer class="footer">
+        <div class="footer-inner">
+            <div class="footer-brand">
+                <div class="brand-logo">🕸️ Grafos Bootcamp</div>
+                <p>Apuntes de teoría de grafos para proyectos Big Data con Neo4j.</p>
+            </div>
+            <div class="footer-links">
+                <h5>Secciones</h5>
+                <ul>
+                    <li><a href="index.html">Inicio</a></li>
+                    <li><a href="conceptos.html">Conceptos</a></li>
+                    <li><a href="tipos.html">Tipos de Grafos</a></li>
+                    <li><a href="propiedades.html">Propiedades</a></li>
+                    <li><a href="algoritmos.html">Algoritmos</a></li>
+                    <li><a href="problemas.html">Problemas Reales</a></li>
+                    <li><a href="neo4j.html">Neo4j</a></li>
+                </ul>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p>Grafos Bootcamp — Apuntes para proyecto Big Data con Neo4j</p>
+        </div>
+    </footer>
+
+    <script>
+        const navbar = document.getElementById('navbar');
+        window.addEventListener('scroll', () => {
+            navbar.classList.toggle('scrolled', window.scrollY > 50);
+        });
+        document.getElementById('navToggle').addEventListener('click', () => {
+            document.querySelector('.nav-links').classList.toggle('open');
+        });
+        function copyCode(btn) {
+            const pre = btn.closest('.code-block').querySelector('pre');
+            navigator.clipboard.writeText(pre.innerText).then(() => {
+                btn.textContent = '✅ Copiado';
+                btn.classList.add('copied');
+                setTimeout(() => { btn.textContent = '📋 Copiar'; btn.classList.remove('copied'); }, 2000);
+            });
+        }
+        function toggleAnswer(btn) {
+            const content = btn.nextElementSibling;
+            content.classList.toggle('open');
+            btn.textContent = content.classList.contains('open') ? '🙈 Ocultar' : '👁️ Ver respuestas';
+        }
+        // Reveal on scroll
+        const reveals = document.querySelectorAll('.reveal');
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(e => {
+                if (e.isIntersecting) {
+                    e.target.classList.add('animate-in');
+                    observer.unobserve(e.target);
+                }
+            });
+        }, { threshold: 0.05 });
+        reveals.forEach(el => observer.observe(el));
+    </script>
+</body>
+
+</html>

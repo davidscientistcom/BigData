@@ -1,0 +1,22 @@
+services:
+  nifi:
+    image: apache/nifi:latest
+    container_name: nifi-practica-1
+    ports:
+      - "8443:8443"
+    environment:
+      - SINGLE_USER_CREDENTIALS_USERNAME=admin
+      - SINGLE_USER_CREDENTIALS_PASSWORD=password_seguro_2026
+      - NIFI_WEB_HTTPS_PORT=8443
+    volumes:
+      # Volúmenes con nombre (Docker los gestiona solo y no fallan)
+      - nifi-conf:/opt/nifi/nifi-current/conf
+      - nifi-database:/opt/nifi/nifi-current/database_repository
+      # Estos los dejamos como carpetas locales para que los alumnos vean sus ficheros
+      - ./ingesta:/opt/nifi/nifi-current/ingesta
+      - ./exportacion:/opt/nifi/nifi-current/exportacion
+
+# Definimos los volúmenes aquí abajo
+volumes:
+  nifi-conf:
+  nifi-database:

@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <title>15 · Masterclass: Apache Parquet — Kafka Bootcamp</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', system-ui, sans-serif;
+            background: #0d1117;
+            color: #e6edf3;
+            line-height: 1.6;
+        }
+
+        .topbar {
+            background: #161b22;
+            border-bottom: 1px solid #30363d;
+            padding: 12px 24px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 0.82em;
+        }
+
+        .topbar a {
+            color: #d2a8ff;
+            text-decoration: none;
+        }
+
+        .topbar a:hover {
+            color: #e2c5ff;
+        }
+
+        .topbar .sep {
+            color: #484f58;
+        }
+
+        .topbar .cur {
+            color: #e6edf3;
+            font-weight: 600;
+        }
+
+        .hero {
+            background: linear-gradient(135deg, #2a1a3a22, #0d1117);
+            border-bottom: 1px solid #30363d;
+            padding: 40px 24px;
+            text-align: center;
+        }
+
+        .badge {
+            display: inline-block;
+            background: #2a1a3a;
+            color: #d2a8ff;
+            font-size: 0.7em;
+            font-weight: 700;
+            padding: 4px 14px;
+            border-radius: 20px;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            margin-bottom: 16px;
+        }
+
+        .hero h1 {
+            font-size: 2.4em;
+            font-weight: 900;
+            margin-bottom: 12px;
+            color: #ffffff;
+        }
+
+        .hero p {
+            color: #8b949e;
+            font-size: 1.05em;
+            max-width: 760px;
+            margin: 0 auto;
+        }
+
+        .content {
+            max-width: 1000px;
+            margin: 40px auto;
+            padding: 0 24px;
+        }
+
+        h2 {
+            font-size: 1.6em;
+            color: #d2a8ff;
+            margin: 48px 0 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #30363d;
+        }
+
+        h3 {
+            font-size: 1.2em;
+            color: #e6edf3;
+            margin: 32px 0 16px;
+        }
+
+        p {
+            margin-bottom: 18px;
+            font-size: 0.95em;
+        }
+
+        .card {
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 24px;
+        }
+
+        pre {
+            background: #010409;
+            border: 1px solid #21262d;
+            border-radius: 8px;
+            padding: 16px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85em;
+            overflow-x: auto;
+            margin: 16px 0;
+            color: #e6edf3;
+        }
+
+        code {
+            font-family: monospace;
+            background: #21262d;
+            padding: 2px 6px;
+            border-radius: 4px;
+            color: #e2c5ff;
+            font-size: 0.9em;
+        }
+
+        .hi {
+            padding: 16px 20px;
+            border-radius: 8px;
+            margin: 24px 0;
+            font-size: 0.95em;
+            border-left: 4px solid;
+            background: #161b22;
+        }
+
+        .hi.warn {
+            border-color: #ff7b72;
+            background: #3a1a1a33;
+            color: #ffa198;
+        }
+
+        .hi.info {
+            border-color: #d2a8ff;
+            background: #2a1a3a33;
+            color: #e2c5ff;
+        }
+
+        .diagram-box {
+            background: #010409;
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            padding: 24px;
+            margin: 24px 0;
+            text-align: center;
+        }
+
+        .diagram-col {
+            display: inline-block;
+            vertical-align: top;
+            margin: 0 10px;
+            text-align: center;
+        }
+
+        .col-header {
+            color: #8b949e;
+            font-size: 0.8em;
+            text-transform: uppercase;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+
+        .col-block {
+            background: #21262d;
+            border: 1px solid #d2a8ff44;
+            color: #d2a8ff;
+            padding: 10px 20px;
+            border-radius: 6px;
+            margin-bottom: 4px;
+            font-family: monospace;
+        }
+
+        .nav-footer {
+            border-top: 1px solid #30363d;
+            padding: 30px 24px;
+            display: flex;
+            justify-content: space-between;
+            margin-top: 60px;
+            max-width: 1000px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .nav-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            padding: 12px 24px;
+            text-decoration: none;
+            color: #e6edf3;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        .nav-btn:hover {
+            border-color: #d2a8ff;
+            color: #d2a8ff;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="topbar">
+        <a href="index.html">🏠 Menú Principal</a><span class="sep">›</span>
+        <span class="cur">15 · Masterclass: Parquet</span>
+    </div>
+
+    <div class="hero">
+        <div class="badge">Ecosistema Data — Deep Dive</div>
+        <h1>🧊 Apache Parquet (El Almacén Masivo)</h1>
+        <p>Entendiendo el paradigma Columnar, las matemáticas detrás del Run-Length Encoding y cómo Spark pulveriza GigaBytes en microsegundos usando Predicate Pushdown.</p>
+    </div>
+
+    <div class="content">
+
+        <h2>1. El Mito "Row-Based vs Column-Based"</h2>
+        <p>A menudo escucharás: "Kafka usa Avro porque es <em>Row-Oriented</em>, mientras que S3 usa Parquet porque es <em>Column-Oriented</em>". ¿Qué significa físicamente en tu Disco Duro u Memoria RAM (SSD/HDD)?</p>
+        
+        <div class="card">
+            <h3>Archivos Orientados por Filas (PostgreSQL, Avro, Kafka)</h3>
+            <p>Imagina que tienes 1 millón de compras. Si guardas un dato y su disco duro gira para escribir el siguiente bit, escribimos: <code>[ID: 1, User: Ana, Precio: 50.0] -> [ID: 2, User: Jon, Precio: 25.0]...</code></p>
+            <p>Es la forma humana y natural de registrar hechos transaccionales de la vida real (*un evento ocurre, lo escribo*). Las BBDD y Kafka aman esto porque escribes rápido y linealmente (Append-only).</p>
+
+            <h3>Archivos Orientados por Columnas (Parquet)</h3>
+            <p>Parquet destroza deliberadamente las "Filas". Coge 1 millón de compras en RAM temporal, las revienta y físicamente en el disco guarda un bloque inmenso de solo IDs juntos, otro bloque infinito de solo Usuarios juntos, y otro bloque de puros Precios.</p>
+            <code>Archivo en disco: [1, 2, 3... 1_000_000] [Ana, Jon, Bob... 1_000_000] [50.0, 25.0, 15.0... 1_000_000]</code>
+        </div>
+
+        <div class="hi warn">
+            <strong>¿Por qué nadie usa Parquet para mensajería instantánea en Kafka?</strong><br>
+            Porque si tu Microservicio emite UN solo mensaje JSON tipo <code>{"id": 4, "nombre": "Leo", "precio": 5}</code>, obligarías a Parquet a dividir esos 3 campitos, abrir un archivo físico, ir a la sección "Bloque IDs" y añadir un 4, saltar al "Bloque Nombres" y poner a "Leo"... Es terriblemente pesado a nivel de I/O de disco para transacciones solitarias de baja latencia. <strong>Parquet brilla creando Lotes/Batches (cientos de miles de filas acumuladas)</strong>.
+        </div>
+
+        <h2>2. Compresión Matemática (Dictionary y RLE)</h2>
+        <p>Ok, al guardar de golpe todas las "Edades" juntas en bloques continuos de Disco Duro, se abrieron puertas que la Inteligencia Artificial y la Analítica exigían a gritos. Parquet es capaz de aplicar algoritmos salvajes porque sabe que a la CPU le llegarán un millón de <em>Integers</em> consecutivos uniformes.</p>
+
+        <div class="diagram-box">
+            <h4 style="color: #d2a8ff; margin-bottom: 20px;">Run-Length Encoding (RLE) para Columnas de Baja Cardinalidad</h4>
+            <div class="diagram-col">
+                <div class="col-header">Real Row Data</div>
+                <div class="col-block">Spain</div>
+                <div class="col-block">Spain</div>
+                <div class="col-block">Spain</div>
+                <div class="col-block">Spain</div>
+            </div>
+            <div style="display: inline-block; vertical-align: top; margin: 30px 10px; color: #8b949e;">➡️ Compresor ➡️</div>
+            <div class="diagram-col">
+                <div class="col-header">Físico Parquet Disk</div>
+                <div class="col-block" style="background: transparent; border: none; font-size: 1.1em; color: #a5d6ff;">[4, "Spain"]</div>
+                <div style="font-size: 0.7em; margin-top: 10px; color: #8b949e;">Pesa 4 bytes <br>en lugar de 20 bytes.</div>
+            </div>
+        </div>
+
+        <p><strong>RLE:</strong> Si Parquet ve miles de elementos de "España" o "Usuarios No Premium (False)", no escribe miles de Trues y Strings en disco. El disco literalmente escribe <code>420xTrue</code> o <code>[80.000x "ES"]</code>. El archivo físico pasa a pesar de 10GB de puros Bools a literalmente Megabytes.</p>
+        <p><strong>Dictionary Encoding:</strong> Si Parquet detecta textos muy variados pero que se repiten (como Nombres de Ciudades), genera automáticamente un Mini-Diccionario interno en el archivo (Ej: <code>0="Madrid"</code>, <code>1="Londres"</code>). La gigantesca columna analítica se cambia silenciosamente para almacenar números binarios <code>[0, 1, 0, 0, 0, 1]</code> (que ocupan bits), y solo convierte el string cuando el Data Scientist pide ver el reporte.</p>
+
+        <h2>3. Predicate Pushdown: El Secreto de la Inmensidad Mágica (Data Lakes)</h2>
+        <p>Aquí reside el "Mind-Blowing" del Big Data. Las herramientas como Databricks, Spark o AWS Athena analizan Petabytes de información en Amazon S3. El problema radica en el <em>"Escaneo de Red"</em> (lo que AWS te cobra por leer 1 TB). ¿Cómo evitan leer 1 TB entero?</p>
+        
+        <p>El archivo Parquet está fraccionado y dividido físicamente en <strong>Row Groups</strong>. Y al último byte del archivo (el Footer de Metadatos), Parquet guarda silenciosamente resúmenes estadísticos (Min/Max Stats) sobre cada sub-bloque antes de que cierres el fichero.</p>
+
+        <div class="hi info">
+            <strong>Caso SQL Real -> <code>SELECT sum(gastos) FROM data.parquet WHERE edad = 110</code></strong><br><br>
+            Tú esperas que Spark lea 100 GB de registros y cuente. Pero lo que Spark hace primero es abrir <i>únicamente</i> el Footer (que pesa 2KB).
+            <ul>
+                <li><strong>RowGroup 1 Stats:</strong> Columna Edad. Mínimo: 18, Máximo: 65.</li>
+                <li><strong>RowGroup 2 Stats:</strong> Columna Edad. Mínimo: 30, Máximo: 95.</li>
+            </ul>
+            Spark analiza esto milisegundos y dice: <i>"Imposible que un número 110 esté en el grupo 1 o en el 2. Excluyo los 100 GB directamente. Terminado. Costo lectura: 0$"</i>. Esto se llama empujar el filtro SQL (Predicate) al hardware en disco.
+        </div>
+
+        <h2>4. El Pipeline Dorado: Kafka + Avro → S3 + Parquet</h2>
+        <p>Por eso, en la industria Real:</p>
+        <ul>
+            <li>Tus microservicios envían clicks asíncronamente en 5 msgs por <strong>Avro a Kafka</strong> (No les importa la compresión RLE gigantesca, priorizan velocidad y compatibilidad de tipos).</li>
+            <li>En medio, despliegas <strong>Kafka Connect</strong> o tareas de <strong>Spark Streaming</strong>. Su único labor es beber esos miles de Avros asíncronos en RAM durante un espacio de tiempo (ej. 15 minutos).</li>
+            <li>Cada 15 minutos, Spark ordena esa cubeta de Ram, aplica un rotundo cambio de matriz, la tritura con el diccionario (convierte todo a una estructura Columnar densa), y la guarda en un archivo gigante <code>dump_15_mins.parquet</code> en Amazon S3 para que tu equipo de AI la consuma el año que viene a hipervelocidad y bajo coste.</li>
+        </ul>
+
+    </div>
+
+    <div class="nav-footer">
+        <a href="14_formato_protobuf.html" class="nav-btn">← Protobuf RPC</a>
+        <a href="index.html" class="nav-btn">Finalizar Masterclass →</a>
+    </div>
+</body>
+
+</html>

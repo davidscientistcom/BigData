@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <title>09 · Patrones de Arquitectura — Kafka Bootcamp</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', system-ui, sans-serif;
+            background: #0d1117;
+            color: #e6edf3;
+        }
+
+        .topbar {
+            background: #161b22;
+            border-bottom: 1px solid #30363d;
+            padding: 12px 24px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 0.82em;
+        }
+
+        .topbar a {
+            color: #50fa7b;
+            text-decoration: none;
+        }
+
+        .topbar a:hover {
+            color: #80ffab;
+        }
+
+        .topbar .sep {
+            color: #484f58;
+        }
+
+        .topbar .cur {
+            color: #e6edf3;
+            font-weight: 600;
+        }
+
+        .hero {
+            background: linear-gradient(135deg, #0a2a1022, #0d1117);
+            border-bottom: 1px solid #30363d;
+            padding: 36px 24px;
+            text-align: center;
+        }
+
+        .badge {
+            display: inline-block;
+            background: #0a2a10;
+            color: #50fa7b;
+            font-size: 0.7em;
+            font-weight: 700;
+            padding: 3px 12px;
+            border-radius: 20px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            margin-bottom: 14px;
+        }
+
+        .hero h1 {
+            font-size: 1.9em;
+            font-weight: 900;
+            margin-bottom: 8px;
+        }
+
+        .hero p {
+            color: #8b949e;
+            font-size: 0.88em;
+            max-width: 640px;
+            margin: 0 auto;
+            line-height: 1.6;
+        }
+
+        .content {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 32px 24px;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .grid-wide {
+            grid-column: 1 / -1;
+        }
+
+        .card {
+            background: #161b22;
+            border-radius: 12px;
+            border: 1px solid #30363d;
+            padding: 20px;
+            transition: border-color 0.18s;
+        }
+
+        .card:hover {
+            border-color: #50fa7b44;
+        }
+
+        .card-title {
+            font-weight: 700;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.95em;
+        }
+
+        p {
+            color: #8b949e;
+            line-height: 1.65;
+            margin-bottom: 8px;
+            font-size: 0.85em;
+        }
+
+        pre {
+            background: #010409;
+            border: 1px solid #21262d;
+            border-radius: 8px;
+            padding: 14px 16px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.76em;
+            overflow-x: auto; white-space: pre;
+            line-height: 1.7;
+            margin: 8px 0;
+            white-space: pre;
+        }
+
+        code {
+            font-family: monospace;
+            background: #21262d;
+            padding: 1px 5px;
+            border-radius: 4px;
+            font-size: 0.88em;
+            color: #a5d6ff;
+        }
+
+        .c {
+            color: #6e7681;
+        }
+
+        .kw {
+            color: #ff7b72;
+        }
+
+        .str {
+            color: #a5d6ff;
+        }
+
+        .num {
+            color: #79c0ff;
+        }
+
+        .nm {
+            color: #d2a8ff;
+        }
+
+        .fn {
+            color: #e3b341;
+        }
+
+        .gr {
+            color: #3fb950;
+        }
+
+        .cy {
+            color: #39d0d8;
+        }
+
+        .or {
+            color: #ff6b35;
+        }
+
+        ul,
+        ol {
+            padding-left: 20px;
+            margin: 6px 0 10px;
+        }
+
+        li {
+            color: #8b949e;
+            margin-bottom: 4px;
+            font-size: 0.85em;
+            line-height: 1.5;
+        }
+
+        li::marker {
+            color: #50fa7b;
+        }
+
+        .hi {
+            margin: 10px 0;
+            background: #0a2a1033;
+            border: 1px solid #50fa7b44;
+            border-radius: 8px;
+            padding: 10px 14px;
+            font-size: 0.82em;
+            color: #80ffab;
+        }
+
+        .hi.b {
+            background: #1f3a5f33;
+            border-color: #79c0ff44;
+            color: #a5d6ff;
+        }
+
+        .hi.r {
+            background: #3a1a1a33;
+            border-color: #ff7b7244;
+            color: #ffa198;
+        }
+
+        .hi.o {
+            background: #1a0d0533;
+            border-color: #ff6b3544;
+            color: #ff8c5a;
+        }
+
+        .hi.p {
+            background: #2a1a3a33;
+            border-color: #d2a8ff44;
+            color: #d2a8ff;
+        }
+
+        .section-title {
+            font-size: 1.1em;
+            font-weight: 700;
+            color: #50fa7b;
+            margin: 32px 0 16px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #21262d;
+        }
+
+        .diagram {
+            background: #010409;
+            border: 1px solid #0a2a10;
+            border-radius: 10px;
+            padding: 16px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.76em;
+            line-height: 1.8;
+            margin: 12px 0;
+            overflow-x: auto; white-space: pre;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.8em;
+            margin: 8px 0;
+        }
+
+        th {
+            background: #1b1f24;
+            color: #8b949e;
+            text-align: left;
+            padding: 7px 10px;
+            font-weight: 600;
+        }
+
+        td {
+            padding: 6px 10px;
+            border-bottom: 1px solid #21262d;
+            color: #8b949e;
+            vertical-align: top;
+        }
+
+        tr:hover td {
+            background: #21262d44;
+        }
+
+        .nav-footer {
+            border-top: 1px solid #30363d;
+            padding: 20px 24px;
+            display: flex;
+            justify-content: space-between;
+            margin-top: 20px;
+        }
+
+        .nav-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            padding: 10px 18px;
+            text-decoration: none;
+            color: #e6edf3;
+            font-size: 0.83em;
+            font-weight: 600;
+            transition: all 0.18s;
+        }
+
+        .nav-btn:hover {
+            border-color: #50fa7b;
+            color: #50fa7b;
+        }
+    </style>
+
+    <script type="module">
+        import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+        mermaid.initialize({ startOnLoad: true, theme: 'dark' });
+    </script>
+</head>
+
+<body>
+    <div class="topbar">
+        <a href="index.html">🏠 Kafka Bootcamp</a><span class="sep">›</span>
+        <span class="cur">09 · Patrones de Arquitectura</span>
+    </div>
+    <div class="hero">
+        <div class="badge">Sección 09 · Arquitectura</div>
+        <h1>🏗️ Patrones de Arquitectura con Kafka</h1>
+        <p>Event Sourcing, CQRS, Saga Pattern y Outbox Pattern. Integración con Spark, Flink y el Data Lakehouse.
+            Los patrones que usan Netflix, Uber y LinkedIn.</p>
+    </div>
+
+    <div class="content">
+
+        <div class="section-title">📖 Event Sourcing — el log como fuente de verdad</div>
+        <div class="grid">
+            <div class="card grid-wide">
+                <div class="card-title">Guardar eventos, no estado — el patrón más poderoso con Kafka</div>
+                <p>En lugar de guardar el estado actual de una entidad (la cuenta bancaria tiene 500€), guardas
+                    todos los <em>eventos</em> que llevaron a ese estado (depósito 300€, retirada 100€, depósito 300€).
+                    Kafka es el log de eventos perfecto.</p>
+                <div class="mermaid">
+graph LR
+    subgraph CRUD
+        U[TABLE: {id: 1, saldo: 500}]
+    end
+    subgraph EVENT SOURCING Kafka
+        E0[0: CREADA] --> E1[1: DEPOSITO 300] --> E2[2: RETIRADA 100] --> E3[3: DEPOSITO 300]
+        E3 --> R[Estado: 500]
+    end
+</div>
+                <pre><span class="kw">import</span> faust
+<span class="kw">from</span> datetime <span class="kw">import</span> datetime
+
+app = faust.App(<span class="str">'event-sourcing'</span>, broker=<span class="str">'kafka://localhost:9094'</span>)
+
+<span class="c"># Evento base</span>
+<span class="kw">class</span> <span class="nm">EventoCuenta</span>(faust.Record):
+    tipo: str             <span class="c"># DEPOSITO, RETIRADA, TRANSFERENCIA</span>
+    cuenta_id: str
+    monto: float
+    timestamp: str
+
+topic_eventos = app.topic(<span class="str">'cuenta-eventos'</span>, value_type=<span class="nm">EventoCuenta</span>)
+
+<span class="c"># Tabla de proyección: saldo actual por cuenta</span>
+saldos = app.Table(<span class="str">'saldos'</span>, default=float)
+
+<span class="fn">@app</span>.agent(topic_eventos)
+<span class="kw">async def</span> <span class="fn">proyectar_saldo</span>(eventos):
+    <span class="kw">async for</span> evento <span class="kw">in</span> eventos:
+        <span class="kw">if</span> evento.tipo == <span class="str">"DEPOSITO"</span>:
+            saldos[evento.cuenta_id] += evento.monto
+        <span class="kw">elif</span> evento.tipo == <span class="str">"RETIRADA"</span>:
+            saldos[evento.cuenta_id] -= evento.monto
+        <span class="fn">print</span>(<span class="str">f"Cuenta {evento.cuenta_id}: €{saldos[evento.cuenta_id]:.2f}"</span>)</pre>
+                <div class="hi b">💡 La tabla <code>saldos</code> es solo una <strong>proyección</strong> del log. Si se
+                    corrompe,
+                    se puede reconstruir completamente haciendo replay desde el offset 0.</div>
+            </div>
+        </div>
+
+        <div class="section-title">⚡ CQRS — separar lectura y escritura</div>
+        <div class="grid">
+            <div class="card grid-wide">
+                <div class="card-title">Command Query Responsibility Segregation con Kafka</div>
+                <div class="mermaid">
+graph TD
+    API --> CH[Command Handler]
+    CH --> V[Validar]
+    V -->|Producir| K[Kafka Topic: eventos]
+    
+    K --> C1[Consumer 1: Elasticsearch]
+    K --> C2[Consumer 2: Redis]
+    K --> C3[Consumer 3: PostgreSQL]
+    K --> C4[Consumer 4: MongoDB]
+</div>
+                <div class="hi">🎯 Netflix usa exactamente este patrón: un evento "usuario vio película" alimenta el
+                    sistema
+                    de recomendaciones, el historial, la facturación y el sistema de analíticas — todos desde el mismo
+                    topic Kafka.</div>
+            </div>
+        </div>
+
+        <div class="section-title">🔄 Saga Pattern — transacciones distribuidas</div>
+        <div class="grid">
+            <div class="card grid-wide">
+                <div class="card-title">Coordinar flujos de negocio entre microservicios</div>
+                <p>Una "saga" es una secuencia de transacciones locales. Si alguna falla, se ejecutan
+                    transacciones compensadoras para deshacer el efecto de las anteriores.</p>
+                <div class="mermaid">
+graph TD
+    O[Orchestrator] --> S1[Topic: reservar-stock]
+    S1 -->|OK| S2[Topic: pago]
+    S2 -->|OK| S3[Topic: envio]
+    S3 -->|OK| S4[Topic: confirmacion-pedido]
+    
+    S2 -.->|Fallo Pago| C1[Topic: compensacion-stock]
+    C1 -.-> C2[Topic: cancelar-pedido]
+</div>
+                <pre><span class="kw">import</span> faust
+
+app = faust.App(<span class="str">'saga-orquestador'</span>, broker=<span class="str">'kafka://localhost:9094'</span>)
+
+<span class="kw">class</span> <span class="nm">ResultadoPago</span>(faust.Record):
+    pedido_id: str
+    exito: bool
+    motivo: str
+
+topic_resultado_pago   = app.topic(<span class="str">'resultado-pago'</span>,        value_type=<span class="nm">ResultadoPago</span>)
+topic_compensar_stock  = app.topic(<span class="str">'compensacion-stock'</span>,    value_type=dict)
+topic_notificar        = app.topic(<span class="str">'notificaciones'</span>,         value_type=dict)
+
+<span class="fn">@app</span>.agent(topic_resultado_pago)
+<span class="kw">async def</span> <span class="fn">manejar_resultado_pago</span>(resultados):
+    <span class="kw">async for</span> resultado <span class="kw">in</span> resultados:
+        <span class="kw">if</span> resultado.exito:
+            <span class="c"># Continuar saga: siguiente paso</span>
+            await app.topic(<span class="str">'crear-envio'</span>).send(
+                key=resultado.pedido_id,
+                value={<span class="str">"pedido_id"</span>: resultado.pedido_id}
+            )
+        <span class="kw">else</span>:
+            <span class="c"># Compensar: liberar el stock reservado</span>
+            await topic_compensar_stock.send(
+                key=resultado.pedido_id,
+                value={<span class="str">"pedido_id"</span>: resultado.pedido_id, <span class="str">"accion"</span>: <span class="str">"liberar"</span>}
+            )
+            <span class="c"># Notificar al usuario del fallo</span>
+            await topic_notificar.send(
+                key=resultado.pedido_id,
+                value={<span class="str">"tipo"</span>: <span class="str">"pedido_cancelado"</span>, <span class="str">"motivo"</span>: resultado.motivo}
+            )</pre>
+            </div>
+        </div>
+
+        <div class="section-title">🔌 Outbox Pattern — garantizar publicación en Kafka</div>
+        <div class="grid">
+            <div class="card grid-wide">
+                <div class="card-title">El problema del doble commit y cómo resolverlo</div>
+                <div class="mermaid">
+graph TD
+    subgraph Outbox Pattern
+        T[BEGIN TRANSACTION] --> I1[INSERT INTO pedidos]
+        I1 --> I2[INSERT INTO outbox topic, key, value]
+        I2 --> C[COMMIT]
+    end
+    subgraph CDC Connect
+        D[Debezium] -->|Lee outbox| K[Kafka]
+    end
+    C --> D
+</div>
+                <pre><span class="c"># Debezium captura los cambios de PostgreSQL y los publica en Kafka
+# Configuración del conector Debezium en Kafka Connect:</span>
+connector_config = {
+    <span class="str">"name"</span>: <span class="str">"outbox-connector"</span>,
+    <span class="str">"config"</span>: {
+        <span class="str">"connector.class"</span>: <span class="str">"io.debezium.connector.postgresql.PostgresConnector"</span>,
+        <span class="str">"database.hostname"</span>: <span class="str">"postgres"</span>,
+        <span class="str">"database.dbname"</span>: <span class="str">"mi_app"</span>,
+        <span class="str">"table.include.list"</span>: <span class="str">"public.outbox"</span>,
+        <span class="str">"transforms"</span>: <span class="str">"outbox"</span>,
+        <span class="str">"transforms.outbox.type"</span>: <span class="str">"io.debezium.transforms.outbox.EventRouter"</span>,
+    }
+}</pre>
+                <div class="hi b">💡 El Outbox Pattern es <strong>imprescindible</strong> para sistemas de producción
+                    donde
+                    necesitas consistencia entre tu base de datos relacional y Kafka. Debezium lo implementa en minutos.
+                </div>
+            </div>
+        </div>
+
+        <div class="section-title">⚡ Integración con el ecosistema Big Data</div>
+        <div class="grid">
+            <div class="card">
+                <div class="card-title">🔥 Kafka + Apache Spark Streaming</div>
+                <pre><span class="kw">from</span> pyspark.sql <span class="kw">import</span> SparkSession
+<span class="kw">from</span> pyspark.sql.functions <span class="kw">import</span> from_json, col
+<span class="kw">from</span> pyspark.sql.types <span class="kw">import</span> *
+
+spark = SparkSession.builder \
+    .appName(<span class="str">"KafkaStreaming"</span>) \
+    .config(<span class="str">"spark.jars.packages"</span>,
+            <span class="str">"org.apache.spark:spark-sql-kafka-0-10_2.12:3.5.0"</span>) \
+    .getOrCreate()
+
+<span class="c"># Leer de Kafka como stream</span>
+df = spark.readStream \
+    .format(<span class="str">"kafka"</span>) \
+    .option(<span class="str">"kafka.bootstrap.servers"</span>, <span class="str">"localhost:9094"</span>) \
+    .option(<span class="str">"subscribe"</span>, <span class="str">"pedidos"</span>) \
+    .option(<span class="str">"startingOffsets"</span>, <span class="str">"earliest"</span>) \
+    .load()
+
+schema = StructType([
+    StructField(<span class="str">"pedido_id"</span>, StringType()),
+    StructField(<span class="str">"total"</span>, DoubleType()),
+    StructField(<span class="str">"usuario_id"</span>, StringType()),
+])
+
+<span class="c"># Deserializar JSON</span>
+pedidos = df.select(
+    from_json(col(<span class="str">"value"</span>).cast(<span class="str">"string"</span>), schema).alias(<span class="str">"data"</span>)
+).select(<span class="str">"data.*"</span>)
+
+<span class="c"># Aggregation: total de ventas por usuario</span>
+totales = pedidos.groupBy(<span class="str">"usuario_id"</span>).sum(<span class="str">"total"</span>)
+
+query = totales.writeStream \
+    .format(<span class="str">"console"</span>) \
+    .outputMode(<span class="str">"complete"</span>) \
+    .start()
+
+query.awaitTermination()</pre>
+            </div>
+
+            <div class="card">
+                <div class="card-title">🗄️ Kafka → Data Lakehouse (Delta Lake / Iceberg)</div>
+                <pre><span class="c"># Escribir de Kafka directamente a Delta Lake</span>
+<span class="kw">from</span> pyspark.sql <span class="kw">import</span> SparkSession
+
+spark = SparkSession.builder \
+    .appName(<span class="str">"KafkaToDelta"</span>) \
+    .config(<span class="str">"spark.sql.extensions"</span>,
+            <span class="str">"io.delta.sql.DeltaSparkSessionExtension"</span>) \
+    .getOrCreate()
+
+kafka_df = spark.readStream \
+    .format(<span class="str">"kafka"</span>) \
+    .option(<span class="str">"kafka.bootstrap.servers"</span>, <span class="str">"localhost:9094"</span>) \
+    .option(<span class="str">"subscribe"</span>, <span class="str">"pedidos"</span>) \
+    .load()
+
+<span class="c"># Escribir a Delta Lake en modo streaming</span>
+query = kafka_df.writeStream \
+    .format(<span class="str">"delta"</span>) \
+    .outputMode(<span class="str">"append"</span>) \
+    .option(<span class="str">"checkpointLocation"</span>, <span class="str">"/tmp/kafka-delta-checkpoint"</span>) \
+    .start(<span class="str">"/data/lake/pedidos"</span>)
+
+<span class="c"># Ahora dbt puede leer la tabla Delta con SQL ✅</span>
+<span class="c"># Spark SQL: SELECT * FROM delta.`/data/lake/pedidos`</span></pre>
+                <div class="hi">🏗️ Este es el patrón Lambda/Kappa moderno: Kafka captura los eventos en tiempo real,
+                    Spark los escribe al Data Lake, y dbt los transforma para analítica.</div>
+            </div>
+
+            <div class="card grid-wide">
+                <div class="card-title">🗺️ La arquitectura Big Data completa con Kafka en el centro</div>
+                <div class="mermaid">
+graph LR
+    subgraph Fuentes
+        AW[Aplicaciones web]
+        AE[APIs externas]
+        SI[Sensores IoT]
+        BD[Bases de datos CDC]
+        EU[Eventos usuario]
+    end
+    subgraph Kafka Hub
+        K[Topics Kafka]
+    end
+    subgraph Destinos
+        F[Faust]
+        SS[Spark Streaming]
+        AF[Apache Flink]
+        ES[Elasticsearch]
+        R[Redis]
+        CH[ClickHouse]
+        DL[Delta Lake]
+    end
+    AW --> K
+    AE --> K
+    SI --> K
+    BD --> K
+    EU --> K
+    
+    K --> F
+    K --> SS
+    K --> AF
+    K --> ES
+    K --> R
+    K --> CH
+    K --> DL
+</div>
+            </div>
+        </div>
+
+        <div class="section-title">📚 ¿Qué sigue? Rutas de aprendizaje avanzadas</div>
+        <div class="grid">
+            <div class="card grid-wide">
+                <div class="card-title">Secciones futuras de este bootcamp</div>
+                <table>
+                    <tr>
+                        <th>Sección</th>
+                        <th>Tema</th>
+                        <th>Nivel</th>
+                    </tr>
+                    <tr>
+                        <td>10</td>
+                        <td>Kafka Connect: conectores predefinidos para S3, PostgreSQL, Elasticsearch, MongoDB</td>
+                        <td>⭐⭐⭐</td>
+                    </tr>
+                    <tr>
+                        <td>11</td>
+                        <td>ksqlDB: SQL sobre streams Kafka en tiempo real</td>
+                        <td>⭐⭐⭐</td>
+                    </tr>
+                    <tr>
+                        <td>12</td>
+                        <td>Kafka en Kubernetes: Strimzi Operator y escalado automático</td>
+                        <td>⭐⭐⭐⭐</td>
+                    </tr>
+                    <tr>
+                        <td>13</td>
+                        <td>Multi-cluster y geo-replicación: MirrorMaker 2</td>
+                        <td>⭐⭐⭐⭐</td>
+                    </tr>
+                    <tr>
+                        <td>14</td>
+                        <td>Seguridad: TLS, SASL/SCRAM, ACLs y Confluent RBAC</td>
+                        <td>⭐⭐⭐⭐</td>
+                    </tr>
+                    <tr>
+                        <td>15</td>
+                        <td>Caso completo: pipeline de detección de fraude en tiempo real</td>
+                        <td>⭐⭐⭐⭐⭐</td>
+                    </tr>
+                </table>
+                <div class="hi">📈 Di "profundiza en la sección 10 de Kafka" y ampliaré la guía con una nueva entrada en
+                    el índice.</div>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="nav-footer">
+        <a href="08_produccion.html" class="nav-btn">← 08 · Producción</a>
+        <a href="index.html" class="nav-btn">🏠 Volver al índice</a>
+    </div>
+</body>
+
+</html>
