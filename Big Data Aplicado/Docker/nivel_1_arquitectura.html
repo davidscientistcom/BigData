@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nivel 1: Anatomía Nuclear — Docker Bootcamp</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+
+    <nav class="navbar" id="navbar">
+        <div class="nav-inner">
+            <div class="nav-brand"><span class="brand-text">Docker Bootcamp</span></div>
+            <ul class="nav-links">
+                <li><a href="index.html">Inicio</a></li>
+                <li><a href="nivel_1_arquitectura.html" class="active">1. Arquitectura</a></li>
+                <li><a href="nivel_2_dockerfiles.html">2. Dockerfiles</a></li>
+                <li><a href="nivel_3_volumenes_redes.html">3. Volúmenes</a></li>
+                <li><a href="nivel_4_compose_basico.html">4. Compose Base</a></li>
+                <li><a href="nivel_5_compose_avanzado.html">5. Compose Pro</a></li>
+            </ul>
+            <button class="nav-mobile-btn" id="navToggle">MENU</button>
+        </div>
+    </nav>
+
+    <div class="breadcrumb">
+        <div class="breadcrumb-inner">
+            <a href="index.html">Inicio</a><span class="breadcrumb-sep">›</span><span>Nivel 1: Arquitectura</span>
+        </div>
+    </div>
+
+    <div class="page-hero">
+        <h1>Anatomía <span class="gradient-text">Nuclear</span> del Contenedor</h1>
+        <p>Desmitificación del proceso aislado. Profundidad sobre primitivas del Kernel de Linux (Namespaces y CGroups) y el mito de la máquina virtual compartida.</p>
+    </div>
+
+    <div class="content">
+
+        <h2>1. El falso mito de la Máquina Virtual</h2>
+        <p>Históricamente, el aislamiento de procesos se conseguía virtualizando hardware completo mediante un <strong>Hypervisor</strong>. El coste asociado a arrancar un sistema operativo invitado gigante solo para ejecutar un servidor web de 20MB suponía un desperdicio del 90% de los recursos.</p>
+        <p>Docker no virtualiza hardware. Docker es un demonio (proceso root silencioso) que habla directamente con la API del Kernel de Linux para crear procesos aislados lógicamente entre sí. Lo hace exprimiendo dos características base del sistema operativo:</p>
+
+        <div class="diagram-demo">
+            <span class="diagram-demo-label">Contenedores contra Máquinas Virtuales</span>
+            <svg viewBox="0 0 700 200" style="height:200px">
+                <!-- Virtual Machine Side -->
+                <text x="150" y="30" text-anchor="middle" fill="#4b5563" font-size="14" font-weight="700" font-family="Inter">Arquitectura Hypervisor</text>
+                <rect x="20" y="50" width="260" height="20" rx="4" fill="#64748b" />
+                <text x="150" y="63" text-anchor="middle" fill="#f8fafc" font-size="10" font-family="Inter">Servidor Físico (Infraestructura)</text>
+                
+                <rect x="20" y="75" width="260" height="20" rx="4" fill="#334155" />
+                <text x="150" y="88" text-anchor="middle" fill="#f8fafc" font-size="10" font-family="Inter">Sistema Operativo Host</text>
+
+                <rect x="20" y="100" width="260" height="20" rx="4" fill="#94a3b8" />
+                <text x="150" y="113" text-anchor="middle" fill="#0f172a" font-size="10" font-weight="700" font-family="Inter">Hypervisor (VMware / KVM)</text>
+
+                <rect x="20" y="125" width="125" height="30" rx="4" fill="rgba(232,66,26,0.2)" stroke="#e8421a" stroke-width="1.5" />
+                <text x="82.5" y="145" text-anchor="middle" fill="#e8421a" font-size="9" font-weight="700" font-family="Inter">Guest OS (3GB)</text>
+
+                <rect x="155" y="125" width="125" height="30" rx="4" fill="rgba(232,66,26,0.2)" stroke="#e8421a" stroke-width="1.5" />
+                <text x="217.5" y="145" text-anchor="middle" fill="#e8421a" font-size="9" font-weight="700" font-family="Inter">Guest OS (3GB)</text>
+
+                <rect x="20" y="160" width="125" height="20" rx="4" fill="rgba(16,185,129,0.2)" stroke="#10b981" stroke-width="1.5" />
+                <text x="82.5" y="173" text-anchor="middle" fill="#10b981" font-size="9" font-weight="700" font-family="Inter">App 1 (50MB)</text>
+
+                <rect x="155" y="160" width="125" height="20" rx="4" fill="rgba(16,185,129,0.2)" stroke="#10b981" stroke-width="1.5" />
+                <text x="217.5" y="173" text-anchor="middle" fill="#10b981" font-size="9" font-weight="700" font-family="Inter">App 2 (50MB)</text>
+
+                <!-- Divider -->
+                <line x1="350" y1="40" x2="350" y2="180" stroke="#cbd5e1" stroke-width="2" stroke-dasharray="5,5" />
+
+                <!-- Container Side -->
+                <text x="550" y="30" text-anchor="middle" fill="#4b5563" font-size="14" font-weight="700" font-family="Inter">Arquitectura Contenedor</text>
+                <rect x="420" y="50" width="260" height="20" rx="4" fill="#64748b" />
+                <text x="550" y="63" text-anchor="middle" fill="#f8fafc" font-size="10" font-family="Inter">Servidor Físico (Infraestructura)</text>
+                
+                <rect x="420" y="75" width="260" height="20" rx="4" fill="#334155" />
+                <text x="550" y="88" text-anchor="middle" fill="#f8fafc" font-size="10" font-family="Inter">Sistema Operativo Host (Linux)</text>
+
+                <rect x="420" y="100" width="260" height="20" rx="4" fill="#0ea5e9" />
+                <text x="550" y="113" text-anchor="middle" fill="#f8fafc" font-size="10" font-weight="700" font-family="Inter">Demonio Docker (Kernel Primitives)</text>
+
+                <rect x="420" y="140" width="125" height="40" rx="4" fill="rgba(16,185,129,0.2)" stroke="#10b981" stroke-width="1.5" />
+                <text x="482.5" y="163" text-anchor="middle" fill="#10b981" font-size="9" font-weight="700" font-family="Inter">App 1 CGroup</text>
+
+                <rect x="555" y="140" width="125" height="40" rx="4" fill="rgba(16,185,129,0.2)" stroke="#10b981" stroke-width="1.5" />
+                <text x="617.5" y="163" text-anchor="middle" fill="#10b981" font-size="9" font-weight="700" font-family="Inter">App 2 CGroup</text>
+
+                <text x="550" y="195" text-anchor="middle" fill="#38bdf8" font-size="10" font-weight="700" font-family="Inter">No hay Gastos Generales del SO Invitado</text>
+            </svg>
+        </div>
+
+        <div class="two-col">
+            <div class="mini-card">
+                <h5>Namespaces (El Muro de Cristal)</h5>
+                <p>Hacen creer al proceso que es el único dueño y señor de la máquina. Proporcionan vistas de sistema únicas incluyendo: MNT (sistema de archivos), PID (árbol de procesos empieza en 1), NET (interfaces de red dedicadas) y UTS (hostname del servidor).</p>
+            </div>
+            <div class="mini-card">
+                <h5>CGroups (La Cuota Dictatorial)</h5>
+                <p>Las <em>Control Groups</em> regulan agresivamente los recursos físicos permitidos e imponen un techo de cuota para el proceso aislado. Ejemplo: Limitamos el CGroup del Namespace a usar como máximo el 15% de RAM o 2 hilos nativos del procesador.</p>
+            </div>
+        </div>
+
+        <h2>2. Inyeción Subyacente e Instanciación</h2>
+        <p>Una <strong>Imagen</strong> no corre. Es un artefacto inmutable guardado en disco. Consta de capas geológicas comprimidas (UnionFS) de binarios Unix.</p>
+        <p>El <strong>Contenedor</strong> nace en el instante en el que Docker invoca el Kernel con una petición <code>clone()</code> y asigna los Namespaces pertinentes. Una fina capa R/W efímera es montada en la cima del sistema de carpetas y el ciclo arranca al invocar su binario maestro.</p>
+
+        <div class="code-block">
+            <div class="code-header">
+                <span class="code-lang">bash — Inicialización de Nginx Atrapado</span>
+                <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+            </div>
+            <pre><code># Instanciación en Foreground.
+# Nginx no entrega el control de la terminal (STDOUT), si haces Control-C lo matas de muerte inmediata (SIGKILL).
+docker run nginx:alpine
+
+# Instanciación en Detached (Demonizado).
+# Ejecuta en el fondo y Docker devuelve un Hash UUID hexadecimal de rastreo.
+docker run -d --name engranaje-core nginx:alpine
+</code></pre>
+        </div>
+
+        <h2>3. Violar el Aislamiento (Modo Interactivo TTY)</h2>
+        <p>Al ser simplemente procesos Unix confabulados por el daemon, un administrador maestro (Root del servidor Host) puede saltarse el plano exterior e inyectar un nuevo subproceso directamente en los dominios del Namespace aislado simulando un acceso SSH, sin el peso inherente del propio protocolo SSH.</p>
+
+        <div class="info-box info">
+            <div class="info-box-text">
+                <strong>Análisis Crítico:</strong> <code>exec</code> no es equivalente a hacer login completo a un servidor. No corren daemons init como <em>systemd</em> ni se ejecutan scripts globales como un bash-profile completo. Solo estás empujando el binario local <code>/bin/bash</code> dentro de la jaula virtual del proceso principal.
+            </div>
+        </div>
+
+        <div class="code-block">
+            <div class="code-header">
+                <span class="code-lang">bash — Saltándose el Namespace</span>
+                <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+            </div>
+            <pre><code># La i minúscula indica Interactive, la t indica seudo-TTY. 
+# Si tu imagen no tiene Bash precompilado (como Distroless o Alpine básico), 
+# usarás `/bin/sh` u otro binario menor equivalente.
+docker exec -it engranaje-core /bin/bash
+
+# Comprobación de que estamos dentro de una simulación completa (el árbol cuelga del PID 1 de Docker):
+root@8b5ef2c2c011:/# ps -ef
+</code></pre>
+        </div>
+
+        <h2>4. La Naturaleza de la Limpieza Profunda</h2>
+        <p>Mantener servidores encendidos "por si acaso" es un antipatrón en la era Serverless y Cloud. Los UUID inactivos de contenedores engordan la base de datos de Docker provocando desgaste progresivo. La administración correcta de un ecosistema es destruir el material inactivo radicalmente.</p>
+
+        <div class="code-block">
+            <div class="code-header">
+                <span class="code-lang">bash — Poda Inmutable</span>
+                <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+            </div>
+            <pre><code># Detener grácilmente un servicio activo (envía señal limpia SIGTERM y espera 10s al FS)
+docker stop engranaje-core
+
+# Poda universal en el servidor de Integración Continua (Limpia GB en segundos).
+# Esto destruye todos los contenedores cerrados y purga las Imágenes que no dependan actualmente de un contenedor existente.
+docker system prune -f
+</code></pre>
+        </div>
+
+        <div style="display:flex; gap:1rem; flex-wrap:wrap; margin-top:2rem">
+            <a href="nivel_2_dockerfiles.html" class="btn btn-primary">Siguiente Capítulo: Empaquetar y Compilar (Dockerfiles)</a>
+            <a href="index.html" class="btn btn-outline">Volver a Inicio</a>
+        </div>
+    </div>
+
+    <footer class="footer">
+        <div class="footer-inner">
+            <div class="footer-brand">
+                <div class="brand-logo">Docker Bootcamp</div>
+                <p>Entendiendo infraestructuras desde cero a experto.</p>
+            </div>
+            <div class="footer-links">
+                <h5>Secciones Avanzadas</h5>
+                <ul>
+                    <li><a href="index.html">Inicio</a></li>
+                    <li><a href="nivel_1_arquitectura.html">1. Arquitectura</a></li>
+                    <li><a href="nivel_2_dockerfiles.html">2. Dockerfiles</a></li>
+                    <li><a href="nivel_3_volumenes_redes.html">3. Volúmenes y Red</a></li>
+                    <li><a href="nivel_4_compose_basico.html">4. Orquestación Base</a></li>
+                    <li><a href="nivel_5_compose_avanzado.html">5. Orquestación Avanzada</a></li>
+                </ul>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p>Laboratorio Formativo Docker</p>
+        </div>
+    </footer>
+
+    <script>
+        const navbar = document.getElementById('navbar');
+        window.addEventListener('scroll', () => { navbar.classList.toggle('scrolled', window.scrollY > 50); });
+        document.getElementById('navToggle').addEventListener('click', () => { document.querySelector('.nav-links').classList.toggle('open'); });
+        function copyCode(btn) {
+            const pre = btn.closest('.code-block').querySelector('pre');
+            navigator.clipboard.writeText(pre.innerText).then(() => {
+                btn.textContent = 'Copiado'; btn.classList.add('copied');
+                setTimeout(() => { btn.textContent = 'Copiar'; btn.classList.remove('copied'); }, 2000);
+            });
+        }
+    </script>
+</body>
+
+</html>
