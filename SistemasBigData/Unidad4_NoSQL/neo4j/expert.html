@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Módulo 5: Expert, APOC & GDS | Neo4j Zero to Expert</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <nav class="navbar" id="navbar">
+        <div class="nav-inner">
+            <div class="nav-brand"><span class="brand-icon">🔬</span> Neo4j Raw</div>
+            <ul class="nav-links">
+                <li><a href="index.html">Inicio</a></li>
+                <li><a href="intro.html">M1: Fundamentos</a></li>
+                <li><a href="cypher-basics.html">M2: Cypher I</a></li>
+                <li><a href="cypher-intermediate.html">M3: Cypher II</a></li>
+                <li><a href="modeling.html">M4: Modelado</a></li>
+                <li><a href="expert.html" class="active">M5: Expert</a></li>
+                <li><a href="lab.html">M6: Lab</a></li>
+            </ul>
+            <button class="nav-mobile-btn" id="navToggle">☰</button>
+        </div>
+    </nav>
+
+    <header class="page-hero">
+        <span class="page-hero-icon">🚀</span>
+        <h1>Módulo 5: <span class="gradient-text">Expert — Índices, APOC & GDS</span></h1>
+        <p>Rendimiento extremo, herramientas de ecosistema y algoritmos de grafos para arquitectos serios.</p>
+    </header>
+
+    <main class="content">
+
+        <!-- ÍNDICES Y CONSTRAINTS -->
+        <h2>1. Índices en Neo4j 5.x</h2>
+        <p>Neo4j 5.x tiene múltiples tipos de índice. Elegir el correcto es la diferencia entre milisegundos y segundos.</p>
+
+        <div class="table-wrapper">
+            <table>
+                <thead><tr><th>Tipo</th><th>Uso</th><th>Cypher</th></tr></thead>
+                <tbody>
+                    <tr><td>Range</td><td>Búsquedas por valor exacto, rangos, orden</td><td><code>CREATE INDEX FOR (n:Label) ON (n.prop)</code></td></tr>
+                    <tr><td>Full-Text</td><td>Búsqueda textual (CONTAINS, ~)</td><td><code>CREATE FULLTEXT INDEX ix FOR (n:Paper) ON EACH [n.titulo, n.abstract]</code></td></tr>
+                    <tr><td>Point</td><td>Datos geoespaciales (distancia, área)</td><td><code>CREATE POINT INDEX FOR (n:Ciudad) ON (n.coords)</code></td></tr>
+                    <tr><td>Vector</td><td>Búsqueda por similitud semántica (embeddings)</td><td><code>CREATE VECTOR INDEX ix FOR (n:Doc) ON (n.embedding)</code></td></tr>
+                    <tr><td>Token Lookup</td><td>Buscar por label o rel-type (creado auto)</td><td>Automático, no se crea manualmente</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="code-block">
+            <div class="code-header"><span class="code-lang">cypher — Constraints y uso del Full-Text</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+            <pre><code><span class="cmt">-- CONSTRAINTS: garantizan integridad + crean índice automáticamente</span>
+<span class="kw">CREATE CONSTRAINT</span> paper_doi_unique <span class="kw">FOR</span> (p:Paper) <span class="kw">REQUIRE</span> p.doi <span class="kw">IS UNIQUE</span>
+<span class="kw">CREATE CONSTRAINT</span> user_email_unique <span class="kw">FOR</span> (u:User) <span class="kw">REQUIRE</span> u.email <span class="kw">IS UNIQUE</span>
+<span class="kw">CREATE CONSTRAINT</span> sensor_not_null  <span class="kw">FOR</span> (s:Sensor) <span class="kw">REQUIRE</span> s.tipo <span class="kw">IS NOT NULL</span>
+
+<span class="cmt">-- FULL-TEXT INDEX para búsqueda semántica en papers</span>
+<span class="kw">CREATE FULLTEXT INDEX</span> papers_ft
+<span class="kw">FOR</span> (p:Paper) <span class="kw">ON EACH</span> [p.titulo, p.abstract]
+
+<span class="cmt">-- Buscar papers que mencionan "LIDAR calibration"</span>
+<span class="kw">CALL</span> <span class="fn">db.index.fulltext.queryNodes</span>(<span class="str">"papers_ft"</span>, <span class="str">"LIDAR AND calibration"</span>)
+<span class="kw">YIELD</span> node, score
+<span class="kw">RETURN</span> node.titulo, score <span class="kw">ORDER BY</span> score <span class="kw">DESC LIMIT</span> <span class="num">10</span>
+
+<span class="cmt">-- VECTOR INDEX para búsqueda por embedding (GraphRAG)</span>
+<span class="kw">CREATE VECTOR INDEX</span> paper_embedding
+<span class="kw">FOR</span> (p:Paper) <span class="kw">ON</span> (p.embedding) OPTIONS {indexConfig: {
+  `vector.dimensions`: <span class="num">1536</span>, `vector.similarity_function`: <span class="str">"cosine"</span>
+}}
+
+<span class="kw">CALL</span> <span class="fn">db.index.vector.queryNodes</span>(<span class="str">"paper_embedding"</span>, <span class="num">5</span>, $query_embedding)
+<span class="kw">YIELD</span> node, score
+<span class="kw">RETURN</span> node.titulo, score</code></pre>
+        </div>
+
+        <!-- EXPLAIN / PROFILE -->
+        <h2>2. EXPLAIN y PROFILE — Leer el Plan de Ejecución</h2>
+
+        <div class="code-block">
+            <div class="code-header"><span class="code-lang">cypher — EXPLAIN vs PROFILE</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+            <pre><code><span class="cmt">-- EXPLAIN: solo muestra el plan, no ejecuta (gratis)</span>
+<span class="kw">EXPLAIN</span>
+<span class="kw">MATCH</span> (p:Paper)-[:REFERENCIA]->(r:Paper)
+<span class="kw">WHERE</span> p.citaciones > <span class="num">100</span>
+<span class="kw">RETURN</span> p.titulo, <span class="fn">count</span>(r)
+
+<span class="cmt">-- PROFILE: ejecuta y reporta coste real (db hits, rows)</span>
+<span class="kw">PROFILE</span>
+<span class="kw">MATCH</span> (inv:Investigador {nombre: <span class="str">"Deivit"</span>})-[:PUBLICÓ]->(p:Paper)
+<span class="kw">RETURN</span> p.titulo</code></pre>
+        </div>
+
+        <div class="two-col">
+            <div>
+                <h3 style="color: var(--secondary)">✅ Señales de plan eficiente</h3>
+                <ul>
+                    <li><strong>NodeIndexSeek</strong> — usa índice, O(log n)</li>
+                    <li><strong>Rows ≈ resultado final</strong> — sin expansión masiva</li>
+                    <li><strong>DB Hits bajos</strong> — pocas lecturas de storage</li>
+                    <li><strong>Expand(Into)</strong> en joins de grafos densos</li>
+                </ul>
+            </div>
+            <div>
+                <h3 style="color: var(--primary)">🚫 Señales de plan lento</h3>
+                <ul>
+                    <li><strong>AllNodesScan</strong> — sin label filter, escanea todo</li>
+                    <li><strong>Rows astronómicas</strong> en steps intermedios</li>
+                    <li><strong>CartesianProduct</strong> — producto cartesiano no deseado</li>
+                    <li><strong>Filter</strong> alto antes de un Seek — reordena tus WHERE</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- BATCH PROCESSING -->
+        <h2>3. Procesamiento por Lotes — CALL IN TRANSACTIONS</h2>
+
+        <div class="code-block">
+            <div class="code-header"><span class="code-lang">cypher — Batch update sin agotar heap</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+            <pre><code><span class="cmt">-- Migración masiva: añadir embeddings a 10M papers</span>
+<span class="kw">MATCH</span> (p:Paper) <span class="kw">WHERE</span> p.embedding <span class="kw">IS NULL</span>
+<span class="kw">CALL</span> {
+  <span class="kw">WITH</span> p
+  <span class="kw">CALL</span> <span class="fn">apoc.ml.openai.embedding</span>([p.abstract], $api_key) <span class="kw">YIELD</span> embedding
+  <span class="kw">SET</span> p.embedding = embedding[<span class="num">0</span>]
+} <span class="kw">IN TRANSACTIONS OF</span> <span class="num">500</span> <span class="kw">ROWS</span>
+<span class="kw">RETURN</span> <span class="fn">count</span>(*) <span class="kw">AS</span> procesados</code></pre>
+        </div>
+
+        <!-- APOC -->
+        <h2>4. APOC — Awesome Procedures on Cypher</h2>
+
+        <h3>4.1 Qué es APOC y por qué existe</h3>
+        <p>Cypher es un lenguaje declarativo diseñado para traversals y manipulación de grafos. Lo que <em>no</em> hace bien de forma nativa: importar datos de fuentes externas, ejecutar lógica condicional compleja dentro de una query, convertir formatos, procesar millones de registros en batches sin volcar la memoria de la JVM, o explorar subgrafos con criterios dinámicos. Para todo eso existe <strong>APOC</strong> — Awesome Procedures on Cypher.</p>
+        <p>APOC es la librería de extensiones oficial de Neo4j. Se instala como plugin (un JAR en el directorio <code>plugins/</code> de Neo4j) y expone más de <strong>450 procedimientos y funciones</strong> invocables desde Cypher con <code>CALL apoc.*</code> o <code>apoc.*()</code> según el tipo. Está dividida en dos artefactos:</p>
+        <ul>
+            <li><strong>apoc-core</strong>: incluido por defecto en Neo4j Desktop y AuraDB. Contiene las utilidades más usadas.</li>
+            <li><strong>apoc-extended</strong>: funcionalidades adicionales (conexiones JDBC, exportación a sistemas externos). Requiere instalación explícita del JAR.</li>
+        </ul>
+        <div class="info-box info">
+            <div class="info-box-text"><strong>INFO — Verificar APOC instalado:</strong> <code>RETURN apoc.version()</code>. Si devuelve la versión, APOC core está disponible. Si da error, el plugin no está cargado. En Docker Compose: el JAR debe estar en el volumen <code>plugins/</code> y la variable de entorno debe incluir <code>NEO4J_PLUGINS=["apoc"]</code> (Neo4j 5.x) o el fichero <code>apoc.conf</code> con los permisos necesarios (Neo4j 4.x).</div>
+        </div>
+
+        <h3>4.2 Las cuatro familias de procedimientos</h3>
+        <div class="table-wrapper">
+            <table>
+                <thead><tr><th>Familia</th><th>Prefijo</th><th>Para qué sirve</th><th>Procedimientos clave</th></tr></thead>
+                <tbody>
+                    <tr><td><strong>Load</strong></td><td><code>apoc.load.*</code></td><td>Importar datos de JSON, CSV, XML, HTTP, JDBC</td><td><code>apoc.load.json</code>, <code>apoc.load.csv</code>, <code>apoc.load.xml</code></td></tr>
+                    <tr><td><strong>Periodic</strong></td><td><code>apoc.periodic.*</code></td><td>Procesar millones de registros en batches sin TimeoutError</td><td><code>apoc.periodic.iterate</code>, <code>apoc.periodic.commit</code></td></tr>
+                    <tr><td><strong>Path</strong></td><td><code>apoc.path.*</code></td><td>Explorar subgrafos con filtros de label y tipo de relación</td><td><code>apoc.path.subgraphAll</code>, <code>apoc.path.spanningTree</code>, <code>apoc.path.expandConfig</code></td></tr>
+                    <tr><td><strong>Do / When</strong></td><td><code>apoc.do.*</code></td><td>Lógica condicional (IF/ELSE) dentro de Cypher</td><td><code>apoc.do.when</code>, <code>apoc.do.case</code></td></tr>
+                    <tr><td><strong>Convert / Util</strong></td><td><code>apoc.convert.*</code>, <code>apoc.util.*</code></td><td>Conversión de tipos, validación, text processing</td><td><code>apoc.convert.toJson</code>, <code>apoc.convert.fromJsonList</code>, <code>apoc.util.validate</code></td></tr>
+                    <tr><td><strong>Meta / Graph</strong></td><td><code>apoc.meta.*</code></td><td>Inspeccionar esquema y estadísticas del grafo</td><td><code>apoc.meta.schema</code>, <code>apoc.meta.stats</code>, <code>apoc.meta.nodeTypeProperties</code></td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <h3>4.3 apoc.load.json — importar datos de APIs externas</h3>
+        <p>Hace una petición HTTP GET contra un endpoint JSON y expone el resultado como mapa Cypher accesible con notación de punto. El JSON completo se recibe en <code>value</code>, y desde ahí puedes navegar su estructura con <code>value.campo.subcampo</code>, <code>UNWIND</code> para arrays, etc.</p>
+        <p><strong>Prerequisito en Docker:</strong> variable de entorno <code>NEO4J_apoc_import_file_enabled=true</code> y <code>NEO4J_apoc_import_file_use__neo4j__config=false</code>. Para URLs externas, añadir el dominio a <code>apoc.import.file.enabled=true</code> en <code>neo4j.conf</code>.</p>
+
+        <div class="code-block">
+            <div class="code-header"><span class="code-lang">cypher — apoc.load.json: importar papers de Semantic Scholar</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+            <pre><code><span class="kw">CALL</span> <span class="fn">apoc.load.json</span>(
+  <span class="str">"https://api.semanticscholar.org/graph/v1/paper/search?query=autonomous+lidar&fields=title,year,authors,externalIds&limit=20"</span>,
+  {}, <span class="cmt">-- segundo parámetro: headers HTTP {Authorization: "Bearer TOKEN"}</span>
+  {failOnError: <span class="kw">false</span>}
+)
+<span class="kw">YIELD</span> value
+<span class="cmt">-- value es el JSON completo. value.data es el array de papers.</span>
+<span class="kw">UNWIND</span> value.data <span class="kw">AS</span> paper_data
+<span class="kw">MERGE</span> (p:Paper {doi: <span class="fn">coalesce</span>(paper_data.externalIds.DOI, paper_data.paperId)})
+<span class="kw">SET</span> p.titulo = paper_data.title, p.year = paper_data.year
+<span class="kw">WITH</span> p, paper_data
+<span class="kw">UNWIND</span> paper_data.authors <span class="kw">AS</span> autor_data
+<span class="kw">MERGE</span> (a:Autor {id: autor_data.authorId})
+<span class="kw">SET</span> a.nombre = autor_data.name
+<span class="kw">MERGE</span> (a)-[:ES_AUTOR_DE]->(p)
+
+<span class="cmt">-- Verificar resultado</span>
+<span class="kw">MATCH</span> (p:Paper)<-[:ES_AUTOR_DE]-(a:Autor)
+<span class="kw">RETURN</span> p.titulo, <span class="fn">collect</span>(a.nombre) <span class="kw">AS</span> autores <span class="kw">LIMIT</span> <span class="num">5</span></code></pre>
+        </div>
+
+        <div class="code-block">
+            <div class="code-header"><span class="code-lang">cypher — apoc.load.csv: importar fichero local</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+            <pre><code><span class="cmt">-- El fichero debe estar en el directorio import/ de Neo4j</span>
+<span class="cmt">-- Docker: montado como volumen en /var/lib/neo4j/import/accidents.csv</span>
+<span class="kw">CALL</span> <span class="fn">apoc.load.csv</span>(<span class="str">"file:///accidents.csv"</span>, {header: <span class="kw">true</span>, sep: <span class="str">","</span>})
+<span class="kw">YIELD</span> map <span class="cmt">-- cada fila del CSV es un mapa {nombre_columna: valor}</span>
+<span class="kw">MERGE</span> (a:Accidente {id: map.accident_id})
+<span class="kw">SET</span>
+  a.fecha     = <span class="fn">date</span>(map.date),
+  a.severidad = <span class="fn">toInteger</span>(map.severity),
+  a.latitud   = <span class="fn">toFloat</span>(map.lat)
+<span class="kw">WITH</span> a, map
+<span class="kw">MATCH</span> (v:Vehiculo {vin: map.vehicle_vin})
+<span class="kw">MERGE</span> (v)-[:INVOLUCRADO_EN]->(a)
+
+<span class="cmt">-- Fallo típico: si map.date viene como "03/15/2024" (MM/DD/YYYY),</span>
+<span class="cmt">-- date() falla. Usar: apoc.date.parse(map.date, 'ms', 'MM/dd/yyyy')</span></code></pre>
+        </div>
+
+        <h3>4.4 apoc.periodic.iterate — batches sin matar la JVM</h3>
+        <p>El problema con <code>MATCH (n:Paper) SET n.indexed = true</code> sobre millones de nodos: Neo4j abre una única transacción que carga todo en memoria antes del commit. Con suficientes nodos, superas el heap de la JVM y obtienes <code>Transaction too large</code> o <code>OutOfMemoryError</code>.</p>
+        <p><code>apoc.periodic.iterate</code> divide el trabajo en dos queries: la <strong>outer query</strong> produce los elementos (se ejecuta una vez); la <strong>inner query</strong> los procesa en lotes de <code>batchSize</code> registros, cada lote en su propia transacción. Si un lote falla, los demás siguen.</p>
+
+        <div class="code-block">
+            <div class="code-header"><span class="code-lang">cypher — apoc.periodic.iterate: actualización masiva en batches</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+            <pre><code><span class="kw">CALL</span> <span class="fn">apoc.periodic.iterate</span>(
+  <span class="cmt">-- Outer query: produce los nodos a procesar. Se ejecuta UNA vez.</span>
+  <span class="str">"MATCH (p:Paper) WHERE p.indexed IS NULL RETURN p"</span>,
+  <span class="cmt">-- Inner query: qué hacer con cada elemento. Se ejecuta en batches.</span>
+  <span class="str">"SET p.indexed = true, p.indexed_at = datetime()"</span>,
+  {
+    batchSize: <span class="num">1000</span>,  <span class="cmt">-- nodos por transacción</span>
+    parallel:  <span class="kw">false</span>, <span class="cmt">-- true solo si las ops son independientes entre sí (riesgo deadlock)</span>
+    retries:   <span class="num">3</span>      <span class="cmt">-- reintentos por lote en caso de deadlock</span>
+  }
+)
+<span class="kw">YIELD</span> batches, total, timeTaken, failedBatches, errorMessages
+<span class="kw">RETURN</span> batches, total, timeTaken, failedBatches, errorMessages
+<span class="cmt">-- Output esperado si todo va bien: {failedBatches: 0, ...}</span>
+<span class="cmt">-- Si failedBatches > 0 revisar errorMessages para diagnosticar</span></code></pre>
+        </div>
+
+        <h3>4.5 apoc.path.subgraphAll — subgrafos con filtros avanzados</h3>
+        <p>Cypher permite <code>*1..n</code> en traversals, pero los filtros son limitados. <code>apoc.path.subgraphAll</code> permite combinar múltiples tipos de relación con dirección, filtrar por labels de nodos intermedios y fijar niveles mín/máx de expansión, todo en la misma llamada.</p>
+
+        <div class="code-block">
+            <div class="code-header"><span class="code-lang">cypher — apoc.path.subgraphAll: árbol causal de un accidente</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+            <pre><code><span class="kw">MATCH</span> (acc:Accidente {id: <span class="str">"ACC-001"</span>})
+<span class="kw">CALL</span> <span class="fn">apoc.path.subgraphAll</span>(acc, {
+  relationshipFilter: <span class="str">"CAUSA_DIRECTA>|SENSOR_FALLO>|CONDICION_AMB>"</span>,
+  <span class="cmt">-- '>' = salida del nodo actual; '<' = entrada; sin símbolo = ambas</span>
+  labelFilter:        <span class="str">"/Accidente|Sensor|CondicionAmbiental"</span>,
+  <span class="cmt">-- '/' = incluir solo nodos con estos labels; '-' = excluir</span>
+  maxLevel: <span class="num">4</span>,
+  minLevel: <span class="num">1</span>
+})
+<span class="kw">YIELD</span> nodes, relationships
+<span class="kw">RETURN</span> nodes, relationships
+<span class="cmt">-- Útil para visualizar en Browser o exportar a JSON con apoc.convert.toJson()</span></code></pre>
+        </div>
+
+        <h3>4.6 apoc.do.when — lógica IF/ELSE dentro de Cypher</h3>
+        <p>Cypher no tiene <code>IF/ELSE</code> como sentencia. <code>CASE</code> funciona en expresiones pero no puede ejecutar cláusulas (<code>SET</code>, <code>CREATE</code>). <code>apoc.do.when</code> evalúa una condición booleana y ejecuta una de dos queries Cypher completas. Las variables del contexto externo se pasan como mapa en el tercer parámetro.</p>
+
+        <div class="code-block">
+            <div class="code-header"><span class="code-lang">cypher — apoc.do.when: actualización condicional de sensor</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+            <pre><code><span class="kw">MATCH</span> (s:Sensor {id: <span class="str">"S-LIDAR-01"</span>})
+<span class="kw">CALL</span> <span class="fn">apoc.do.when</span>(
+  s.estado = <span class="str">"ERROR"</span>,  <span class="cmt">-- condición booleana</span>
+  <span class="str">"SET s.alertas = coalesce(s.alertas,0)+1, s.last_error = datetime() RETURN s"</span>,
+  <span class="str">"SET s.ok_count = coalesce(s.ok_count,0)+1, s.last_ok = datetime() RETURN s"</span>,
+  {s: s}  <span class="cmt">-- variables del contexto externo accesibles dentro de las queries</span>
+)
+<span class="kw">YIELD</span> value
+<span class="kw">RETURN</span> value.s.id, value.s.estado, value.s.alertas, value.s.ok_count
+
+<span class="cmt">-- Para múltiples ramas: apoc.do.case([condicion1, query1, condicion2, query2, ...], queryDefault, params)</span></code></pre>
+        </div>
+
+        <h3>4.7 apoc.meta.schema — inspeccionar el grafo sin documentación</h3>
+        <p>En un LPG sin schema rígido es fácil perder la noción de qué labels y tipos de relación existen. <code>apoc.meta.schema</code> hace un muestreo estadístico del grafo y devuelve su estructura inferida — útil para auditar, documentar o migrar un grafo existente.</p>
+
+        <div class="code-block">
+            <div class="code-header"><span class="code-lang">cypher — apoc.meta: auditoría de esquema</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+            <pre><code><span class="cmt">-- Esquema completo: labels, propiedades, relaciones entre labels</span>
+<span class="kw">CALL</span> <span class="fn">apoc.meta.schema</span>() <span class="kw">YIELD</span> value <span class="kw">RETURN</span> value
+
+<span class="cmt">-- Estadísticas rápidas: conteos globales</span>
+<span class="kw">CALL</span> <span class="fn">apoc.meta.stats</span>()
+<span class="kw">YIELD</span> labels, relTypesCount, nodeCount, relCount
+<span class="kw">RETURN</span> labels, relTypesCount, nodeCount, relCount
+
+<span class="cmt">-- Propiedades por label (muestra de 100 nodos por label)</span>
+<span class="kw">CALL</span> <span class="fn">apoc.meta.nodeTypeProperties</span>()
+<span class="kw">YIELD</span> nodeType, propertyName, propertyTypes, mandatory
+<span class="kw">RETURN</span> nodeType, propertyName, propertyTypes, mandatory
+<span class="kw">ORDER BY</span> nodeType, propertyName</code></pre>
+        </div>
+
+        <!-- GDS -->
+        <h2>5. GDS — Graph Data Science</h2>
+
+        <div class="code-block">
+            <div class="code-header"><span class="code-lang">cypher — GDS: proyección + algoritmos</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+            <pre><code><span class="cmt">-- 1. Crear proyección nativa del subgrafo</span>
+<span class="kw">CALL</span> <span class="fn">gds.graph.project</span>(
+  <span class="str">"red-investigadores"</span>,
+  <span class="str">"Investigador"</span>,
+  {COLABORA_CON: {orientation: <span class="str">"UNDIRECTED"</span>}}
+)
+
+<span class="cmt">-- 2. PageRank: ¿quiénes son los investigadores más influyentes?</span>
+<span class="kw">CALL</span> <span class="fn">gds.pageRank.stream</span>(<span class="str">"red-investigadores"</span>)
+<span class="kw">YIELD</span> nodeId, score
+<span class="kw">RETURN</span> <span class="fn">gds.util.asNode</span>(nodeId).nombre <span class="kw">AS</span> investigador, score
+<span class="kw">ORDER BY</span> score <span class="kw">DESC LIMIT</span> <span class="num">10</span>
+
+<span class="cmt">-- 3. Louvain: detectar comunidades (grupos de investigación)</span>
+<span class="kw">CALL</span> <span class="fn">gds.louvain.stream</span>(<span class="str">"red-investigadores"</span>)
+<span class="kw">YIELD</span> nodeId, communityId
+<span class="kw">RETURN</span> communityId, <span class="fn">collect</span>(<span class="fn">gds.util.asNode</span>(nodeId).nombre) <span class="kw">AS</span> miembros
+<span class="kw">ORDER BY</span> <span class="fn">size</span>(miembros) <span class="kw">DESC LIMIT</span> <span class="num">5</span>
+
+<span class="cmt">-- 4. Betweenness Centrality: ¿quién es el broker de la red?</span>
+<span class="kw">CALL</span> <span class="fn">gds.betweenness.stream</span>(<span class="str">"red-investigadores"</span>)
+<span class="kw">YIELD</span> nodeId, score
+<span class="kw">RETURN</span> <span class="fn">gds.util.asNode</span>(nodeId).nombre, score <span class="kw">ORDER BY</span> score <span class="kw">DESC</span>
+
+<span class="cmt">-- 5. Node Similarity: investigadores con colaboraciones similares</span>
+<span class="kw">CALL</span> <span class="fn">gds.nodeSimilarity.stream</span>(<span class="str">"red-investigadores"</span>, {topK: <span class="num">5</span>})
+<span class="kw">YIELD</span> node1, node2, similarity
+<span class="kw">RETURN</span> <span class="fn">gds.util.asNode</span>(node1).nombre <span class="kw">AS</span> inv1,
+       <span class="fn">gds.util.asNode</span>(node2).nombre <span class="kw">AS</span> inv2, similarity
+<span class="kw">ORDER BY</span> similarity <span class="kw">DESC</span>
+
+<span class="cmt">-- 6. Escribir resultados de vuelta al grafo (mutate mode)</span>
+<span class="kw">CALL</span> <span class="fn">gds.pageRank.write</span>(<span class="str">"red-investigadores"</span>, {writeProperty: <span class="str">"pagerank"</span>})
+<span class="kw">YIELD</span> nodePropertiesWritten
+
+<span class="cmt">-- 7. Limpiar proyección cuando ya no se necesita</span>
+<span class="kw">CALL</span> <span class="fn">gds.graph.drop</span>(<span class="str">"red-investigadores"</span>)</code></pre>
+        </div>
+
+        <div class="info-box tip">
+            <div class="info-box-icon">💡</div>
+            <div class="info-box-text"><strong>GDS modos de ejecución:</strong> <code>stream</code> devuelve resultados fila a fila (sin escribir al grafo). <code>write</code> escribe propiedades de vuelta al grafo para uso posterior. <code>mutate</code> añade propiedades a la proyección in-memory. <code>stats</code> solo devuelve métricas.</div>
+        </div>
+
+        <h2>🧪 Ejercicios — Módulo 5</h2>
+        <div class="info-box info">
+            <div class="info-box-icon">📝</div>
+            <div class="info-box-text"><strong>E1:</strong> Crea un índice Full-Text sobre tus papers y búscalos con <code>db.index.fulltext.queryNodes</code>. Compara el tiempo con un <code>MATCH WHERE p.titulo CONTAINS "..."</code>. Usa <code>PROFILE</code> en ambos.</div>
+        </div>
+        <div class="info-box warning">
+            <div class="info-box-icon">📝</div>
+            <div class="info-box-text"><strong>E2 (GDS):</strong> Proyecta tu red de investigadores y ejecuta Louvain para detectar comunidades. ¿Cuántos grupos naturales hay? Escribe los communityId de vuelta al grafo con <code>gds.louvain.write</code>.</div>
+        </div>
+        <div class="info-box danger">
+            <div class="info-box-icon">📝</div>
+            <div class="info-box-text"><strong>E3 (APOC):</strong> Usa <code>apoc.load.json</code> para cargar datos de la API pública de Semantic Scholar e importar 50 papers sobre "autonomous vehicles" a tu grafo Neo4j. Crea constraints e índices apropiados antes de la carga.</div>
+        </div>
+
+        <div style="margin-top: 4rem; display: flex; justify-content: space-between;">
+            <a href="modeling.html" class="btn btn-outline">← M4: Modelado</a>
+            <a href="lab.html" class="btn btn-primary">Siguiente: Lab Final →</a>
+        </div>
+    </main>
+
+    <footer style="text-align: center; padding: 2rem; color: var(--text3); font-size: 0.8rem; border-top: 1px solid var(--border);">
+        &copy; 2026 LucentIA Research · Neo4j Zero to Expert
+    </footer>
+    <script>
+        const navbar = document.getElementById('navbar');
+        window.addEventListener('scroll', () => navbar.classList.toggle('scrolled', window.scrollY > 50));
+        document.getElementById('navToggle')?.addEventListener('click', () => document.querySelector('.nav-links').classList.toggle('open'));
+        function copyCode(btn) {
+            const code = btn.closest('.code-block').querySelector('pre').innerText;
+            navigator.clipboard.writeText(code).then(() => { btn.textContent = '✓ Copiado'; btn.classList.add('copied'); setTimeout(() => { btn.textContent = 'Copiar'; btn.classList.remove('copied'); }, 2000); });
+        }
+    </script>
+</body>
+</html>

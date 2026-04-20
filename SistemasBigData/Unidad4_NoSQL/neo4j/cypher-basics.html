@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Módulo 2: Cypher Básico | Neo4j Zero to Expert</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <nav class="navbar" id="navbar">
+        <div class="nav-inner">
+            <div class="nav-brand"><span class="brand-icon">🔬</span> Neo4j Raw</div>
+            <ul class="nav-links">
+                <li><a href="index.html">Inicio</a></li>
+                <li><a href="intro.html">M1: Fundamentos</a></li>
+                <li><a href="cypher-basics.html" class="active">M2: Cypher I</a></li>
+                <li><a href="cypher-intermediate.html">M3: Cypher II</a></li>
+                <li><a href="modeling.html">M4: Modelado</a></li>
+                <li><a href="expert.html">M5: Expert</a></li>
+                <li><a href="lab.html">M6: Lab</a></li>
+            </ul>
+            <button class="nav-mobile-btn" id="navToggle">☰</button>
+        </div>
+    </nav>
+
+    <header class="page-hero">
+        <span class="page-hero-icon">⚡</span>
+        <h1>Módulo 2: <span class="gradient-text">Cypher — Nivel Básico</span></h1>
+        <p>El lenguaje que convierte patrones visuales en consultas. Si puedes dibujarlo en una pizarra, puedes consultarlo.</p>
+    </header>
+
+    <main class="content">
+
+        <!-- SINTAXIS ASCII -->
+        <h2>1. Sintaxis ASCII del grafo</h2>
+        <p>Cypher refleja visualmente la estructura del grafo. La notación es intuitiva por diseño:</p>
+
+        <div class="table-wrapper">
+            <table>
+                <thead><tr><th>Símbolo</th><th>Representa</th><th>Ejemplo</th></tr></thead>
+                <tbody>
+                    <tr><td><code>()</code></td><td>Nodo (círculo vacío)</td><td><code>(n)</code> — nodo sin label</td></tr>
+                    <tr><td><code>(:Label)</code></td><td>Nodo con etiqueta</td><td><code>(:Persona)</code></td></tr>
+                    <tr><td><code>(n:Label)</code></td><td>Nodo con variable y etiqueta</td><td><code>(p:Persona)</code> — puedes reusar <code>p</code></td></tr>
+                    <tr><td><code>{prop: val}</code></td><td>Propiedades (filtro o asignación)</td><td><code>({nombre: "Ana"})</code></td></tr>
+                    <tr><td><code>-[]-></code></td><td>Relación dirigida</td><td><code>-[:CONOCE]-></code></td></tr>
+                    <tr><td><code>-[]-</code></td><td>Relación sin dirección (match ambos sentidos)</td><td><code>-[:AMIGO]-</code></td></tr>
+                    <tr><td><code>[r:TIPO]</code></td><td>Relación con variable</td><td><code>[r:COMPRA]</code></td></tr>
+                    <tr><td><code>[*1..3]</code></td><td>Variable de longitud (1 a 3 saltos)</td><td><code>-[*1..3]-></code></td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="code-block">
+            <div class="code-header"><span class="code-lang">cypher — Anatomía completa de un patrón</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+            <pre><code><span class="cmt">// Nodo completo con variable, label y propiedades</span>
+(p:Persona:Investigador {nombre: <span class="str">"Deivit"</span>, activo: <span class="kw">true</span>})
+
+<span class="cmt">// Relación completa con variable, tipo y propiedades</span>
+(p)-[r:PUBLICÓ {año: <span class="num">2024</span>, citaciones: <span class="num">150</span>}]->(a:Paper)
+
+<span class="cmt">// Un nodo puede tener múltiples labels</span>
+(x:Sensor:IoT:Activo {id: <span class="str">"SNS-001"</span>, tipo: <span class="str">"LIDAR"</span>})
+
+<span class="cmt">// Patrón complejo en una sola expresión</span>
+(v:Vehiculo)-[:TIENE]->(s:Sensor)-[:DETECTÓ {timestamp: datetime()}]->(o:Obstáculo)</code></pre>
+        </div>
+
+        <!-- TIPOS DE DATOS -->
+        <h2>2. Tipos de Datos en Neo4j 5.x</h2>
+
+        <div class="table-wrapper">
+            <table>
+                <thead><tr><th>Tipo</th><th>Ejemplo</th><th>Notas</th></tr></thead>
+                <tbody>
+                    <tr><td><strong>String</strong></td><td><code>"hola mundo"</code></td><td>UTF-8, inmutable</td></tr>
+                    <tr><td><strong>Integer</strong></td><td><code>42</code>, <code>-100</code></td><td>64-bit signed</td></tr>
+                    <tr><td><strong>Float</strong></td><td><code>3.14</code>, <code>1.0e10</code></td><td>64-bit IEEE 754</td></tr>
+                    <tr><td><strong>Boolean</strong></td><td><code>true</code>, <code>false</code></td><td>Sin null implícito</td></tr>
+                    <tr><td><strong>Date</strong></td><td><code>date("2026-03-26")</code></td><td>Solo fecha, ISO 8601</td></tr>
+                    <tr><td><strong>DateTime</strong></td><td><code>datetime("2026-03-26T10:00:00")</code></td><td>Con zona horaria</td></tr>
+                    <tr><td><strong>Duration</strong></td><td><code>duration("P1Y2M")</code></td><td>Aritmética de fechas</td></tr>
+                    <tr><td><strong>Point</strong></td><td><code>point({lat: 38.3, lon: -0.49})</code></td><td>Geo 2D/3D, WGS84</td></tr>
+                    <tr><td><strong>List</strong></td><td><code>[1, 2, 3]</code>, <code>["a", "b"]</code></td><td>Homogéneo o mixto</td></tr>
+                    <tr><td><strong>Map</strong></td><td><code>{nombre: "Ana", edad: 30}</code></td><td>Solo en consultas, no en props de disco</td></tr>
+                    <tr><td><strong>Null</strong></td><td><code>null</code></td><td>Ausencia de valor, propaga en operaciones</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="info-box warning">
+            <div class="info-box-icon">⚠️</div>
+            <div class="info-box-text">
+                <strong>Null en Cypher:</strong> Null no es igual a null. <code>null = null</code> evalúa a <code>null</code>, no a <code>true</code>. Para comprobar nulos, usa siempre <code>IS NULL</code> o <code>IS NOT NULL</code>.
+            </div>
+        </div>
+
+        <!-- CREATE -->
+        <h2>3. CREATE — Construir el grafo</h2>
+
+        <div class="code-block">
+            <div class="code-header"><span class="code-lang">cypher — Ejemplos CREATE variados</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+            <pre><code><span class="cmt">-- E1: Nodo simple</span>
+<span class="kw">CREATE</span> (u:User {nombre: <span class="str">"Ana"</span>, email: <span class="str">"ana@lab.es"</span>})
+
+<span class="cmt">-- E2: Varios nodos en una sola sentencia</span>
+<span class="kw">CREATE</span>
+  (v1:Vehiculo {id: <span class="str">"AV-001"</span>, modelo: <span class="str">"Tesla Model S"</span>}),
+  (v2:Vehiculo {id: <span class="str">"AV-002"</span>, modelo: <span class="str">"Waymo"</span>}),
+  (s1:Sensor {tipo: <span class="str">"LIDAR"</span>, frecuencia: <span class="num">10</span>})
+
+<span class="cmt">-- E3: Nodo con lista como propiedad</span>
+<span class="kw">CREATE</span> (p:Paper {
+  titulo: <span class="str">"Graph Neural Networks for Autonomous Driving"</span>,
+  autores: [<span class="str">"Deivit"</span>, <span class="str">"Merino"</span>],
+  keywords: [<span class="str">"GNN"</span>, <span class="str">"autonomous"</span>, <span class="str">"safety"</span>],
+  publicado: <span class="fn">date</span>(<span class="str">"2025-09-15"</span>),
+  citaciones: <span class="num">45</span>
+})
+
+<span class="cmt">-- E4: Nodo + relación en una sola sentencia</span>
+<span class="kw">CREATE</span> (inv:Investigador {nombre: <span class="str">"Deivit"</span>})-[:PUBLICÓ {año: <span class="num">2025</span>}]->(p:Paper {titulo: <span class="str">"GNN Survey"</span>})
+
+<span class="cmt">-- E5: MATCH primero, luego CREATE la relación (correcto)</span>
+<span class="kw">MATCH</span> (a:User {nombre: <span class="str">"Ana"</span>}), (b:User {nombre: <span class="str">"Bob"</span>})
+<span class="kw">CREATE</span> (a)-[:COLABORA_CON {proyectos: <span class="num">3</span>, desde: <span class="fn">date</span>()}]->(b)
+
+<span class="cmt">-- E6: Crear nodo de fraude bancario con propiedades complejas</span>
+<span class="kw">CREATE</span> (t:Transaccion {
+  id: <span class="str">"TXN-98123"</span>,
+  importe: <span class="num">4500.75</span>,
+  moneda: <span class="str">"EUR"</span>,
+  timestamp: <span class="fn">datetime</span>(<span class="str">"2026-03-25T23:45:00Z"</span>),
+  ip_origen: <span class="str">"192.168.1.1"</span>,
+  sospechosa: <span class="kw">true</span>
+})</code></pre>
+        </div>
+
+        <div class="info-box danger">
+            <div class="info-box-icon">⚠️</div>
+            <div class="info-box-text">
+                <strong>Antipatrón:</strong> <code>CREATE</code> siempre crea, incluso si el nodo ya existe. Si ejecutas el mismo CREATE dos veces, tendrás duplicados. Para evitarlo, usa <code>MERGE</code> (Módulo 3). En producción, casi nunca usarás CREATE puro para entidades — solo para relaciones entre nodos ya existentes.
+            </div>
+        </div>
+
+        <!-- MATCH -->
+        <h2>4. MATCH — Navegar el grafo</h2>
+
+        <div class="code-block">
+            <div class="code-header"><span class="code-lang">cypher — Ejemplos MATCH de menos a más complejo</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+            <pre><code><span class="cmt">-- E1: Todos los nodos con un label</span>
+<span class="kw">MATCH</span> (p:Paper) <span class="kw">RETURN</span> p.titulo
+
+<span class="cmt">-- E2: Filtrar por propiedad directamente en el patrón</span>
+<span class="kw">MATCH</span> (u:User {activo: <span class="kw">true</span>}) <span class="kw">RETURN</span> u.nombre, u.email
+
+<span class="cmt">-- E3: Relación simple — quién publicó qué paper</span>
+<span class="kw">MATCH</span> (inv:Investigador)-[:PUBLICÓ]->(p:Paper)
+<span class="kw">RETURN</span> inv.nombre, p.titulo, p.publicado
+
+<span class="cmt">-- E4: Sin dirección — todos los colaboradores (en cualquier sentido)</span>
+<span class="kw">MATCH</span> (a:User)-[:COLABORA_CON]-(b:User)
+<span class="kw">RETURN</span> a.nombre, b.nombre
+
+<span class="cmt">-- E5: Múltiples saltos — coautores de coautores (red académica)</span>
+<span class="kw">MATCH</span> (yo:Investigador {nombre: <span class="str">"Deivit"</span>})-[:PUBLICÓ]->(p:Paper)<-[:PUBLICÓ]-(coautor:Investigador)
+<span class="kw">RETURN</span> coautor.nombre, <span class="fn">count</span>(p) <span class="kw">AS</span> papers_juntos
+<span class="kw">ORDER BY</span> papers_juntos <span class="kw">DESC</span>
+
+<span class="cmt">-- E6: Multiple labels en el patrón</span>
+<span class="kw">MATCH</span> (v:Vehiculo)-[:TIENE]->(s:Sensor)
+<span class="kw">WHERE</span> s.tipo <span class="kw">IN</span> [<span class="str">"LIDAR"</span>, <span class="str">"RADAR"</span>]
+<span class="kw">RETURN</span> v.id, <span class="fn">collect</span>(s.tipo) <span class="kw">AS</span> sensores
+
+<span class="cmt">-- E7: Patrón de fraude — cuenta conectada a 3+ cuentas sospechosas</span>
+<span class="kw">MATCH</span> (c:Cuenta)-[:TRANSACCIÓN_A]->(destino:Cuenta {sospechosa: <span class="kw">true</span>})
+<span class="kw">WITH</span> c, <span class="fn">count</span>(destino) <span class="kw">AS</span> cuentas_sospechosas
+<span class="kw">WHERE</span> cuentas_sospechosas >= <span class="num">3</span>
+<span class="kw">RETURN</span> c.id, cuentas_sospechosas</code></pre>
+        </div>
+
+        <div class="info-box tip">
+            <div class="info-box-icon">💡</div>
+            <div class="info-box-text">
+                <strong>Regla de oro:</strong> Siempre incluye al menos un label en cada nodo del MATCH. Sin label, Neo4j hace un <code>AllNodesScan</code> y escanea toda la base de datos. Con label, usa el Token Lookup Index — instantáneo.
+            </div>
+        </div>
+
+        <!-- WHERE -->
+        <h2>5. WHERE — Filtrado avanzado</h2>
+
+        <div class="code-block">
+            <div class="code-header"><span class="code-lang">cypher — Todo el arsenal de WHERE</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+            <pre><code><span class="cmt">-- Comparadores básicos</span>
+<span class="kw">MATCH</span> (t:Transaccion) <span class="kw">WHERE</span> t.importe > <span class="num">1000</span> <span class="kw">RETURN</span> t.id
+
+<span class="cmt">-- AND / OR / NOT / XOR</span>
+<span class="kw">MATCH</span> (u:User)
+<span class="kw">WHERE</span> (u.rol = <span class="str">"admin"</span> <span class="kw">OR</span> u.rol = <span class="str">"superuser"</span>)
+  <span class="kw">AND NOT</span> u.bloqueado
+<span class="kw">RETURN</span> u.nombre
+
+<span class="cmt">-- IS NULL / IS NOT NULL</span>
+<span class="kw">MATCH</span> (p:Paper) <span class="kw">WHERE</span> p.doi <span class="kw">IS NULL RETURN</span> p.titulo <span class="cmt">-- papers sin DOI</span>
+
+<span class="cmt">-- IN (lista literal)</span>
+<span class="kw">MATCH</span> (s:Sensor) <span class="kw">WHERE</span> s.tipo <span class="kw">IN</span> [<span class="str">"LIDAR"</span>, <span class="str">"RADAR"</span>, <span class="str">"CAMERA"</span>] <span class="kw">RETURN</span> s
+
+<span class="cmt">-- STARTS WITH / ENDS WITH / CONTAINS (string matching)</span>
+<span class="kw">MATCH</span> (u:User) <span class="kw">WHERE</span> u.email <span class="kw">ENDS WITH</span> <span class="str">"@ua.es"</span> <span class="kw">RETURN</span> u.nombre
+<span class="kw">MATCH</span> (p:Paper) <span class="kw">WHERE</span> p.titulo <span class="kw">CONTAINS</span> <span class="str">"autonomous"</span> <span class="kw">RETURN</span> p.titulo
+
+<span class="cmt">-- Expresión regular con =~</span>
+<span class="kw">MATCH</span> (u:User) <span class="kw">WHERE</span> u.telefono =~ <span class="str">"\\+34.*"</span> <span class="kw">RETURN</span> u.nombre
+
+<span class="cmt">-- WHERE con patrón de grafo (existencia de relación)</span>
+<span class="kw">MATCH</span> (p:Persona)
+<span class="kw">WHERE</span> (p)-[:PERTENECE]->(:Grupo {nombre: <span class="str">"IA Lab"</span>})
+<span class="kw">RETURN</span> p.nombre
+
+<span class="cmt">-- WHERE NOT EXISTS (filtrar si NO tiene relación)</span>
+<span class="kw">MATCH</span> (u:User)
+<span class="kw">WHERE NOT</span> (u)-[:TIENE_ROL]->(:Rol)
+<span class="kw">RETURN</span> u.nombre <span class="cmt">-- usuarios sin ningún rol asignado</span>
+
+<span class="cmt">-- Comparación de fechas</span>
+<span class="kw">MATCH</span> (t:Transaccion)
+<span class="kw">WHERE</span> t.timestamp > <span class="fn">datetime</span>(<span class="str">"2026-01-01T00:00:00Z"</span>)
+  <span class="kw">AND</span> t.importe > <span class="num">5000</span>
+<span class="kw">RETURN</span> t.id, t.importe, t.timestamp</code></pre>
+        </div>
+
+        <!-- RETURN -->
+        <h2>6. RETURN — Proyectar resultados</h2>
+
+        <div class="code-block">
+            <div class="code-header"><span class="code-lang">cypher — RETURN avanzado</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+            <pre><code><span class="cmt">-- E1: Alias con AS</span>
+<span class="kw">MATCH</span> (p:Paper) <span class="kw">RETURN</span> p.titulo <span class="kw">AS</span> titulo, p.citaciones <span class="kw">AS</span> citas
+
+<span class="cmt">-- E2: DISTINCT — eliminar duplicados</span>
+<span class="kw">MATCH</span> (u:User)-[:COMPRÓ]->(p:Producto)-[:DE_CATEGORÍA]->(c:Categoría)
+<span class="kw">RETURN DISTINCT</span> c.nombre <span class="cmt">-- categorías únicas compradas</span>
+
+<span class="cmt">-- E3: ORDER BY con múltiples criterios</span>
+<span class="kw">MATCH</span> (p:Paper)
+<span class="kw">RETURN</span> p.titulo, p.citaciones, p.publicado
+<span class="kw">ORDER BY</span> p.citaciones <span class="kw">DESC</span>, p.publicado <span class="kw">DESC</span>
+
+<span class="cmt">-- E4: SKIP y LIMIT (paginación)</span>
+<span class="kw">MATCH</span> (u:User) <span class="kw">RETURN</span> u.nombre <span class="kw">SKIP</span> <span class="num">20</span> <span class="kw">LIMIT</span> <span class="num">10</span>  <span class="cmt">-- página 3</span>
+
+<span class="cmt">-- E5: Retornar el nodo completo, solo propiedades específicas, o un map</span>
+<span class="kw">MATCH</span> (v:Vehiculo)
+<span class="kw">RETURN</span>
+  v,                         <span class="cmt">-- nodo entero</span>
+  v.id,                      <span class="cmt">-- propiedad</span>
+  {id: v.id, modelo: v.modelo} <span class="kw">AS</span> resumen  <span class="cmt">-- map</span>
+
+<span class="cmt">-- E6: Retornar conteo y agregación</span>
+<span class="kw">MATCH</span> (inv:Investigador)-[:PUBLICÓ]->(p:Paper)
+<span class="kw">RETURN</span> inv.nombre, <span class="fn">count</span>(p) <span class="kw">AS</span> total, <span class="fn">sum</span>(p.citaciones) <span class="kw">AS</span> total_citas
+<span class="kw">ORDER BY</span> total_citas <span class="kw">DESC</span></code></pre>
+        </div>
+
+        <!-- SET y REMOVE -->
+        <h2>7. SET y REMOVE — Modificar datos</h2>
+
+        <div class="code-block">
+            <div class="code-header"><span class="code-lang">cypher — SET y REMOVE exhaustivos</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+            <pre><code><span class="cmt">-- SET propiedad simple</span>
+<span class="kw">MATCH</span> (u:User {email: <span class="str">"ana@lab.es"</span>})
+<span class="kw">SET</span> u.activo = <span class="kw">true</span>
+<span class="kw">RETURN</span> u
+
+<span class="cmt">-- SET multiple propiedades a la vez</span>
+<span class="kw">MATCH</span> (v:Vehiculo {id: <span class="str">"AV-001"</span>})
+<span class="kw">SET</span> v.velocidad_max = <span class="num">120</span>, v.nivel_autonomia = <span class="num">4</span>, v.actualizado = <span class="fn">datetime</span>()
+
+<span class="cmt">-- SET con += (merge de propiedades, no sobreescribe las existentes)</span>
+<span class="kw">MATCH</span> (p:Persona {id: <span class="str">"P001"</span>})
+<span class="kw">SET</span> p += {telefono: <span class="str">"+34600123456"</span>, ciudad: <span class="str">"Alicante"</span>}
+
+<span class="cmt">-- Añadir un nuevo label</span>
+<span class="kw">MATCH</span> (u:User {rol: <span class="str">"admin"</span>})
+<span class="kw">SET</span> u:Admin
+
+<span class="cmt">-- SET propiedad en relación</span>
+<span class="kw">MATCH</span> (a:User)-[r:SIGUE]->(b:User)
+<span class="kw">WHERE</span> a.nombre = <span class="str">"Ana"</span> <span class="kw">AND</span> b.nombre = <span class="str">"Bob"</span>
+<span class="kw">SET</span> r.notificaciones = <span class="kw">true</span>
+
+<span class="cmt">-- REMOVE propiedad</span>
+<span class="kw">MATCH</span> (u:User {email: <span class="str">"ana@lab.es"</span>})
+<span class="kw">REMOVE</span> u.token_temporal
+
+<span class="cmt">-- REMOVE label</span>
+<span class="kw">MATCH</span> (u:User:Admin {email: <span class="str">"ana@lab.es"</span>})
+<span class="kw">REMOVE</span> u:Admin  <span class="cmt">-- quitar label Admin, sigue siendo User</span></code></pre>
+        </div>
+
+        <!-- DELETE -->
+        <h2>8. DELETE y DETACH DELETE</h2>
+
+        <div class="code-block">
+            <div class="code-header"><span class="code-lang">cypher — Borrado seguro</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+            <pre><code><span class="cmt">-- Borrar relación (primero match explícito)</span>
+<span class="kw">MATCH</span> (a:User {nombre: <span class="str">"Ana"</span>})-[r:SIGUE]->(b:User)
+<span class="kw">DELETE</span> r
+
+<span class="cmt">-- ERROR: no puedes borrar un nodo con relaciones activas</span>
+<span class="cmt">-- MATCH (u:User {nombre: "Ana"}) DELETE u  ← Neo.ClientError.Schema.ConstraintViolation</span>
+
+<span class="cmt">-- DETACH DELETE: borra nodo Y todas sus relaciones (hazlo con cuidado)</span>
+<span class="kw">MATCH</span> (u:User {nombre: <span class="str">"Temporal"</span>})
+<span class="kw">DETACH DELETE</span> u
+
+<span class="cmt">-- Borrar todos los nodos y relaciones de la DB (solo desarrollo)</span>
+<span class="kw">MATCH</span> (n) <span class="kw">DETACH DELETE</span> n</code></pre>
+        </div>
+
+        <div class="info-box danger">
+            <div class="info-box-icon">⚠️</div>
+            <div class="info-box-text">
+                <strong>DETACH DELETE en producción:</strong> Nunca ejecutes <code>MATCH (n) DETACH DELETE n</code> en una base de datos de producción. No hay rollback automático. Siempre trabaja con transacciones explícitas y verifica primero con <code>MATCH (n) RETURN count(n)</code>.
+            </div>
+        </div>
+
+        <!-- PROPIEDADES EN RELACIONES -->
+        <h2>9. Propiedades en Relaciones</h2>
+        <p>A diferencia de SQL (donde necesitas una tabla intermedia), en Neo4j las relaciones son ciudadanos de primera clase y pueden tener propiedades propias.</p>
+
+        <div class="code-block">
+            <div class="code-header"><span class="code-lang">cypher — Propiedades en relaciones</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+            <pre><code><span class="cmt">-- Crear relación con propiedades (red de vuelos)</span>
+<span class="kw">MATCH</span> (mad:Aeropuerto {iata: <span class="str">"MAD"</span>}), (bcn:Aeropuerto {iata: <span class="str">"BCN"</span>})
+<span class="kw">CREATE</span> (mad)-[:VUELO {
+  compañia: <span class="str">"Iberia"</span>,
+  duracion_min: <span class="num">75</span>,
+  precio_medio: <span class="num">89.99</span>,
+  frecuencia_diaria: <span class="num">12</span>
+}]->(bcn)
+
+<span class="cmt">-- Consultar propiedades de relaciones</span>
+<span class="kw">MATCH</span> (origen:Aeropuerto)-[v:VUELO]->(destino:Aeropuerto)
+<span class="kw">WHERE</span> v.precio_medio < <span class="num">100</span>
+<span class="kw">RETURN</span> origen.iata, destino.iata, v.compañia, v.precio_medio
+<span class="kw">ORDER BY</span> v.precio_medio
+
+<span class="cmt">-- Red de colaboración científica — cuántos papers juntos</span>
+<span class="kw">MATCH</span> (a:Investigador)-[c:COLABORA_CON]->(b:Investigador)
+<span class="kw">WHERE</span> c.papers_juntos >= <span class="num">3</span>
+<span class="kw">RETURN</span> a.nombre, b.nombre, c.papers_juntos
+<span class="kw">ORDER BY</span> c.papers_juntos <span class="kw">DESC</span>
+
+<span class="cmt">-- E-commerce: un usuario compró un producto — cuándo y a qué precio</span>
+<span class="kw">MATCH</span> (u:User)-[c:COMPRÓ]->(p:Producto)
+<span class="kw">RETURN</span> u.nombre, p.nombre, c.precio_compra, c.fecha, c.cantidad</code></pre>
+        </div>
+
+        <!-- EJERCICIOS -->
+        <h2>🧪 Ejercicios — Módulo 2</h2>
+
+        <div class="info-box info">
+            <div class="info-box-icon">📝</div>
+            <div class="info-box-text">
+                <strong>E1 (Básico):</strong> Crea un grafo de tu equipo de investigación: al menos 3 investigadores, 3 papers y las relaciones <code>[:PUBLICÓ]</code>. Uno de los papers debe tener 2 autores. <em>Carga con el dataset movies de :play movies para practicar antes.</em>
+            </div>
+        </div>
+        <div class="info-box info">
+            <div class="info-box-icon">📝</div>
+            <div class="info-box-text">
+                <strong>E2 (Básico):</strong> Con el dataset movies, encuentra todas las películas con Tom Hanks. Retorna el título y el año. Ordena por año descendente. <em>Solución: MATCH (tom:Person {name:"Tom Hanks"})-[:ACTED_IN]->(m:Movie) RETURN m.title, m.released ORDER BY m.released DESC</em>
+            </div>
+        </div>
+        <div class="info-box warning">
+            <div class="info-box-icon">📝</div>
+            <div class="info-box-text">
+                <strong>E3 (Medio):</strong> Escribe una query que encuentre todos los usuarios que cumplen: (a) su email termina en "@ua.es" OR (b) tienen propiedad <code>admin: true</code>. Usa <code>WHERE</code> con operadores lógicos. Devuelve solo los distintos emails.
+            </div>
+        </div>
+        <div class="info-box warning">
+            <div class="info-box-icon">📝</div>
+            <div class="info-box-text">
+                <strong>E4 (Medio):</strong> Crea un grafo de transacciones bancarias sospechosas: 5 cuentas, 8 transacciones con propiedades (importe, timestamp). Identifica las cuentas que han enviado y recibido dinero (están en ambos extremos de una transacción).
+            </div>
+        </div>
+        <div class="info-box danger">
+            <div class="info-box-icon">📝</div>
+            <div class="info-box-text">
+                <strong>E5 (Avanzado):</strong> Usando el operador <code>=~</code> y regex, encuentra todos los papers cuyos títulos contienen una palabra que empieza por mayúscula seguida de al menos 4 letras minúsculas. Explica por qué esta query puede ser lenta y cómo lo resolverías en producción (pista: full-text index).
+            </div>
+        </div>
+
+        <div style="margin-top: 4rem; display: flex; justify-content: space-between;">
+            <a href="intro.html" class="btn btn-outline">← M1: Fundamentos</a>
+            <a href="cypher-intermediate.html" class="btn btn-primary">Siguiente: Cypher II →</a>
+        </div>
+    </main>
+
+    <footer style="text-align: center; padding: 2rem; color: var(--text3); font-size: 0.8rem; border-top: 1px solid var(--border);">
+        &copy; 2026 LucentIA Research · Neo4j Zero to Expert
+    </footer>
+    <script>
+        const navbar = document.getElementById('navbar');
+        window.addEventListener('scroll', () => navbar.classList.toggle('scrolled', window.scrollY > 50));
+        document.getElementById('navToggle')?.addEventListener('click', () => document.querySelector('.nav-links').classList.toggle('open'));
+        function copyCode(btn) {
+            const code = btn.closest('.code-block').querySelector('pre').innerText;
+            navigator.clipboard.writeText(code).then(() => { btn.textContent = '✓ Copiado'; btn.classList.add('copied'); setTimeout(() => { btn.textContent = 'Copiar'; btn.classList.remove('copied'); }, 2000); });
+        }
+    </script>
+</body>
+</html>

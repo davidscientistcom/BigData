@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Módulo 3: Cypher Intermedio | Neo4j Zero to Expert</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <nav class="navbar" id="navbar">
+        <div class="nav-inner">
+            <div class="nav-brand"><span class="brand-icon">🔬</span> Neo4j Raw</div>
+            <ul class="nav-links">
+                <li><a href="index.html">Inicio</a></li>
+                <li><a href="intro.html">M1: Fundamentos</a></li>
+                <li><a href="cypher-basics.html">M2: Cypher I</a></li>
+                <li><a href="cypher-intermediate.html" class="active">M3: Cypher II</a></li>
+                <li><a href="modeling.html">M4: Modelado</a></li>
+                <li><a href="expert.html">M5: Expert</a></li>
+                <li><a href="lab.html">M6: Lab</a></li>
+            </ul>
+            <button class="nav-mobile-btn" id="navToggle">☰</button>
+        </div>
+    </nav>
+
+    <header class="page-hero">
+        <span class="page-hero-icon">💎</span>
+        <h1>Módulo 3: <span class="gradient-text">Cypher — Nivel Intermedio</span></h1>
+        <p>MERGE, WITH, UNWIND, subconsultas, traversal variable y la potencia completa de la manipulación de datos.</p>
+    </header>
+
+    <main class="content">
+
+        <!-- MERGE -->
+        <h2>1. MERGE en profundidad — Upsert inteligente</h2>
+        <p><code>MERGE</code> es la operación más importante de Cypher en producción. Garantiza que un patrón exista exactamente una vez. Si no existe, lo crea; si ya existe, lo recupera.</p>
+
+        <div class="code-block">
+            <div class="code-header"><span class="code-lang">cypher — MERGE básico con ON CREATE / ON MATCH</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+            <pre><code><span class="cmt">-- Upsert de usuario por email</span>
+<span class="kw">MERGE</span> (u:User {email: <span class="str">"ana@lab.es"</span>})
+<span class="kw">ON CREATE SET</span>
+  u.nombre = <span class="str">"Ana"</span>,
+  u.created_at = <span class="fn">datetime</span>(),
+  u.activo = <span class="kw">true</span>
+<span class="kw">ON MATCH SET</span>
+  u.last_login = <span class="fn">datetime</span>()
+<span class="kw">RETURN</span> u
+
+<span class="cmt">-- MERGE de relación (siempre con MATCH de nodos primero)</span>
+<span class="kw">MATCH</span> (a:Investigador {nombre: <span class="str">"Deivit"</span>}), (p:Paper {doi: <span class="str">"10.1234/xyz"</span>})
+<span class="kw">MERGE</span> (a)-[r:PUBLICÓ]->(p)
+<span class="kw">ON CREATE SET</span> r.año = <span class="num">2025</span>, r.rol = <span class="str">"first_author"</span>
+<span class="kw">RETURN</span> r
+
+<span class="cmt">-- MERGE de nodo + relación en una sola operación (cuidado: puede crear nodos duplicados)</span>
+<span class="cmt">-- PELIGROSO si no pones las propiedades de identificación únicas en el patrón del MERGE</span>
+<span class="kw">MERGE</span> (ciudad:Ciudad {nombre: <span class="str">"Alicante"</span>})-[:EN_PAIS]->(pais:Pais {nombre: <span class="str">"España"</span>})
+
+<span class="cmt">-- Patrón correcto para e-commerce: upsert de producto</span>
+<span class="kw">MERGE</span> (p:Producto {sku: <span class="str">"SKU-001"</span>})
+<span class="kw">ON CREATE SET</span> p.nombre = <span class="str">"Sensor LIDAR"</span>, p.precio = <span class="num">2500.00</span>, p.stock = <span class="num">10</span>
+<span class="kw">ON MATCH SET</span>  p.precio = <span class="num">2450.00</span>, p.updated_at = <span class="fn">datetime</span>()</code></pre>
+        </div>
+
+        <div class="info-box danger">
+            <div class="info-box-icon">⚠️</div>
+            <div class="info-box-text">
+                <strong>El peligro del MERGE parcial:</strong> <code>MERGE (n:Persona {nombre:"Ana", ciudad:"Madrid"})</code> solo hace match si AMBAS propiedades coinciden. Si Ana existe con nombre="Ana" pero sin ciudad, creará un NUEVO nodo. La regla de oro: <strong>MERGE solo sobre la propiedad de identidad</strong> (email, id, sku), luego usa SET para el resto.
+            </div>
+        </div>
+
+        <!-- WITH -->
+        <h2>2. WITH — Pipeline de consultas</h2>
+        <p><code>WITH</code> es el operador de composición de Cypher. Permite encadenar etapas de transformación, filtrar resultados intermedios y pasar solo lo necesario a la siguiente etapa.</p>
+
+        <div class="code-block">
+            <div class="code-header"><span class="code-lang">cypher — WITH para filtrado post-agregación</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+            <pre><code><span class="cmt">-- Investigadores con más de 5 publicaciones</span>
+<span class="kw">MATCH</span> (inv:Investigador)-[:PUBLICÓ]->(p:Paper)
+<span class="kw">WITH</span> inv, <span class="fn">count</span>(p) <span class="kw">AS</span> total_papers
+<span class="kw">WHERE</span> total_papers > <span class="num">5</span>
+<span class="kw">RETURN</span> inv.nombre, total_papers
+<span class="kw">ORDER BY</span> total_papers <span class="kw">DESC</span>
+
+<span class="cmt">-- WITH encadenados: red de fraude — cuentas a 2+ saltos de una cuenta origen</span>
+<span class="kw">MATCH</span> (origen:Cuenta {id: <span class="str">"C-001"</span>})-[:TRANSFIERE]->(intermedia:Cuenta)
+<span class="kw">WITH</span> origen, intermedia
+<span class="kw">MATCH</span> (intermedia)-[:TRANSFIERE]->(destino:Cuenta)
+<span class="kw">WITH</span> origen, intermedia, destino, <span class="fn">count</span>(*) <span class="kw">AS</span> veces
+<span class="kw">WHERE</span> veces >= <span class="num">3</span>
+<span class="kw">RETURN</span> origen.id, intermedia.id, destino.id, veces
+
+<span class="cmt">-- WITH para limitar antes de un MATCH costoso (optimización)</span>
+<span class="kw">MATCH</span> (u:User) <span class="kw">WHERE</span> u.activo = <span class="kw">true</span>
+<span class="kw">WITH</span> u <span class="kw">ORDER BY</span> u.created_at <span class="kw">DESC LIMIT</span> <span class="num">100</span>  <span class="cmt">-- solo los 100 más recientes</span>
+<span class="kw">MATCH</span> (u)-[:COMPRÓ]->(p:Producto)
+<span class="kw">RETURN</span> u.nombre, <span class="fn">collect</span>(p.nombre) <span class="kw">AS</span> compras</code></pre>
+        </div>
+
+        <!-- UNWIND -->
+        <h2>3. UNWIND — De listas a filas</h2>
+        <p><code>UNWIND</code> expande una lista en filas individuales. Es el inverso de <code>collect()</code>. Fundamental para carga masiva de datos y para procesar arrays.</p>
+
+        <div class="code-block">
+            <div class="code-header"><span class="code-lang">cypher — UNWIND para carga masiva y procesamiento</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+            <pre><code><span class="cmt">-- Crear nodos desde una lista in-memory</span>
+<span class="kw">UNWIND</span> [
+  {nombre: <span class="str">"LIDAR"</span>, alcance: <span class="num">200</span>},
+  {nombre: <span class="str">"RADAR"</span>, alcance: <span class="num">150</span>},
+  {nombre: <span class="str">"CAMERA"</span>, alcance: <span class="num">80</span>}
+] <span class="kw">AS</span> sensor_data
+<span class="kw">MERGE</span> (s:TipoSensor {nombre: sensor_data.nombre})
+<span class="kw">SET</span> s.alcance_metros = sensor_data.alcance
+
+<span class="cmt">-- UNWIND para crear relaciones desde lista de conexiones</span>
+<span class="kw">MATCH</span> (v:Vehiculo {id: <span class="str">"AV-001"</span>})
+<span class="kw">UNWIND</span> [<span class="str">"LIDAR"</span>, <span class="str">"RADAR"</span>, <span class="str">"CAMERA"</span>] <span class="kw">AS</span> tipo
+<span class="kw">MATCH</span> (s:TipoSensor {nombre: tipo})
+<span class="kw">MERGE</span> (v)-[:EQUIPADO_CON]->(s)
+
+<span class="cmt">-- UNWIND + MERGE para carga de red académica</span>
+<span class="kw">UNWIND</span> [
+  {doi: <span class="str">"10.1/a"</span>, titulo: <span class="str">"GNN for Driving"</span>, autores: [<span class="str">"Deivit"</span>, <span class="str">"Merino"</span>]},
+  {doi: <span class="str">"10.1/b"</span>, titulo: <span class="str">"LIDAR Calibration"</span>, autores: [<span class="str">"Merino"</span>]}
+] <span class="kw">AS</span> paper_data
+<span class="kw">MERGE</span> (p:Paper {doi: paper_data.doi})
+<span class="kw">SET</span> p.titulo = paper_data.titulo
+<span class="kw">WITH</span> p, paper_data
+<span class="kw">UNWIND</span> paper_data.autores <span class="kw">AS</span> autor_nombre
+<span class="kw">MERGE</span> (inv:Investigador {nombre: autor_nombre})
+<span class="kw">MERGE</span> (inv)-[:PUBLICÓ]->(p)</code></pre>
+        </div>
+
+        <!-- FUNCIONES DE AGREGACIÓN -->
+        <h2>4. Funciones de Agregación</h2>
+
+        <div class="code-block">
+            <div class="code-header"><span class="code-lang">cypher — Todas las funciones de agregación</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+            <pre><code><span class="kw">MATCH</span> (p:Paper)
+<span class="kw">RETURN</span>
+  <span class="fn">count</span>(p)              <span class="kw">AS</span> total_papers,
+  <span class="fn">count</span>(p.doi)          <span class="kw">AS</span> papers_con_doi,  <span class="cmt">-- ignora null</span>
+  <span class="fn">sum</span>(p.citaciones)     <span class="kw">AS</span> total_citas,
+  <span class="fn">avg</span>(p.citaciones)     <span class="kw">AS</span> media_citas,
+  <span class="fn">min</span>(p.citaciones)     <span class="kw">AS</span> min_citas,
+  <span class="fn">max</span>(p.citaciones)     <span class="kw">AS</span> max_citas,
+  <span class="fn">stDev</span>(p.citaciones)   <span class="kw">AS</span> desviacion,
+  <span class="fn">percentileCont</span>(p.citaciones, <span class="num">0.95</span>) <span class="kw">AS</span> percentil_95,
+  <span class="fn">collect</span>(p.titulo)    <span class="kw">AS</span> lista_titulos    <span class="cmt">-- agrupa en lista</span>
+
+<span class="cmt">-- GROUP BY implícito: Neo4j agrupa por todo lo que no es agregación</span>
+<span class="kw">MATCH</span> (inv:Investigador)-[:PUBLICÓ]->(p:Paper)
+<span class="kw">RETURN</span> inv.nombre, <span class="fn">count</span>(p) <span class="kw">AS</span> papers
+<span class="cmt">-- "inv.nombre" actúa como GROUP BY automáticamente</span>
+
+<span class="cmt">-- collect con ORDER — lista ordenada</span>
+<span class="kw">MATCH</span> (inv:Investigador)-[:PUBLICÓ]->(p:Paper)
+<span class="kw">WITH</span> inv, p <span class="kw">ORDER BY</span> p.citaciones <span class="kw">DESC</span>
+<span class="kw">RETURN</span> inv.nombre, <span class="fn">collect</span>(p.titulo)[..<span class="num">3</span>] <span class="kw">AS</span> top3_papers</code></pre>
+        </div>
+
+        <!-- FUNCIONES DE STRING -->
+        <h2>5. Funciones de String, Lista y Fecha</h2>
+
+        <div class="code-block">
+            <div class="code-header"><span class="code-lang">cypher — Strings</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+            <pre><code><span class="kw">MATCH</span> (u:User)
+<span class="kw">RETURN</span>
+  <span class="fn">toLower</span>(u.nombre)                   <span class="kw">AS</span> nombre_lower,
+  <span class="fn">toUpper</span>(u.nombre)                   <span class="kw">AS</span> nombre_upper,
+  <span class="fn">trim</span>(u.nombre)                      <span class="kw">AS</span> sin_espacios,
+  <span class="fn">split</span>(u.email, <span class="str">"@"</span>)[<span class="num">0</span>]             <span class="kw">AS</span> usuario_email,
+  <span class="fn">replace</span>(u.nombre, <span class="str">" "</span>, <span class="str">"_"</span>)         <span class="kw">AS</span> nombre_slug,
+  <span class="fn">substring</span>(u.nombre, <span class="num">0</span>, <span class="num">3</span>)           <span class="kw">AS</span> abreviatura,
+  <span class="fn">size</span>(u.nombre)                      <span class="kw">AS</span> longitud</code></pre>
+        </div>
+
+        <div class="code-block">
+            <div class="code-header"><span class="code-lang">cypher — Listas</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+            <pre><code><span class="kw">WITH</span> [<span class="num">1</span>,<span class="num">2</span>,<span class="num">3</span>,<span class="num">4</span>,<span class="num">5</span>,<span class="num">6</span>,<span class="num">7</span>,<span class="num">8</span>,<span class="num">9</span>,<span class="num">10</span>] <span class="kw">AS</span> nums
+<span class="kw">RETURN</span>
+  [x <span class="kw">IN</span> nums <span class="kw">WHERE</span> x % <span class="num">2</span> = <span class="num">0</span>]            <span class="kw">AS</span> pares,
+  [x <span class="kw">IN</span> nums | x * x]                    <span class="kw">AS</span> cuadrados,
+  <span class="fn">reduce</span>(acc=<span class="num">0</span>, x <span class="kw">IN</span> nums | acc + x)    <span class="kw">AS</span> suma,
+  <span class="fn">any</span>(x <span class="kw">IN</span> nums <span class="kw">WHERE</span> x > <span class="num">9</span>)            <span class="kw">AS</span> hay_mayor_9,
+  <span class="fn">all</span>(x <span class="kw">IN</span> nums <span class="kw">WHERE</span> x > <span class="num">0</span>)            <span class="kw">AS</span> todos_positivos,
+  <span class="fn">none</span>(x <span class="kw">IN</span> nums <span class="kw">WHERE</span> x < <span class="num">0</span>)           <span class="kw">AS</span> ninguno_negativo,
+  <span class="fn">single</span>(x <span class="kw">IN</span> nums <span class="kw">WHERE</span> x = <span class="num">5</span>)        <span class="kw">AS</span> exactamente_uno_5</code></pre>
+        </div>
+
+        <div class="code-block">
+            <div class="code-header"><span class="code-lang">cypher — Fechas y duraciones</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+            <pre><code><span class="kw">WITH</span> <span class="fn">date</span>(<span class="str">"2026-03-26"</span>) <span class="kw">AS</span> hoy, <span class="fn">date</span>(<span class="str">"2023-09-01"</span>) <span class="kw">AS</span> inicio_doctorado
+<span class="kw">RETURN</span>
+  hoy,
+  inicio_doctorado,
+  <span class="fn">duration.between</span>(inicio_doctorado, hoy).months <span class="kw">AS</span> meses_doctorado,
+  hoy + <span class="fn">duration</span>(<span class="str">"P30D"</span>)                               <span class="kw">AS</span> en_30_dias
+
+<span class="cmt">-- Filtrar transacciones del último mes</span>
+<span class="kw">MATCH</span> (t:Transaccion)
+<span class="kw">WHERE</span> t.timestamp >= <span class="fn">datetime</span>() - <span class="fn">duration</span>(<span class="str">"P30D"</span>)
+<span class="kw">RETURN</span> <span class="fn">count</span>(t), <span class="fn">sum</span>(t.importe)</code></pre>
+        </div>
+
+        <!-- OPTIONAL MATCH -->
+        <h2>6. OPTIONAL MATCH — El LEFT JOIN de los grafos</h2>
+
+        <div class="code-block">
+            <div class="code-header"><span class="code-lang">cypher — OPTIONAL MATCH</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+            <pre><code><span class="cmt">-- Todos los vehículos, con o sin conductor asignado</span>
+<span class="kw">MATCH</span> (v:Vehiculo)
+<span class="kw">OPTIONAL MATCH</span> (v)<-[:CONDUCE]-(d:Conductor)
+<span class="kw">RETURN</span> v.id, d.nombre  <span class="cmt">-- d.nombre será null si no hay conductor</span>
+
+<span class="cmt">-- Enriquecer con datos opcionales: papers con o sin DOI</span>
+<span class="kw">MATCH</span> (inv:Investigador)-[:PUBLICÓ]->(p:Paper)
+<span class="kw">OPTIONAL MATCH</span> (p)-[:REFERENCIA]->(ref:Paper)
+<span class="kw">RETURN</span> inv.nombre, p.titulo, <span class="fn">count</span>(ref) <span class="kw">AS</span> num_referencias
+
+<span class="cmt">-- Trampa común: OPTIONAL MATCH crea una fila con nulos, no la elimina</span>
+<span class="kw">MATCH</span> (u:User)
+<span class="kw">OPTIONAL MATCH</span> (u)-[:TIENE_ROL]->(r:Rol)
+<span class="kw">WHERE</span> r <span class="kw">IS NOT NULL</span>  <span class="cmt">-- este WHERE filtra DESPUÉS del OPTIONAL MATCH</span>
+<span class="kw">RETURN</span> u.nombre, r.nombre</code></pre>
+        </div>
+
+        <!-- SUBCONSULTAS -->
+        <h2>7. CALL { } — Subconsultas</h2>
+
+        <div class="code-block">
+            <div class="code-header"><span class="code-lang">cypher — Subconsultas con CALL</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+            <pre><code><span class="cmt">-- Subconsulta para calcular estadísticas independientes</span>
+<span class="kw">CALL</span> {
+  <span class="kw">MATCH</span> (p:Paper) <span class="kw">RETURN</span> <span class="fn">avg</span>(p.citaciones) <span class="kw">AS</span> media_global
+}
+<span class="kw">MATCH</span> (inv:Investigador)-[:PUBLICÓ]->(p:Paper)
+<span class="kw">WITH</span> inv, <span class="fn">avg</span>(p.citaciones) <span class="kw">AS</span> media_inv, media_global
+<span class="kw">WHERE</span> media_inv > media_global
+<span class="kw">RETURN</span> inv.nombre, media_inv, media_global
+
+<span class="cmt">-- CALL { } IN TRANSACTIONS para actualización masiva sin agotar memoria</span>
+<span class="kw">MATCH</span> (t:Transaccion) <span class="kw">WHERE</span> t.procesada <span class="kw">IS NULL</span>
+<span class="kw">CALL</span> {
+  <span class="kw">WITH</span> t
+  <span class="kw">SET</span> t.procesada = <span class="kw">true</span>, t.procesada_at = <span class="fn">datetime</span>()
+} <span class="kw">IN TRANSACTIONS OF</span> <span class="num">1000</span> <span class="kw">ROWS</span>  <span class="cmt">-- batches de 1000</span></code></pre>
+        </div>
+
+        <!-- TRAVERSAL VARIABLE -->
+        <h2>8. Traversal de Longitud Variable</h2>
+
+        <div class="code-block">
+            <div class="code-header"><span class="code-lang">cypher — Variable length, shortestPath, allShortestPaths</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+            <pre><code><span class="cmt">-- Todos los nodos alcanzables en 1 a 3 saltos</span>
+<span class="kw">MATCH</span> (inicio:Cuenta {id: <span class="str">"C-001"</span>})-[<span class="prop">*1..3</span>]->(destino:Cuenta)
+<span class="kw">RETURN DISTINCT</span> destino.id
+
+<span class="cmt">-- shortestPath: el camino más corto entre dos nodos</span>
+<span class="kw">MATCH</span> (a:Investigador {nombre: <span class="str">"Deivit"</span>}), (b:Investigador {nombre: <span class="str">"Turing"</span>})
+<span class="kw">MATCH</span> p = <span class="fn">shortestPath</span>((a)-[:COLABORA_CON*]-(b))
+<span class="kw">RETURN</span> p, <span class="fn">length</span>(p) <span class="kw">AS</span> grados_separacion
+
+<span class="cmt">-- allShortestPaths: todos los caminos más cortos</span>
+<span class="kw">MATCH</span> (a:Ciudad {nombre: <span class="str">"Madrid"</span>}), (b:Ciudad {nombre: <span class="str">"Barcelona"</span>})
+<span class="kw">MATCH</span> paths = <span class="fn">allShortestPaths</span>((a)-[:CONECTADO*]-(b))
+<span class="kw">RETURN</span> paths
+
+<span class="cmt">-- Filtrar relaciones específicas en traversal variable</span>
+<span class="kw">MATCH</span> (origen)-[r:TRANSFIERE|COMPRA*1..5]->(destino:Cuenta {sospechosa: <span class="kw">true</span>})
+<span class="kw">RETURN DISTINCT</span> origen.id, <span class="fn">length</span>(r) <span class="kw">AS</span> saltos</code></pre>
+        </div>
+
+        <div class="info-box warning">
+            <div class="info-box-icon">⚠️</div>
+            <div class="info-box-text">
+                <strong>Peligro del traversal sin límite:</strong> <code>-[*]-></code> sin rango de longitud puede explorar billones de paths en grafos densos. Siempre define un límite superior: <code>-[*1..5]-></code>. Usa <code>EXPLAIN</code> para verificar el plan antes de ejecutar.
+            </div>
+        </div>
+
+        <!-- FOREACH -->
+        <h2>9. FOREACH — Iterar listas para efectos secundarios</h2>
+
+        <div class="code-block">
+            <div class="code-header"><span class="code-lang">cypher — FOREACH para creación masiva</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+            <pre><code><span class="cmt">-- Marcar múltiples nodos en una sola operación</span>
+<span class="kw">MATCH</span> p = (inicio:Cuenta {id: <span class="str">"C-001"</span>})-[:TRANSFIERE*1..4]->(fin:Cuenta)
+<span class="kw">FOREACH</span> (nodo <span class="kw">IN</span> <span class="fn">nodes</span>(p) |
+  <span class="kw">SET</span> nodo.en_investigacion = <span class="kw">true</span>
+)
+
+<span class="cmt">-- Crear nodos a partir de lista (cuando UNWIND no aplica)</span>
+<span class="kw">FOREACH</span> (ciudad <span class="kw">IN</span> [<span class="str">"Madrid"</span>, <span class="str">"Barcelona"</span>, <span class="str">"Alicante"</span>, <span class="str">"Valencia"</span>] |
+  <span class="kw">MERGE</span> (:Ciudad {nombre: ciudad})
+)</code></pre>
+        </div>
+
+        <h2>🧪 Ejercicios — Módulo 3</h2>
+
+        <div class="info-box info">
+            <div class="info-box-icon">📝</div>
+            <div class="info-box-text"><strong>E1 (Básico):</strong> Crea un sistema de usuarios con MERGE que haga upsert por email. Si es nuevo, añade <code>created_at = datetime()</code>. Si ya existe, actualiza <code>last_seen = datetime()</code>. Verifica ejecutándolo dos veces con el mismo email.</div>
+        </div>
+        <div class="info-box info">
+            <div class="info-box-icon">📝</div>
+            <div class="info-box-text"><strong>E2 (Básico):</strong> Con el dataset movies, usa <code>WITH</code> para encontrar actores que han trabajado en más de 3 películas, luego ordena por número de películas descendente y devuelve el top 5.</div>
+        </div>
+        <div class="info-box warning">
+            <div class="info-box-icon">📝</div>
+            <div class="info-box-text"><strong>E3 (Medio):</strong> Usa <code>UNWIND</code> para insertar 10 sensores IoT de un vehículo autónomo desde una lista in-memory. Cada sensor tiene: tipo, frecuencia, alcance_metros. Luego crea relaciones <code>[:EQUIPADO_CON]</code> entre el vehículo y los sensores.</div>
+        </div>
+        <div class="info-box warning">
+            <div class="info-box-icon">📝</div>
+            <div class="info-box-text"><strong>E4 (Medio):</strong> Encuentra el camino más corto entre dos investigadores en tu grafo académico, pasando solo por relaciones <code>[:COLABORA_CON]</code>. Usa <code>shortestPath()</code>. ¿Cuántos grados de separación hay?</div>
+        </div>
+        <div class="info-box danger">
+            <div class="info-box-icon">📝</div>
+            <div class="info-box-text"><strong>E5 (Avanzado):</strong> Construye una subconsulta con <code>CALL { }</code> que calcule la media global de citaciones de papers, y úsala para identificar investigadores cuya media personal supera la media global en más de un 20%. <em>Pista: CALL { } para la media global, luego WITH para comparar.</em></div>
+        </div>
+
+        <div style="margin-top: 4rem; display: flex; justify-content: space-between;">
+            <a href="cypher-basics.html" class="btn btn-outline">← M2: Cypher I</a>
+            <a href="modeling.html" class="btn btn-primary">Siguiente: Modelado →</a>
+        </div>
+    </main>
+
+    <footer style="text-align: center; padding: 2rem; color: var(--text3); font-size: 0.8rem; border-top: 1px solid var(--border);">
+        &copy; 2026 LucentIA Research · Neo4j Zero to Expert
+    </footer>
+    <script>
+        const navbar = document.getElementById('navbar');
+        window.addEventListener('scroll', () => navbar.classList.toggle('scrolled', window.scrollY > 50));
+        document.getElementById('navToggle')?.addEventListener('click', () => document.querySelector('.nav-links').classList.toggle('open'));
+        function copyCode(btn) {
+            const code = btn.closest('.code-block').querySelector('pre').innerText;
+            navigator.clipboard.writeText(code).then(() => { btn.textContent = '✓ Copiado'; btn.classList.add('copied'); setTimeout(() => { btn.textContent = 'Copiar'; btn.classList.remove('copied'); }, 2000); });
+        }
+    </script>
+</body>
+</html>

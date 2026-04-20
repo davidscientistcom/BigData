@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Módulo 6: Lab Final | Neo4j Zero to Expert</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <nav class="navbar" id="navbar">
+        <div class="nav-inner">
+            <div class="nav-brand"><span class="brand-icon">🔬</span> Neo4j Raw</div>
+            <ul class="nav-links">
+                <li><a href="index.html">Inicio</a></li>
+                <li><a href="intro.html">M1: Fundamentos</a></li>
+                <li><a href="cypher-basics.html">M2: Cypher I</a></li>
+                <li><a href="cypher-intermediate.html">M3: Cypher II</a></li>
+                <li><a href="modeling.html">M4: Modelado</a></li>
+                <li><a href="expert.html">M5: Expert</a></li>
+                <li><a href="lab.html" class="active">M6: Lab</a></li>
+            </ul>
+            <button class="nav-mobile-btn" id="navToggle">☰</button>
+        </div>
+    </nav>
+
+    <header class="page-hero">
+        <span class="page-hero-icon">🧪</span>
+        <h1>Módulo 6: <span class="gradient-text">Lab — Integración & Proyecto Final</span></h1>
+        <p>Python + Neo4j Driver, GraphRAG con LLMs, y el proyecto completo: Knowledge Graph de Vehículos Autónomos.</p>
+    </header>
+
+    <main class="content">
+
+        <!-- PYTHON INTEGRATION -->
+        <h2>1. Python + Neo4j Driver</h2>
+
+        <div class="code-block">
+            <div class="code-header"><span class="code-lang">bash — instalación</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+            <pre><code>pip install neo4j python-dotenv</code></pre>
+        </div>
+
+        <div class="code-block">
+            <div class="code-header"><span class="code-lang">python — Driver básico: sesiones y transacciones</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+            <pre><code>from neo4j import GraphDatabase
+import os
+
+URI = os.getenv("NEO4J_URI", "bolt://localhost:7687")
+AUTH = (os.getenv("NEO4J_USER", "neo4j"), os.getenv("NEO4J_PASS", "neuralbrain"))
+
+class Neo4jClient:
+    def __init__(self, uri: str, auth: tuple):
+        self.driver = GraphDatabase.driver(uri, auth=auth)
+        self.driver.verify_connectivity()
+        print("✅ Conexión establecida")
+
+    def close(self):
+        self.driver.close()
+
+    # Transacción de lectura (never modifies)
+    def get_papers_by_author(self, nombre: str) -> list[dict]:
+        with self.driver.session(database="neo4j") as session:
+            result = session.execute_read(self._query_papers, nombre)
+            return result
+
+    @staticmethod
+    def _query_papers(tx, nombre: str):
+        query = """
+        MATCH (inv:Investigador {nombre: $nombre})-[:PUBLICÓ]->(p:Paper)
+        RETURN p.titulo AS titulo, p.citaciones AS citas
+        ORDER BY citas DESC
+        """
+        records = tx.run(query, nombre=nombre)
+        return [dict(r) for r in records]
+
+    # Transacción de escritura con manejo de errores
+    def upsert_paper(self, doi: str, titulo: str, citaciones: int) -> bool:
+        with self.driver.session(database="neo4j") as session:
+            try:
+                session.execute_write(self._upsert_paper, doi, titulo, citaciones)
+                return True
+            except Exception as e:
+                print(f"❌ Error: {e}")
+                return False
+
+    @staticmethod
+    def _upsert_paper(tx, doi: str, titulo: str, citaciones: int):
+        tx.run(
+            "MERGE (p:Paper {doi: $doi}) SET p.titulo = $titulo, p.citaciones = $citaciones",
+            doi=doi, titulo=titulo, citaciones=citaciones
+        )
+
+# Uso
+if __name__ == "__main__":
+    client = Neo4jClient(URI, AUTH)
+    papers = client.get_papers_by_author("Deivit")
+    for p in papers:
+        print(f"  {p['titulo']} ({p['citas']} citas)")
+    client.close()</code></pre>
+        </div>
+
+        <!-- GRAPHRAG -->
+        <h2>2. GraphRAG con LangChain + Neo4j</h2>
+        <p>Construir un sistema de Retrieval-Augmented Generation donde el contexto viene del grafo, no solo de documentos vectoriales.</p>
+
+        <div class="code-block">
+            <div class="code-header"><span class="code-lang">python — LangChain + Neo4jVector + GraphCypherQA</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+            <pre><code>from langchain_community.graphs import Neo4jGraph
+from langchain_community.vectorstores import Neo4jVector
+from langchain_openai import OpenAIEmbeddings, ChatOpenAI
+from langchain.chains import GraphCypherQAChain
+
+# Conexión al grafo
+graph = Neo4jGraph(
+    url="bolt://localhost:7687",
+    username="neo4j",
+    password="neuralbrain"
+)
+
+# Vector store sobre embeddings de papers
+vector_index = Neo4jVector.from_existing_index(
+    OpenAIEmbeddings(),
+    graph=graph,
+    index_name="paper_embedding",
+    node_label="Paper",
+    text_node_property="abstract",
+    embedding_node_property="embedding"
+)
+
+# Búsqueda semántica pura
+docs = vector_index.similarity_search("LIDAR point cloud processing", k=5)
+for d in docs: print(d.page_content[:200])
+
+# GraphCypherQA: el LLM genera Cypher desde lenguaje natural
+chain = GraphCypherQAChain.from_llm(
+    ChatOpenAI(model="gpt-4o"),
+    graph=graph,
+    verbose=True,
+    allow_dangerous_requests=True  # requerido en v0.3+
+)
+
+result = chain.invoke({"query": "¿Qué investigadores colaboran con Deivit en papers sobre LIDAR?"})
+print(result["result"])</code></pre>
+        </div>
+
+        <div class="info-box tip">
+            <div class="info-box-icon">💡</div>
+            <div class="info-box-text"><strong>GraphRAG vs RAG puro:</strong> El RAG vectorial encuentra documentos similares semánticamente, pero no puede razonar sobre relaciones. GraphRAG combina: (1) embedding search para recuperar nodos relevantes, (2) traversal del grafo para expandir contexto de relaciones, (3) el LLM sintetiza ambas fuentes. Ideal para knowledge graphs donde las conexiones son el dato más valioso.</div>
+        </div>
+
+        <!-- DOCKER STACK -->
+        <h2>3. Docker Compose — Stack Completo</h2>
+
+        <div class="code-block">
+            <div class="code-header"><span class="code-lang">yaml — docker-compose.yml: Neo4j + API + Jupyter</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+            <pre><code>version: "3.9"
+services:
+  neo4j:
+    image: neo4j:5.18-enterprise
+    ports:
+      - "7474:7474"
+      - "7687:7687"
+    environment:
+      NEO4J_AUTH: neo4j/neuralbrain
+      NEO4J_ACCEPT_LICENSE_AGREEMENT: "yes"
+      NEO4J_PLUGINS: '["apoc", "graph-data-science"]'
+      NEO4J_apoc_export_file_enabled: "true"
+      NEO4J_apoc_import_file_enabled: "true"
+      NEO4J_dbms_memory_heap_initial__size: 512m
+      NEO4J_dbms_memory_heap_max__size: 2G
+    volumes:
+      - neo4j_data:/data
+      - ./import:/import
+    healthcheck:
+      test: ["CMD", "cypher-shell", "-u", "neo4j", "-p", "neuralbrain", "RETURN 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  jupyter:
+    image: jupyter/scipy-notebook:latest
+    ports:
+      - "8888:8888"
+    environment:
+      - JUPYTER_TOKEN=lucentia
+    volumes:
+      - ./notebooks:/home/jovyan/work
+    depends_on:
+      neo4j:
+        condition: service_healthy
+
+volumes:
+  neo4j_data:</code></pre>
+        </div>
+
+        <!-- LAB FINAL -->
+        <h2>4. Proyecto Final: Knowledge Graph de Vehículos Autónomos</h2>
+
+        <div class="info-box info">
+            <div class="info-box-icon">🎯</div>
+            <div class="info-box-text"><strong>Objetivo:</strong> Construir un Knowledge Graph completo que modele accidentes de vehículos autónomos, causas raíz, sensores implicados, condiciones ambientales y decisiones del sistema. 5 fases progresivas.</div>
+        </div>
+
+        <h3>Fase 1: Schema y Constraints</h3>
+        <div class="code-block">
+            <div class="code-header"><span class="code-lang">cypher — Schema del Knowledge Graph AV</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+            <pre><code><span class="cmt">-- Constraints (identidad única por entidad)</span>
+<span class="kw">CREATE CONSTRAINT</span> av_vin        <span class="kw">FOR</span> (v:Vehiculo) <span class="kw">REQUIRE</span> v.vin <span class="kw">IS UNIQUE</span>
+<span class="kw">CREATE CONSTRAINT</span> acc_id        <span class="kw">FOR</span> (a:Accidente) <span class="kw">REQUIRE</span> a.id <span class="kw">IS UNIQUE</span>
+<span class="kw">CREATE CONSTRAINT</span> sensor_serial <span class="kw">FOR</span> (s:Sensor) <span class="kw">REQUIRE</span> s.serial <span class="kw">IS UNIQUE</span>
+<span class="kw">CREATE CONSTRAINT</span> causa_id      <span class="kw">FOR</span> (c:CausaRaiz) <span class="kw">REQUIRE</span> c.id <span class="kw">IS UNIQUE</span>
+
+<span class="cmt">-- Índices para queries frecuentes</span>
+<span class="kw">CREATE INDEX</span> acc_severidad <span class="kw">FOR</span> (a:Accidente) <span class="kw">ON</span> (a.severidad)
+<span class="kw">CREATE INDEX</span> acc_fecha     <span class="kw">FOR</span> (a:Accidente) <span class="kw">ON</span> (a.fecha)
+<span class="kw">CREATE INDEX</span> sensor_tipo   <span class="kw">FOR</span> (s:Sensor) <span class="kw">ON</span> (s.tipo)</code></pre>
+        </div>
+
+        <h3>Fase 2: Carga de Datos de Demostración</h3>
+        <div class="code-block">
+            <div class="code-header"><span class="code-lang">cypher — Insertar dataset de prueba</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+            <pre><code><span class="cmt">-- Vehículos</span>
+<span class="kw">UNWIND</span> [
+  {vin: <span class="str">"AV-001"</span>, modelo: <span class="str">"Tesla S"</span>, nivel_autonomia: <span class="num">4</span>},
+  {vin: <span class="str">"AV-002"</span>, modelo: <span class="str">"Waymo One"</span>, nivel_autonomia: <span class="num">5</span>},
+  {vin: <span class="str">"AV-003"</span>, modelo: <span class="str">"Cruise AV"</span>, nivel_autonomia: <span class="num">4</span>}
+] <span class="kw">AS</span> v_data
+<span class="kw">MERGE</span> (v:Vehiculo {vin: v_data.vin})
+<span class="kw">SET</span> v.modelo = v_data.modelo, v.nivel_autonomia = v_data.nivel_autonomia
+
+<span class="cmt">-- Sensores</span>
+<span class="kw">UNWIND</span> [
+  {serial: <span class="str">"S-L01"</span>, tipo: <span class="str">"LIDAR"</span>, alcance: <span class="num">200</span>, vin: <span class="str">"AV-001"</span>},
+  {serial: <span class="str">"S-R01"</span>, tipo: <span class="str">"RADAR"</span>, alcance: <span class="num">150</span>, vin: <span class="str">"AV-001"</span>},
+  {serial: <span class="str">"S-C01"</span>, tipo: <span class="str">"CAMERA"</span>, alcance: <span class="num">80</span>, vin: <span class="str">"AV-002"</span>}
+] <span class="kw">AS</span> s_data
+<span class="kw">MERGE</span> (s:Sensor {serial: s_data.serial})
+<span class="kw">SET</span> s.tipo = s_data.tipo, s.alcance_m = s_data.alcance
+<span class="kw">WITH</span> s, s_data
+<span class="kw">MATCH</span> (v:Vehiculo {vin: s_data.vin})
+<span class="kw">MERGE</span> (v)-[:EQUIPADO_CON]->(s)
+
+<span class="cmt">-- Accidentes con causas</span>
+<span class="kw">MERGE</span> (acc:Accidente {id: <span class="str">"ACC-001"</span>})
+<span class="kw">SET</span> acc.fecha = <span class="fn">date</span>(<span class="str">"2026-01-15"</span>), acc.severidad = <span class="num">3</span>, acc.descripcion = <span class="str">"Colisión trasera en lluvia"</span>
+<span class="kw">MERGE</span> (causa:CausaRaiz {id: <span class="str">"C-001"</span>})
+<span class="kw">SET</span> causa.descripcion = <span class="str">"Fallo de detección LIDAR por lluvia intensa"</span>
+<span class="kw">MERGE</span> (acc)-[:CAUSADO_POR]->(causa)
+<span class="kw">WITH</span> acc
+<span class="kw">MATCH</span> (v:Vehiculo {vin: <span class="str">"AV-001"</span>}), (s:Sensor {serial: <span class="str">"S-L01"</span>})
+<span class="kw">MERGE</span> (v)-[:INVOLUCRADO_EN]->(acc)
+<span class="kw">MERGE</span> (s)-[:FALLÓ_EN]->(acc)
+
+<span class="cmt">-- Condición ambiental</span>
+<span class="kw">MERGE</span> (env:Condicion {id: <span class="str">"ENV-001"</span>})
+<span class="kw">SET</span> env.lluvia_mm = <span class="num">25</span>, env.visibilidad_m = <span class="num">50</span>, env.temperatura = <span class="num">12</span>
+<span class="kw">MATCH</span> (acc:Accidente {id: <span class="str">"ACC-001"</span>})
+<span class="kw">MERGE</span> (acc)-[:OCURRIÓ_BAJO]->(env)</code></pre>
+        </div>
+
+        <h3>Fase 3: Queries de Negocio</h3>
+        <div class="code-block">
+            <div class="code-header"><span class="code-lang">cypher — Análisis de accidentes</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+            <pre><code><span class="cmt">-- ¿Qué tipos de sensor fallan más frecuentemente?</span>
+<span class="kw">MATCH</span> (s:Sensor)-[:FALLÓ_EN]->(acc:Accidente)
+<span class="kw">RETURN</span> s.tipo, <span class="fn">count</span>(acc) <span class="kw">AS</span> fallos, <span class="fn">avg</span>(acc.severidad) <span class="kw">AS</span> severidad_media
+<span class="kw">ORDER BY</span> fallos <span class="kw">DESC</span>
+
+<span class="cmt">-- ¿Hay correlación entre lluvia y fallos de LIDAR?</span>
+<span class="kw">MATCH</span> (s:Sensor {tipo: <span class="str">"LIDAR"</span>})-[:FALLÓ_EN]->(acc:Accidente)-[:OCURRIÓ_BAJO]->(env:Condicion)
+<span class="kw">RETURN</span> env.lluvia_mm, <span class="fn">count</span>(acc) <span class="kw">AS</span> accidentes
+<span class="kw">ORDER BY</span> env.lluvia_mm <span class="kw">DESC</span>
+
+<span class="cmt">-- Cadena causal completa de un accidente</span>
+<span class="kw">MATCH</span> (acc:Accidente {id: <span class="str">"ACC-001"</span>})
+<span class="kw">OPTIONAL MATCH</span> (acc)-[:CAUSADO_POR]->(causa)
+<span class="kw">OPTIONAL MATCH</span> (sensor)-[:FALLÓ_EN]->(acc)
+<span class="kw">OPTIONAL MATCH</span> (vehiculo)-[:INVOLUCRADO_EN]->(acc)
+<span class="kw">OPTIONAL MATCH</span> (acc)-[:OCURRIÓ_BAJO]->(env)
+<span class="kw">RETURN</span> acc, causa, sensor, vehiculo, env</code></pre>
+        </div>
+
+        <h3>Fase 4: Optimización y GDS</h3>
+        <div class="code-block">
+            <div class="code-header"><span class="code-lang">cypher — GDS para análisis de red de causas</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+            <pre><code><span class="cmt">-- Proyectar red de causalidad</span>
+<span class="kw">CALL</span> <span class="fn">gds.graph.project</span>(
+  <span class="str">"causalidad-av"</span>,
+  [<span class="str">"Accidente"</span>, <span class="str">"CausaRaiz"</span>, <span class="str">"Sensor"</span>, <span class="str">"Condicion"</span>],
+  [<span class="str">"CAUSADO_POR"</span>, <span class="str">"FALLÓ_EN"</span>, <span class="str">"OCURRIÓ_BAJO"</span>]
+)
+
+<span class="cmt">-- Centralidad de causas raíz (las más recurrentes en accidentes)</span>
+<span class="kw">CALL</span> <span class="fn">gds.betweenness.stream</span>(<span class="str">"causalidad-av"</span>)
+<span class="kw">YIELD</span> nodeId, score
+<span class="kw">WITH</span> <span class="fn">gds.util.asNode</span>(nodeId) <span class="kw">AS</span> nodo, score
+<span class="kw">WHERE</span> nodo:CausaRaiz
+<span class="kw">RETURN</span> nodo.descripcion, score <span class="kw">ORDER BY</span> score <span class="kw">DESC</span></code></pre>
+        </div>
+
+        <h3>Fase 5: Integración Python + API</h3>
+        <div class="code-block">
+            <div class="code-header"><span class="code-lang">python — FastAPI endpoint para consultas al grafo</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+            <pre><code">from fastapi import FastAPI
+from neo4j import GraphDatabase
+from pydantic import BaseModel
+
+app = FastAPI(title="AV Knowledge Graph API")
+driver = GraphDatabase.driver("bolt://localhost:7687", auth=("neo4j", "neuralbrain"))
+
+class AccidenteQuery(BaseModel):
+    min_severidad: int = 1
+
+@app.get("/accidentes")
+def get_accidentes(min_severidad: int = 1):
+    with driver.session() as session:
+        result = session.run(
+            """
+            MATCH (acc:Accidente)
+            WHERE acc.severidad >= $min_sev
+            OPTIONAL MATCH (acc)-[:CAUSADO_POR]->(causa)
+            RETURN acc.id, acc.severidad, acc.fecha, causa.descripcion
+            ORDER BY acc.severidad DESC
+            """,
+            min_sev=min_severidad
+        )
+        return [dict(r) for r in result]
+
+@app.get("/sensores/{tipo}/fallos")
+def fallos_por_tipo(tipo: str):
+    with driver.session() as session:
+        result = session.run(
+            """
+            MATCH (s:Sensor {tipo: $tipo})-[:FALLÓ_EN]->(acc:Accidente)
+            RETURN s.serial, count(acc) AS total_fallos, avg(acc.severidad) AS severidad_media
+            """,
+            tipo=tipo
+        )
+        return [dict(r) for r in result]
+# uvicorn main:app --reload</code></pre>
+        </div>
+
+        <div class="info-box tip">
+            <div class="info-box-icon">🎓</div>
+            <div class="info-box-text">
+                <strong>¡Curso completado!</strong> Has pasado de cero a construir un Knowledge Graph de producción: modelado semántico, Cypher avanzado, índices, APOC, GDS y una API Python. El siguiente paso natural: conectar embeddings de LLMs al grafo para construir sistemas GraphRAG completos sobre el dominio de vehículos autónomos.
+            </div>
+        </div>
+
+        <div style="margin-top: 4rem; display: flex; justify-content: space-between;">
+            <a href="expert.html" class="btn btn-outline">← M5: Expert</a>
+            <a href="index.html" class="btn btn-primary">Volver al Índice</a>
+        </div>
+    </main>
+
+    <footer style="text-align: center; padding: 2rem; color: var(--text3); font-size: 0.8rem; border-top: 1px solid var(--border);">
+        &copy; 2026 LucentIA Research · Neo4j Zero to Expert
+    </footer>
+    <script>
+        const navbar = document.getElementById('navbar');
+        window.addEventListener('scroll', () => navbar.classList.toggle('scrolled', window.scrollY > 50));
+        document.getElementById('navToggle')?.addEventListener('click', () => document.querySelector('.nav-links').classList.toggle('open'));
+        function copyCode(btn) {
+            const code = btn.closest('.code-block').querySelector('pre').innerText;
+            navigator.clipboard.writeText(code).then(() => { btn.textContent = '✓ Copiado'; btn.classList.add('copied'); setTimeout(() => { btn.textContent = 'Copiar'; btn.classList.remove('copied'); }, 2000); });
+        }
+    </script>
+</body>
+</html>

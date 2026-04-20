@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Neo4j Zero to Expert | LucentIA Research</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <nav class="navbar" id="navbar">
+        <div class="nav-inner">
+            <div class="nav-brand">
+                <span class="brand-icon">🔬</span> Neo4j Raw
+            </div>
+            <ul class="nav-links">
+                <li><a href="index.html" class="active">Inicio</a></li>
+                <li><a href="intro.html">M1: Fundamentos</a></li>
+                <li><a href="cypher-basics.html">M2: Cypher I</a></li>
+                <li><a href="cypher-intermediate.html">M3: Cypher II</a></li>
+                <li><a href="modeling.html">M4: Modelado</a></li>
+                <li><a href="expert.html">M5: Expert</a></li>
+                <li><a href="lab.html">M6: Lab</a></li>
+            </ul>
+            <button class="nav-mobile-btn" id="navToggle">☰</button>
+        </div>
+    </nav>
+
+    <header class="page-hero">
+        <span class="page-hero-icon">🌐</span>
+        <h1>Neo4j <span class="gradient-text">Zero to Expert</span></h1>
+        <p>Curso completo de bases de datos de grafos: desde los fundamentos matemáticos hasta GraphRAG con LLMs. 6 módulos, 30+ ejemplos con datos reales de investigación y vehículos autónomos.</p>
+    </header>
+
+    <main class="content">
+        <h2>📚 Mapa del Curso</h2>
+        <p>Progresión rigurosa sin saltos conceptuales. Cada módulo amplía el anterior, con ejercicios al final de cada sección.</p>
+        
+        <div class="concept-grid">
+            <a href="intro.html" class="concept-card green" style="text-decoration:none;">
+                <div class="concept-icon">🟢</div>
+                <h3>M1 — Fundamentos</h3>
+                <p>Grafos LPG, Index-Free Adjacency, SQL vs NoSQL vs Grafos, instalación Docker Compose con APOC+GDS y primeros pasos en Browser.</p>
+            </a>
+            <a href="cypher-basics.html" class="concept-card orange" style="text-decoration:none;">
+                <div class="concept-icon">⚡</div>
+                <h3>M2 — Cypher Básico</h3>
+                <p>CREATE, MATCH, WHERE, RETURN, SET, DELETE. Sintaxis ASCII-art, tipos de datos, operadores, propiedades de relaciones.</p>
+            </a>
+            <a href="cypher-intermediate.html" class="concept-card cyan" style="text-decoration:none;">
+                <div class="concept-icon">💎</div>
+                <h3>M3 — Cypher Intermedio</h3>
+                <p>MERGE en profundidad, WITH pipeline, UNWIND, agregaciones, funciones de string/lista/fecha, OPTIONAL MATCH, subconsultas CALL, traversal variable.</p>
+            </a>
+            <a href="modeling.html" class="concept-card amber" style="text-decoration:none;">
+                <div class="concept-icon">🗺️</div>
+                <h3>M4 — Modelado</h3>
+                <p>Filosofía de modelado orientado a consultas, decisión propiedad/nodo/relación, patrones canónicos (Time Tree, Hyperedge, Versioning), antipatrones, migración SQL→Grafo.</p>
+            </a>
+            <a href="expert.html" class="concept-card purple" style="text-decoration:none;">
+                <div class="concept-icon">🚀</div>
+                <h3>M5 — Expert: Índices, APOC & GDS</h3>
+                <p>Tipos de índice Neo4j 5.x, constraints, EXPLAIN/PROFILE, batch CALL IN TRANSACTIONS, APOC load/periodic/path, GDS PageRank/Louvain/Betweenness.</p>
+            </a>
+            <a href="lab.html" class="concept-card rose" style="text-decoration:none;">
+                <div class="concept-icon">🧪</div>
+                <h3>M6 — Lab: Integración & Proyecto</h3>
+                <p>Python neo4j-driver, GraphRAG con LangChain, Docker Compose stack completo, y proyecto final: Knowledge Graph de Vehículos Autónomos en 5 fases.</p>
+            </a>
+        </div>
+
+        <div class="info-box tip" style="margin-top: 2rem;">
+            <div class="info-box-icon">💡</div>
+            <div class="info-box-text">
+                <strong>Consejo:</strong> No saltes al Cypher sin los fundamentos del Módulo 1. La potencia de Neo4j reside en entender cuándo y por qué un grafo es la herramienta correcta, no solo en la sintaxis.
+            </div>
+        </div>
+
+        <div style="margin-top: 2rem; text-align: center;">
+            <a href="intro.html" class="btn btn-primary" style="font-size: 1rem; padding: 1rem 2.5rem;">Comenzar el Curso →</a>
+        </div>
+    </main>
+
+    <footer style="text-align: center; padding: 2rem; color: var(--text3); font-size: 0.8rem; border-top: 1px solid var(--border);">
+        &copy; 2026 LucentIA Research · Neo4j Zero to Expert
+    </footer>
+    <script>
+        const navbar = document.getElementById('navbar');
+        window.addEventListener('scroll', () => navbar.classList.toggle('scrolled', window.scrollY > 50));
+        document.getElementById('navToggle')?.addEventListener('click', () => document.querySelector('.nav-links').classList.toggle('open'));
+    </script>
+</body>
+</html>

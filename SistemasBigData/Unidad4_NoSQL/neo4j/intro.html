@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Módulo 1: Fundamentos de Grafos | Neo4j Zero to Expert</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <nav class="navbar" id="navbar">
+        <div class="nav-inner">
+            <div class="nav-brand"><span class="brand-icon">🔬</span> Neo4j Raw</div>
+            <ul class="nav-links">
+                <li><a href="index.html">Inicio</a></li>
+                <li><a href="intro.html" class="active">M1: Fundamentos</a></li>
+                <li><a href="cypher-basics.html">M2: Cypher I</a></li>
+                <li><a href="cypher-intermediate.html">M3: Cypher II</a></li>
+                <li><a href="modeling.html">M4: Modelado</a></li>
+                <li><a href="expert.html">M5: Expert</a></li>
+                <li><a href="lab.html">M6: Lab</a></li>
+            </ul>
+            <button class="nav-mobile-btn" id="navToggle">☰</button>
+        </div>
+    </nav>
+
+    <header class="page-hero">
+        <span class="page-hero-icon">🟢</span>
+        <h1>Módulo 1: <span class="gradient-text">Fundamentos de Bases de Datos de Grafos</span></h1>
+        <p>Por qué surgieron, cómo piensan, y por qué cambian todo lo que sabes sobre almacenamiento de datos.</p>
+    </header>
+
+    <main class="content">
+
+        <h2>1. Historia y motivación: el problema que SQL no puede resolver</h2>
+        <p>Las bases de datos relacionales son una maravilla ingenieril. Llevan 50 años siendo el estándar, y con razón. Pero tienen un talón de Aquiles: las <strong>relaciones profundas</strong>. Cuando el valor de tus datos reside en cómo se conectan entre sí, el modelo relacional colapsa.</p>
+
+        <h3>El problema del JOIN explosion</h3>
+        <p>Imagina un grafo de fraude bancario: una cuenta → hace transacciones → a otras cuentas → que comparten dispositivos → con otras cuentas sospechosas. En SQL, cada "salto" es un JOIN adicional. Cuatro saltos = cuatro JOINs. El planner SQL calcula el producto cartesiano en cada paso. El resultado: consultas que tardan minutos en tablas de millones de filas.</p>
+
+        <div class="code-block">
+            <div class="code-header"><span class="code-lang">sql — El infierno de los JOINs a 4 saltos</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+            <pre><code><span class="cmt">-- Encontrar cuentas a 4 saltos de una cuenta sospechosa</span>
+<span class="kw">SELECT DISTINCT</span> c4.id
+<span class="kw">FROM</span> cuentas c1
+<span class="kw">JOIN</span> transacciones t1 <span class="kw">ON</span> c1.id = t1.origen_id
+<span class="kw">JOIN</span> cuentas c2 <span class="kw">ON</span> t1.destino_id = c2.id
+<span class="kw">JOIN</span> transacciones t2 <span class="kw">ON</span> c2.id = t2.origen_id
+<span class="kw">JOIN</span> cuentas c3 <span class="kw">ON</span> t2.destino_id = c3.id
+<span class="kw">JOIN</span> transacciones t3 <span class="kw">ON</span> c3.id = t3.origen_id
+<span class="kw">JOIN</span> cuentas c4 <span class="kw">ON</span> t3.destino_id = c4.id
+<span class="kw">WHERE</span> c1.id = <span class="num">12345</span>;
+<span class="cmt">-- Con 1M de cuentas y 10M de transacciones: minutos de ejecución</span></code></pre>
+        </div>
+
+        <div class="code-block">
+            <div class="code-header"><span class="code-lang">cypher — Lo mismo en Neo4j</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+            <pre><code><span class="cmt">-- Exactamente la misma consulta. Sub-segundo.</span>
+<span class="kw">MATCH</span> (c:Cuenta {id: <span class="num">12345</span>})-[<span class="prop">*1..4</span>]->(destino:Cuenta)
+<span class="kw">RETURN DISTINCT</span> destino.id</code></pre>
+        </div>
+
+        <div class="info-box tip">
+            <div class="info-box-icon">💡</div>
+            <div class="info-box-text">
+                <strong>Dato de producción:</strong> Neo4j documentó con eBay un caso donde una consulta de recomendación que tardaba 2000ms en SQL pasó a 25ms en Neo4j. La razón no es que Neo4j sea "más rápido" en general — es que el modelo de grafos elimina el JOIN overhead para consultas de conectividad.
+            </div>
+        </div>
+
+        <h3>¿Por qué surgieron los grafos?</h3>
+        <p>El problema apareció con las redes sociales. En 2007, Facebook tenía 50M de usuarios. Encontrar amigos en común con SQL requería auto-JOINs sobre tablas de 500M de filas. Al mismo tiempo, Google ya llevaba años usando PageRank — un algoritmo de grafos — para clasificar páginas web. La teoría de grafos llevaba 300 años existiendo (Euler, 1736), pero fue la explosión de datos relacionados la que la convirtió en necesidad de ingeniería.</p>
+
+        <div class="two-col">
+            <div class="mini-card">
+                <h5>🕰️ Hitos históricos</h5>
+                <ul>
+                    <li><strong>1736:</strong> Euler resuelve los puentes de Königsberg (primer problema de grafos)</li>
+                    <li><strong>1998:</strong> Google PageRank (grafos en producción a escala)</li>
+                    <li><strong>2007:</strong> Neo4j fundado por Emil Eifrem</li>
+                    <li><strong>2010:</strong> Neo4j 1.0 en producción</li>
+                    <li><strong>2012:</strong> Neo4j adopta Cypher como lenguaje estándar</li>
+                    <li><strong>2022-2026:</strong> Neo4j 5.x, GraphRAG, vector indexes</li>
+                </ul>
+            </div>
+            <div class="mini-card">
+                <h5>🎯 Casos clave que impulsaron los grafos</h5>
+                <ul>
+                    <li>Redes sociales (Facebook, LinkedIn)</li>
+                    <li>Detección de fraude bancario</li>
+                    <li>Motores de recomendación (Netflix, Amazon)</li>
+                    <li>Knowledge Graphs (Google, Wikidata)</li>
+                    <li>Gestión de dependencias IT (CMDB)</li>
+                    <li>Drug discovery en farmacéutica</li>
+                    <li>GraphRAG para LLMs (2024-2026)</li>
+                </ul>
+            </div>
+        </div>
+
+        <h2>2. Teoría de Grafos Aplicada</h2>
+        <p>No hace falta ser matemático, pero entender el vocabulario evita errores de diseño graves.</p>
+
+        <div class="table-wrapper">
+            <table>
+                <thead><tr><th>Concepto teórico</th><th>En Neo4j</th><th>Ejemplo</th></tr></thead>
+                <tbody>
+                    <tr><td><strong>Vértice / Nodo</strong></td><td>Node con Label</td><td><code>(:Persona {nombre: "Ana"})</code></td></tr>
+                    <tr><td><strong>Arista / Arco</strong></td><td>Relationship con tipo</td><td><code>[:CONOCE {desde: 2020}]</code></td></tr>
+                    <tr><td><strong>Grafo dirigido</strong></td><td>Relaciones con dirección</td><td><code>(a)-[:SIGUE]->(b)</code></td></tr>
+                    <tr><td><strong>Grafo no dirigido</strong></td><td>Query sin dirección</td><td><code>(a)-[:AMIGO]-(b)</code></td></tr>
+                    <tr><td><strong>Grafo ponderado</strong></td><td>Propiedad en relación</td><td><code>[:VUELO {km: 1200}]</code></td></tr>
+                    <tr><td><strong>Multigrafo</strong></td><td>Múltiples rels entre mismos nodos</td><td>A → compra → B y A → valora → B</td></tr>
+                    <tr><td><strong>Camino (path)</strong></td><td>Secuencia de nodos y rels</td><td><code>shortestPath((a)-[*]-(b))</code></td></tr>
+                    <tr><td><strong>Grado (degree)</strong></td><td>Nº de relaciones de un nodo</td><td><code>size((n)--())</code></td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="info-box warning">
+            <div class="info-box-icon">⚠️</div>
+            <div class="info-box-text">
+                <strong>Dirección en producción:</strong> Las relaciones en Neo4j <em>siempre tienen dirección física</em> en almacenamiento. Sin embargo, puedes hacer MATCH ignorando la dirección: <code>(a)-[:REL]-(b)</code>. El coste es el mismo. La dirección semántica (¿quién sigue a quién?) importa para el modelo; la dirección en consultas es flexible.
+            </div>
+        </div>
+
+        <h2>3. LPG vs RDF — Cuándo usar cada uno</h2>
+
+        <h3>3.1 Qué es LPG y cómo almacena datos</h3>
+        <p>LPG son las siglas de <strong>Labeled Property Graph</strong> — grafo etiquetado con propiedades. Tiene cuatro componentes concretos:</p>
+        <ul>
+            <li><strong>Nodos</strong> con una o varias etiquetas (labels) que indican su tipo: <code>:Persona</code>, <code>:Producto</code>, <code>:Cuenta</code>.</li>
+            <li><strong>Propiedades en nodos</strong>: pares clave-valor directamente dentro del nodo. <code>{nombre: "Ana", edad: 34}</code>.</li>
+            <li><strong>Relaciones</strong> con un tipo único y dirección. <code>[:COMPRA]</code>, <code>[:SIGUE]</code>, <code>[:TRABAJA_EN]</code>.</li>
+            <li><strong>Propiedades en relaciones</strong>: también pares clave-valor. <code>[:COMPRA {precio: 99, fecha: "2024-03-01"}]</code>.</li>
+        </ul>
+        <p>Este último punto es el que separa LPG de casi todo lo demás. Una relación en LPG no es solo un enlace binario — es un objeto de primera clase que puede transportar información. No necesitas un nodo extra para decir <em>cuándo</em> ocurrió esa compra o <em>a qué precio</em>. Eso está en la propia arista.</p>
+
+        <div class="code-block">
+            <div class="code-header"><span class="code-lang">cypher — Modelo LPG: nodo + relación con propiedades</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+            <pre><code><span class="cmt">-- Un cliente compra un producto. La relación lleva el contexto de la compra.</span>
+<span class="kw">CREATE</span> (ana:Persona {nombre: <span class="str">"Ana"</span>, ciudad: <span class="str">"Madrid"</span>})
+<span class="kw">CREATE</span> (prod:Producto {nombre: <span class="str">"Teclado mecánico"</span>, sku: <span class="str">"KB-001"</span>})
+<span class="kw">CREATE</span> (ana)-[:COMPRA {precio: <span class="num">89.99</span>, fecha: <span class="str">"2024-03-15"</span>, canal: <span class="str">"web"</span>}]->(prod)
+
+<span class="cmt">-- Consultar qué compró Ana, con contexto de la compra</span>
+<span class="kw">MATCH</span> (p:Persona {nombre: <span class="str">"Ana"</span>})-[c:COMPRA]->(prod:Producto)
+<span class="kw">RETURN</span> prod.nombre, c.precio, c.fecha, c.canal</code></pre>
+        </div>
+
+        <h3>3.2 Qué es RDF y cómo almacena datos</h3>
+        <p>RDF son las siglas de <strong>Resource Description Framework</strong>. Es un estándar del W3C diseñado para la Web Semántica — la idea de que cualquier entidad del mundo puede describirse con URIs universales y enlazarse con otras. Su unidad básica es la <strong>tripleta</strong>:</p>
+        <p style="text-align:center; font-family: 'JetBrains Mono', monospace; color: #a78bfa; font-size: 1.05rem; margin: 1.2rem 0;">
+            <strong>sujeto → predicado → objeto</strong>
+        </p>
+        <p>Cada elemento es una URI o un literal. Por ejemplo:</p>
+
+        <div class="code-block">
+            <div class="code-header"><span class="code-lang">turtle — RDF: la misma compra expresada como tripletas</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+            <pre><code><span class="cmt"># Turtle es la serialización más legible de RDF</span>
+@prefix ex: &lt;http://ejemplo.org/&gt; .
+@prefix xsd: &lt;http://www.w3.org/2001/XMLSchema#&gt; .
+
+ex:Ana ex:nombre "Ana"^^xsd:string .
+ex:Ana ex:ciudad "Madrid"^^xsd:string .
+ex:TecladoMecanico ex:nombre "Teclado mecánico"^^xsd:string .
+
+<span class="cmt"># El PROBLEMA: no puedo poner precio ni fecha directamente en la relación</span>
+<span class="cmt"># porque las tripletas son siempre sujeto→predicado→objeto (tres elementos, nada más)</span>
+<span class="cmt"># Para añadir contexto a la compra necesito REIFICACIÓN: crear un nodo intermedio</span>
+
+ex:Compra001 a ex:EventoCompra .
+ex:Compra001 ex:comprador ex:Ana .
+ex:Compra001 ex:producto ex:TecladoMecanico .
+ex:Compra001 ex:precio "89.99"^^xsd:decimal .
+ex:Compra001 ex:fecha "2024-03-15"^^xsd:date .</code></pre>
+        </div>
+
+        <div class="info-box warning">
+            <div class="info-box-text">
+                <strong>WARN — Reificación:</strong> En RDF, "añadir propiedades a una relación" no existe. Tienes que crear un nodo intermedio (<code>ex:Compra001</code>) que actúa de puente. Esto multiplica el número de tripletas, complica las consultas SPARQL y degrada el rendimiento en traversals profundos. En LPG, eso es simplemente <code>[:COMPRA {precio: 89.99}]</code>.
+            </div>
+        </div>
+
+        <h3>3.3 La diferencia conceptual real: instancia de datos vs semántica formal</h3>
+        <p>La distinción más importante no es técnica — es de propósito:</p>
+        <ul>
+            <li><strong>LPG</strong> está diseñado para almacenar y recorrer datos operacionales de forma eficiente. El motor sabe cómo navegar aristas porque cada nodo guarda punteros físicos a sus vecinos (index-free adjacency). Prioridad: rendimiento en traversal.</li>
+            <li><strong>RDF</strong> está diseñado para interoperabilidad global. Cualquier base de datos en el mundo que use la URI <code>http://dbpedia.org/resource/Madrid</code> está hablando del mismo Madrid. Se puede hacer razonamiento lógico sobre los datos gracias a OWL (Web Ontology Language). Prioridad: interoperabilidad y inferencia.</li>
+        </ul>
+        <p>Dicho de otro modo: si tu problema es <em>recorrer y operar sobre un grafo de datos tuyo</em>, LPG. Si tu problema es <em>conectar tu conocimiento con el de otros sistemas del mundo</em> o <em>derivar nuevo conocimiento por razonamiento lógico</em>, RDF.</p>
+
+        <div class="table-wrapper">
+            <table>
+                <thead><tr><th>Aspecto</th><th>LPG (Neo4j)</th><th>RDF (Blazegraph, Stardog, Apache Jena)</th></tr></thead>
+                <tbody>
+                    <tr><td><strong>Unidad básica</strong></td><td>Nodo con labels + relación con tipo</td><td>Tripleta: sujeto → predicado → objeto</td></tr>
+                    <tr><td><strong>Props en relaciones</strong></td><td>Nativo. <code>[:COMPRA {precio: 99}]</code></td><td>No existe. Requiere reificación (nodo intermedio)</td></tr>
+                    <tr><td><strong>Identidad de entidades</strong></td><td>ID interno del grafo (local)</td><td>URI global. <code>http://dbpedia.org/resource/Madrid</code></td></tr>
+                    <tr><td><strong>Lenguaje de consulta</strong></td><td>Cypher</td><td>SPARQL</td></tr>
+                    <tr><td><strong>Razonamiento / Inferencia</strong></td><td>No nativo (requiere plugins o lógica app)</td><td>OWL, RDFS: el motor infiere nuevos hechos automáticamente</td></tr>
+                    <tr><td><strong>Interoperabilidad</strong></td><td>Limitada (sin ontologías nativas)</td><td>Alta: Linked Open Data, ontologías compartidas</td></tr>
+                    <tr><td><strong>Rendimiento en traversals</strong></td><td>Excelente (index-free adjacency, O(1) por salto)</td><td>Variable. Penaliza en grafos profundos por resolución de URIs</td></tr>
+                    <tr><td><strong>Escenario ideal</strong></td><td>Apps operacionales, fraude, recomendaciones, GraphRAG, Knowledge Graphs internos</td><td>Linked Data público, ontologías biomédicas (Gene Ontology, UniProt), Web Semántica</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <h3>3.4 Cypher vs SPARQL — el mismo dato, dos mundos</h3>
+        <p>Para que la diferencia sea tangible. Pregunta: <em>¿qué películas ha visto una persona y cuál es el director de cada una?</em></p>
+
+        <div class="code-block">
+            <div class="code-header"><span class="code-lang">cypher — LPG: legible, directo, traversal nativo</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+            <pre><code><span class="kw">MATCH</span> (ana:Persona {nombre: <span class="str">"Ana"</span>})-[:VIO]->(peli:Pelicula)<-[:DIRIGIO]-(dir:Persona)
+<span class="kw">RETURN</span> peli.titulo, dir.nombre</code></pre>
+        </div>
+
+        <div class="code-block">
+            <div class="code-header"><span class="code-lang">sparql — RDF: más verboso, URIs en lugar de labels</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+            <pre><code>PREFIX ex: &lt;http://ejemplo.org/&gt;
+PREFIX schema: &lt;https://schema.org/&gt;
+
+SELECT ?tituloFilm ?nombreDirector
+WHERE {
+  ex:Ana schema:watched ?film .
+  ?film schema:name ?tituloFilm .
+  ?film schema:director ?director .
+  ?director schema:name ?nombreDirector .
+}</code></pre>
+        </div>
+
+        <p>SPARQL es potente cuando necesitas federar consultas contra múltiples endpoints RDF remotos (Wikipedia, DBpedia, Wikidata). Pero para un grafo de datos interno — un sistema de recomendaciones, un grafo de fraude, un Knowledge Graph de empresa — Cypher es mucho más ergonómico y el motor es órdenes de magnitud más rápido en traversals.</p>
+
+        <h3>3.5 Cuándo usar cada uno — criterio de decisión</h3>
+        <ul>
+            <li><strong>Usa LPG (Neo4j)</strong> si: tus datos son propios, necesitas traversals rápidos, las relaciones llevan contexto (precio, fecha, peso), o construyes una app operacional o un GraphRAG sobre datos internos de empresa.</li>
+            <li><strong>Usa RDF</strong> si: necesitas publicar datos como Linked Open Data, tu dominio ya tiene una ontología estándar (biomédica, geoespacial, jurídica), o necesitas que un motor infiera automáticamente conocimiento nuevo a partir de reglas formales (razonamiento OWL).</li>
+            <li><strong>Usa ambos</strong> si: tienes un Knowledge Graph interno (LPG) que quieres conectar a recursos abiertos externos (DBpedia, Wikidata). Neo4j tiene un plugin RDF (<code>neosemantics</code>) que permite importar/exportar tripletas RDF desde un grafo LPG.</li>
+        </ul>
+
+        <div class="info-box info">
+            <div class="info-box-text">
+                <strong>INFO — GraphRAG (2025/2026):</strong> Microsoft y LangChain usan Neo4j como base de conocimiento para LLMs. El LPG es más eficiente para traversals operacionales que RDF: las propiedades en nodos y relaciones mapean directamente a los <em>facts</em> que los LLMs necesitan sin transformación. Si construyes un sistema RAG con grafos de conocimiento sobre datos de empresa, Neo4j es la opción pragmática. RDF sería la elección si quisieras federar ese knowledge graph con fuentes externas tipo Wikidata o Gene Ontology.
+            </div>
+        </div>
+
+        <h2>3b. Ontología — qué es y por qué aparece en el ecosistema de grafos</h2>
+
+        <h3>Definición</h3>
+        <p>En informática, una <strong>ontología</strong> es una especificación formal y explícita de los conceptos de un dominio, sus propiedades y las relaciones entre ellos. El término viene de la filosofía (el estudio del ser y la existencia), pero en el contexto de grafos y knowledge graphs significa algo muy concreto: un vocabulario compartido con semántica precisa que permite que máquinas —y personas de distintos sistemas— entiendan los datos de la misma manera.</p>
+        <p>Una ontología responde a tres preguntas sobre un dominio:</p>
+        <ul>
+            <li><strong>¿Qué clases de entidades existen?</strong> — <code>Persona</code>, <code>Publicación</code>, <code>Organización</code>, <code>Lugar</code></li>
+            <li><strong>¿Qué propiedades tienen?</strong> — <code>nombre</code>, <code>fecha_nacimiento</code>, <code>afiliación</code></li>
+            <li><strong>¿Qué relaciones son válidas entre ellas?</strong> — <code>Persona → trabaja_en → Organización</code>, <code>Publicación → cita → Publicación</code></li>
+        </ul>
+        <p>Más allá de definir clases y relaciones, una ontología puede incluir <strong>axiomas</strong> — reglas lógicas que permiten derivar nuevo conocimiento a partir de los datos. Esto es lo que la diferencia de un simple esquema de base de datos.</p>
+
+        <h3>Ontología vs Esquema de base de datos — la diferencia real</h3>
+        <p>Un schema SQL o un conjunto de constraints en Neo4j define <em>estructura</em>: qué campos existen, qué tipos tienen, cuáles son obligatorios. Una ontología define <em>semántica</em>: qué significa cada clase, qué implica pertenecer a ella, qué se puede inferir de una relación.</p>
+
+        <div class="table-wrapper">
+            <table>
+                <thead><tr><th>Aspecto</th><th>Schema de BD</th><th>Ontología</th></tr></thead>
+                <tbody>
+                    <tr><td><strong>Propósito</strong></td><td>Validar estructura de datos</td><td>Definir significado y permitir razonamiento</td></tr>
+                    <tr><td><strong>Herencia</strong></td><td>No (salvo en OOP)</td><td>Sí: <code>Investigador</code> es subclase de <code>Persona</code></td></tr>
+                    <tr><td><strong>Inferencia</strong></td><td>No — el motor no deduce nada</td><td>Sí — si <code>A cita B</code> y <code>B cita C</code>, un razonador puede inferir <code>A influencia C</code></td></tr>
+                    <tr><td><strong>Interoperabilidad</strong></td><td>Local al sistema</td><td>Global — URIs universales permiten enlazar con otras ontologías</td></tr>
+                    <tr><td><strong>Formato estándar</strong></td><td>DDL, CREATE CONSTRAINT</td><td>OWL (Web Ontology Language), RDFS</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <h3>Cómo se construye una ontología: clases, propiedades y axiomas</h3>
+        <p>El lenguaje estándar para ontologías en la Web Semántica es <strong>OWL</strong> (Web Ontology Language), que se serializa habitualmente en <strong>Turtle</strong> o <strong>RDF/XML</strong>. Los tres bloques fundamentales son:</p>
+
+        <div class="code-block">
+            <div class="code-header"><span class="code-lang">turtle — Ontología mínima de investigación académica</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+            <pre><code>@prefix owl:  &lt;http://www.w3.org/2002/07/owl#&gt; .
+@prefix rdfs: &lt;http://www.w3.org/2000/01/rdf-schema#&gt; .
+@prefix ex:   &lt;http://milab.org/onto/investigacion#&gt; .
+@prefix xsd:  &lt;http://www.w3.org/2001/XMLSchema#&gt; .
+
+<span class="cmt"># 1. CLASES — qué tipos de entidad existen</span>
+ex:Persona        a owl:Class .
+ex:Investigador   a owl:Class ;
+    rdfs:subClassOf ex:Persona .              <span class="cmt"># herencia: todo Investigador ES una Persona</span>
+ex:Publicacion    a owl:Class .
+ex:Organizacion   a owl:Class .
+
+<span class="cmt"># 2. PROPIEDADES DE DATOS — atributos primitivos</span>
+ex:nombre         a owl:DatatypeProperty ;
+    rdfs:domain ex:Persona ;                  <span class="cmt"># quién la tiene</span>
+    rdfs:range  xsd:string .                  <span class="cmt"># qué tipo de valor</span>
+ex:anioPublicacion a owl:DatatypeProperty ;
+    rdfs:domain ex:Publicacion ;
+    rdfs:range  xsd:integer .
+
+<span class="cmt"># 3. PROPIEDADES DE OBJETO — relaciones entre clases</span>
+ex:trabajaEn      a owl:ObjectProperty ;
+    rdfs:domain ex:Investigador ;
+    rdfs:range  ex:Organizacion .
+ex:escribe        a owl:ObjectProperty ;
+    rdfs:domain ex:Investigador ;
+    rdfs:range  ex:Publicacion .
+ex:cita           a owl:ObjectProperty ;
+    rdfs:domain ex:Publicacion ;
+    rdfs:range  ex:Publicacion .
+
+<span class="cmt"># 4. AXIOMAS — reglas que permiten inferencia</span>
+ex:cita           a owl:TransitiveProperty .  <span class="cmt"># si A cita B y B cita C → A cita C (transitiva)</span>
+ex:citeInverso    owl:inverseOf ex:cita .     <span class="cmt"># si A cita B → B es_citado_por A</span></code></pre>
+        </div>
+
+        <p>Lo que hace potente esta ontología es el axioma de transitividad: un razonador OWL puede recorrer toda la cadena de citas y derivar relaciones de influencia que no están explícitamente almacenadas. Con un LPG puro tendrías que escribir una query Cypher con <code>*</code> para hacer lo mismo, y no sería automático — sería una consulta que tú ejecutas.</p>
+
+        <h3>Ontologías de dominio conocidas — ejemplos reales</h3>
+        <p>Las ontologías más usadas en la práctica no se crean desde cero: existen estándares de dominio que miles de sistemas comparten. Usar una ontología establecida permite que tu grafo sea interoperable con cualquier sistema que la entienda.</p>
+
+        <div class="table-wrapper">
+            <table>
+                <thead><tr><th>Ontología</th><th>Dominio</th><th>URI base</th><th>Qué define</th></tr></thead>
+                <tbody>
+                    <tr><td><strong>schema.org</strong></td><td>Web general</td><td><code>https://schema.org/</code></td><td>Persona, Organización, Producto, Evento, Lugar — usada por Google para SEO semántico</td></tr>
+                    <tr><td><strong>FOAF</strong></td><td>Redes sociales</td><td><code>http://xmlns.com/foaf/0.1/</code></td><td>Person, knows, homepage, mbox — el estándar de perfiles enlazados</td></tr>
+                    <tr><td><strong>Dublin Core</strong></td><td>Metadatos de documentos</td><td><code>http://purl.org/dc/elements/1.1/</code></td><td>title, creator, date, subject, format — para publicaciones y archivos</td></tr>
+                    <tr><td><strong>Gene Ontology</strong></td><td>Biología molecular</td><td><code>http://purl.obolibrary.org/obo/GO_</code></td><td>Funciones biológicas, procesos celulares — usada en PubMed y UniProt</td></tr>
+                    <tr><td><strong>SNOMED-CT</strong></td><td>Medicina clínica</td><td><code>http://snomed.info/sct/</code></td><td>Diagnósticos, fármacos, procedimientos — estándar en historiales clínicos electrónicos</td></tr>
+                    <tr><td><strong>OWL-Time</strong></td><td>Tiempo</td><td><code>http://www.w3.org/2006/time#</code></td><td>Instantes, intervalos, duraciones, orden temporal</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <h3>Ontología en Neo4j (LPG) — neosemantics (n10s)</h3>
+        <p>Neo4j no tiene razonamiento OWL nativo, pero puede importar, almacenar y consultar ontologías RDF gracias al plugin <strong>neosemantics</strong> (abreviado <code>n10s</code>). Esto permite usar Neo4j como backend de un knowledge graph que es formalmente compatible con el ecosistema RDF/OWL, pero consultable con Cypher.</p>
+
+        <div class="code-block">
+            <div class="code-header"><span class="code-lang">cypher — Importar una ontología OWL en Neo4j con neosemantics</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+            <pre><code><span class="cmt">-- 1. Inicializar el grafo para modo RDF (solo una vez por base de datos)</span>
+<span class="kw">CALL</span> <span class="fn">n10s.graphconfig.init</span>({
+  handleVocabUris: <span class="str">'SHORTEN'</span>,   <span class="cmt">-- acorta URIs largas a prefijo:local</span>
+  handleMultival: <span class="str">'ARRAY'</span>        <span class="cmt">-- propiedades multi-valor como arrays</span>
+})
+
+<span class="cmt">-- 2. Importar una ontología desde URL (ej: schema.org en formato Turtle)</span>
+<span class="kw">CALL</span> <span class="fn">n10s.onto.import.fetch</span>(
+  <span class="str">'https://schema.org/version/latest/schemaorg-current-https.ttl'</span>,
+  <span class="str">'Turtle'</span>
+)
+<span class="kw">YIELD</span> terminationStatus, triplesLoaded, triplesParsed
+<span class="kw">RETURN</span> terminationStatus, triplesLoaded
+
+<span class="cmt">-- 3. Consultar la jerarquía de clases importada</span>
+<span class="kw">MATCH</span> (clase:Class)-[:SCO]->(superclase:Class)   <span class="cmt">-- SCO = subClassOf</span>
+<span class="kw">RETURN</span> clase.name, superclase.name
+<span class="kw">ORDER BY</span> superclase.name, clase.name
+<span class="kw">LIMIT</span> <span class="num">20</span>
+
+<span class="cmt">-- 4. Ver propiedades válidas para una clase</span>
+<span class="kw">MATCH</span> (prop:Property)-[:DOMAIN]->(clase:Class {name: <span class="str">'Person'</span>})
+<span class="kw">RETURN</span> prop.name, prop.comment <span class="kw">ORDER BY</span> prop.name</code></pre>
+        </div>
+
+        <h3>Cuándo necesitas una ontología y cuándo no</h3>
+        <p>La ontología añade potencia pero también complejidad. La pregunta es si esa complejidad está justificada por el problema que resuelves.</p>
+        <ul>
+            <li><strong>Necesitas ontología</strong> si: tu knowledge graph tiene que interoperar con otros sistemas externos (bases de datos de terceros, publicaciones científicas, datos gubernamentales en Linked Open Data), o si necesitas razonamiento automático — que el sistema infiera hechos nuevos sin que los hayas escrito explícitamente.</li>
+            <li><strong>No necesitas ontología</strong> si: tu grafo es interno, los datos son tuyos, los queries los controlas tú y lo que necesitas es rendimiento operacional en traversals. Un LPG puro con buenos constraints en Neo4j es suficiente y significativamente más rápido.</li>
+            <li><strong>Caso intermedio</strong>: usar <code>neosemantics</code> para importar la ontología de un dominio (ej: schema.org) como vocabulario de referencia para tus labels y tipos de relación, sin activar el razonador OWL. Ganas interoperabilidad semántica sin el coste del razonamiento.</li>
+        </ul>
+
+        <div class="info-box info">
+            <div class="info-box-text">
+                <strong>INFO — Ontología y GraphRAG:</strong> En sistemas GraphRAG (Neo4j + LLM), la ontología actúa como el vocabulario que controla cómo el LLM interpreta el grafo. Si tus nodos usan labels de schema.org (<code>:Person</code>, <code>:Organization</code>, <code>:CreativeWork</code>), el modelo de lenguaje los reconoce sin fine-tuning porque ese vocabulario está en su corpus de entrenamiento. Es una razón práctica para adoptar ontologías establecidas aunque no necesites razonamiento OWL formal.
+            </div>
+        </div>
+
+        <h2>4. SQL vs NoSQL Documental vs Grafos — comparativa real</h2>
+
+        <div class="code-block">
+            <div class="code-header"><span class="code-lang">caso de uso — Red social: amigos en común</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+            <pre><code><span class="cmt">-- SQL: O(n²) para buscar amigos de amigos</span>
+<span class="kw">SELECT</span> a2.user_id
+<span class="kw">FROM</span> friendships f1
+<span class="kw">JOIN</span> friendships f2 <span class="kw">ON</span> f1.friend_id = f2.user_id
+<span class="kw">WHERE</span> f1.user_id = <span class="num">42</span>
+  <span class="kw">AND</span> f2.friend_id != <span class="num">42</span>
+  <span class="kw">AND</span> f2.friend_id <span class="kw">NOT IN</span> (
+      <span class="kw">SELECT</span> friend_id <span class="kw">FROM</span> friendships <span class="kw">WHERE</span> user_id = <span class="num">42</span>
+  );
+
+<span class="cmt">-- Neo4j Cypher: limpio, eficiente, legible</span>
+<span class="kw">MATCH</span> (yo:User {id: <span class="num">42</span>})-[:AMIGO]->(amigo)-[:AMIGO]->(sugerido)
+<span class="kw">WHERE NOT</span> (yo)-[:AMIGO]->(sugerido) <span class="kw">AND</span> sugerido <> yo
+<span class="kw">RETURN</span> sugerido.nombre, <span class="fn">count</span>(amigo) <span class="kw">AS</span> amigos_en_comun
+<span class="kw">ORDER BY</span> amigos_en_comun <span class="kw">DESC LIMIT</span> <span class="num">10</span></code></pre>
+        </div>
+
+        <div class="table-wrapper">
+            <table>
+                <thead><tr><th>Tecnología</th><th>Cuándo gana</th><th>Cuándo pierde</th></tr></thead>
+                <tbody>
+                    <tr><td><strong>SQL (PostgreSQL, MySQL)</strong></td><td>Datos tabulares, transacciones ACID complejas, reporting, schemas estables</td><td>JOINs profundos (&gt;3 niveles), esquemas dinámicos</td></tr>
+                    <tr><td><strong>MongoDB / Elasticsearch</strong></td><td>Documentos semi-estructurados, búsqueda full-text, write-heavy</td><td>Relaciones entre documentos, traversal multi-hop</td></tr>
+                    <tr><td><strong>Neo4j</strong></td><td>Red de relaciones, caminos, dependencias, recomendaciones, detección fraude</td><td>Queries puramente tabulares sin relaciones</td></tr>
+                    <tr><td><strong>Kafka + Flink</strong></td><td>Procesamiento tiempo real, pipelines de eventos de alta velocidad</td><td>Queries ad-hoc sobre historial completo, almacenamiento de entidades</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <h2>5. Arquitectura Interna — Index-Free Adjacency</h2>
+        <p>Este es el secreto del rendimiento de Neo4j. En bases de datos relacionales, para encontrar los vecinos de un nodo el motor hace un <em>index lookup</em> en la tabla de JOINs. En Neo4j, cada nodo almacena directamente <strong>punteros físicos</strong> a sus relaciones adyacentes en disco. Navegar al nodo vecino es seguir un puntero — O(1) por salto, independientemente del tamaño total del grafo.</p>
+
+        <div class="diagram-demo">
+            <div class="diagram-demo-label">Index-Free Adjacency vs Relational Index Lookup</div>
+            <svg viewBox="0 0 650 240" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                    <marker id="arrowR" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#ef4444"/></marker>
+                    <marker id="arrowG" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#10b981"/></marker>
+                </defs>
+                <text x="10" y="18" fill="#94a3b8" font-size="11" font-family="JetBrains Mono">SQL: cada salto = index scan</text>
+                <rect x="10" y="28" width="110" height="36" rx="6" fill="#1a2540" stroke="#ef4444" stroke-width="1.5"/>
+                <text x="65" y="50" fill="#f1f5f9" font-size="10" text-anchor="middle">Tabla FK</text>
+                <rect x="160" y="28" width="110" height="36" rx="6" fill="#1a2540" stroke="#ef4444" stroke-width="1.5"/>
+                <text x="215" y="50" fill="#f1f5f9" font-size="10" text-anchor="middle">B-Tree Index</text>
+                <rect x="310" y="28" width="90" height="36" rx="6" fill="#1a2540" stroke="#ef4444" stroke-width="1.5"/>
+                <text x="355" y="50" fill="#f1f5f9" font-size="10" text-anchor="middle">Scan...</text>
+                <line x1="122" y1="46" x2="158" y2="46" stroke="#ef4444" stroke-width="1.5" marker-end="url(#arrowR)"/>
+                <line x1="272" y1="46" x2="308" y2="46" stroke="#ef4444" stroke-width="1.5" marker-end="url(#arrowR)"/>
+                <text x="350" y="90" fill="#ef4444" font-size="10" text-anchor="middle">O(log n) por salto — crece con el tamaño del grafo</text>
+                <text x="10" y="128" fill="#94a3b8" font-size="11" font-family="JetBrains Mono">Neo4j: puntero directo en disco</text>
+                <circle cx="60" cy="185" r="26" fill="#1a2540" stroke="#10b981" stroke-width="2"/>
+                <text x="60" y="190" fill="#f1f5f9" font-size="9" text-anchor="middle">Nodo A</text>
+                <circle cx="200" cy="185" r="26" fill="#1a2540" stroke="#10b981" stroke-width="2"/>
+                <text x="200" y="190" fill="#f1f5f9" font-size="9" text-anchor="middle">Nodo B</text>
+                <circle cx="340" cy="185" r="26" fill="#1a2540" stroke="#10b981" stroke-width="2"/>
+                <text x="340" y="190" fill="#f1f5f9" font-size="9" text-anchor="middle">Nodo C</text>
+                <line x1="88" y1="185" x2="172" y2="185" stroke="#10b981" stroke-width="1.5" marker-end="url(#arrowG)"/>
+                <line x1="228" y1="185" x2="312" y2="185" stroke="#10b981" stroke-width="1.5" marker-end="url(#arrowG)"/>
+                <text x="135" y="170" fill="#10b981" font-size="9" text-anchor="middle">ptr</text>
+                <text x="270" y="170" fill="#10b981" font-size="9" text-anchor="middle">ptr</text>
+                <text x="200" y="230" fill="#10b981" font-size="10" text-anchor="middle">O(1) por salto — independiente del tamaño del grafo</text>
+            </svg>
+        </div>
+
+        <h3>Record stores — almacenamiento físico</h3>
+        <p>Neo4j 5.x mantiene archivos de registros separados para nodos, relaciones y propiedades:</p>
+        <ul>
+            <li><strong>nodestore</strong> — 15 bytes por nodo. Contiene: in-use flag, ID primera relación, ID primera propiedad, label store ID.</li>
+            <li><strong>relationshipstore</strong> — 57 bytes por relación. Contiene: nodos origen/destino, tipo, punteros a relaciones anterior/siguiente para cada nodo (doubly-linked list per node).</li>
+            <li><strong>propertystore</strong> — cadena de bloques de propiedades de tamaño variable.</li>
+        </ul>
+
+        <div class="info-box info">
+            <div class="info-box-icon">🏗️</div>
+            <div class="info-box-text">
+                <strong>¿Por qué tamaño fijo?</strong> Los registros de tamaño fijo permiten acceso directo por ID sin B-Tree. Si el nodo tiene ID 12345, su registro está en el offset <code>12345 × 15 bytes</code>. El SO puede pre-fetch eficientemente con el page-cache. Esto es lo que hace que seguir un puntero sea O(1).
+            </div>
+        </div>
+
+        <h2>6. Instalación — Docker, Desktop y Aura</h2>
+
+        <h3>Opción A: Docker Compose (desarrollo local)</h3>
+        <div class="code-block">
+            <div class="code-header"><span class="code-lang">bash — docker-compose.yml con APOC + GDS</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+            <pre><code>version: <span class="str">"3.9"</span>
+services:
+  neo4j:
+    image: neo4j:<span class="num">5.18</span>-community
+    container_name: neo4j_dev
+    ports:
+      - <span class="str">"7474:7474"</span>   <span class="cmt"># Neo4j Browser (HTTP)</span>
+      - <span class="str">"7687:7687"</span>   <span class="cmt"># Bolt protocol</span>
+    volumes:
+      - neo4j_data:/data
+      - neo4j_logs:/logs
+      - neo4j_plugins:/plugins
+    environment:
+      NEO4J_AUTH: neo4j/mipassword123
+      NEO4J_PLUGINS: <span class="str">'["apoc", "graph-data-science"]'</span>
+      NEO4J_dbms_security_procedures_unrestricted: apoc.*,gds.*
+      NEO4J_dbms_memory_heap_initial__size: <span class="str">"512m"</span>
+      NEO4J_dbms_memory_heap_max__size: <span class="str">"2G"</span>
+      NEO4J_dbms_memory_pagecache_size: <span class="str">"1G"</span>
+    restart: unless-stopped
+
+volumes:
+  neo4j_data:
+  neo4j_logs:
+  neo4j_plugins:</code></pre>
+        </div>
+
+        <div class="code-block">
+            <div class="code-header"><span class="code-lang">bash — Arrancar y verificar</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+            <pre><code>docker compose up -d
+docker logs neo4j_dev -f   <span class="cmt"># esperar "Started"</span>
+
+<span class="cmt"># Verificar desde cypher-shell</span>
+docker exec -it neo4j_dev cypher-shell -u neo4j -p mipassword123
+> <span class="kw">CALL</span> dbms.components() <span class="kw">YIELD</span> name, versions;
+> <span class="kw">CALL</span> apoc.help(<span class="str">"apoc"</span>);   <span class="cmt">-- confirmar APOC cargado</span></code></pre>
+        </div>
+
+        <h3>Acceso rápido</h3>
+        <div class="table-wrapper">
+            <table>
+                <thead><tr><th>Interfaz</th><th>URL</th><th>Para qué</th></tr></thead>
+                <tbody>
+                    <tr><td><strong>Neo4j Browser</strong></td><td><code>http://localhost:7474</code></td><td>UI interactiva, visualización del grafo, ejecución de Cypher</td></tr>
+                    <tr><td><strong>Bolt</strong></td><td><code>bolt://localhost:7687</code></td><td>Conexión desde Python, Java, Node.js</td></tr>
+                    <tr><td><strong>cypher-shell</strong></td><td>CLI en el contenedor</td><td>Scripts, automatización, producción</td></tr>
+                    <tr><td><strong>Aura Free</strong></td><td><code>console.neo4j.io</code></td><td>Cloud gratuito, sin instalación, 200K nodos</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <h3>Comandos clave del Neo4j Browser</h3>
+        <div class="code-block">
+            <div class="code-header"><span class="code-lang">neo4j-browser — administración</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+            <pre><code>:server status           <span class="cmt">-- estado del servidor</span>
+:schema                  <span class="cmt">-- labels, tipos de rels, índices, constraints</span>
+:play intro              <span class="cmt">-- tutorial interactivo oficial</span>
+:play movies             <span class="cmt">-- cargar dataset películas para practicar</span>
+:play northwind          <span class="cmt">-- dataset tienda (SQL→grafo)</span>
+:dbs                     <span class="cmt">-- listar bases de datos</span>
+:use neo4j               <span class="cmt">-- cambiar a BD "neo4j"</span>
+:history                 <span class="cmt">-- historial de queries</span></code></pre>
+        </div>
+
+        <h3>Herramientas gratuitas del ecosistema</h3>
+        <div class="concept-grid">
+            <div class="concept-card orange">
+                <span class="concept-icon">🌐</span>
+                <h3>Neo4j Browser</h3>
+                <p>UI web incluida con Neo4j. Exploración visual, ejecución Cypher, visualización del grafo.</p>
+            </div>
+            <div class="concept-card cyan">
+                <span class="concept-icon">🖥️</span>
+                <h3>Neo4j Desktop</h3>
+                <p>App Electron gratuita. Gestiona instancias locales, proyectos, plugins APOC/GDS.</p>
+            </div>
+            <div class="concept-card green">
+                <span class="concept-icon">☁️</span>
+                <h3>Neo4j Aura Free</h3>
+                <p>Instancia cloud gratuita (200K nodos, 1M relaciones). Sin instalación. Para aprender.</p>
+            </div>
+            <div class="concept-card amber">
+                <span class="concept-icon">📊</span>
+                <h3>NeoDash</h3>
+                <p>Dashboard builder low-code sobre Neo4j. Crea dashboards sin código frontend.</p>
+            </div>
+            <div class="concept-card purple">
+                <span class="concept-icon">🔧</span>
+                <h3>VS Code + Neo4j</h3>
+                <p>Extensión oficial: syntax highlighting Cypher, conexión directa, autocompletar.</p>
+            </div>
+            <div class="concept-card rose">
+                <span class="concept-icon">⌨️</span>
+                <h3>cypher-shell</h3>
+                <p>CLI oficial. Perfecto para scripts, automatización y producción. Incluido en Docker.</p>
+            </div>
+        </div>
+
+        <h2>🧪 Ejercicios — Módulo 1</h2>
+
+        <div class="info-box info">
+            <div class="info-box-icon">📝</div>
+            <div class="info-box-text"><strong>E1 (Básico):</strong> Levanta Neo4j con Docker Compose. Accede al Browser. Ejecuta <code>:play movies</code>. ¿Cuántos nodos de tipo <code>Movie</code> existen? <em>Solución: <code>MATCH (m:Movie) RETURN count(m)</code></em></div>
+        </div>
+        <div class="info-box info">
+            <div class="info-box-icon">📝</div>
+            <div class="info-box-text"><strong>E2 (Básico):</strong> Con el dataset movies, encuentra el actor con más películas. <em>Pista: MATCH + count + ORDER BY DESC + LIMIT 1</em></div>
+        </div>
+        <div class="info-box warning">
+            <div class="info-box-icon">📝</div>
+            <div class="info-box-text"><strong>E3 (Medio):</strong> Diseña en papel un grafo de conocimiento para tu laboratorio de IA: investigadores, proyectos, publicaciones, datasets, tecnologías. Define tipos de nodos, tipos de relaciones y propiedades clave. No escribas Cypher aún — solo el modelo conceptual.</div>
+        </div>
+        <div class="info-box warning">
+            <div class="info-box-icon">📝</div>
+            <div class="info-box-text"><strong>E4 (Medio):</strong> Argumenta en qué caso <em>no</em> usarías Neo4j para un sistema de vehículos autónomos. ¿Qué tipo de datos del coche irían mejor en PostgreSQL, InfluxDB o Kafka?</div>
+        </div>
+        <div class="info-box danger">
+            <div class="info-box-icon">📝</div>
+            <div class="info-box-text"><strong>E5 (Avanzado):</strong> Busca la documentación oficial sobre el "block format" de Neo4j 5.x. ¿En qué difiere del record store clásico? ¿Qué ventaja tiene para bases de datos multi-terabyte?</div>
+        </div>
+
+        <div style="margin-top: 4rem; display: flex; justify-content: space-between;">
+            <a href="index.html" class="btn btn-outline">← Volver al Inicio</a>
+            <a href="cypher-basics.html" class="btn btn-primary">Siguiente: Cypher Básico →</a>
+        </div>
+    </main>
+
+    <footer style="text-align: center; padding: 2rem; color: var(--text3); font-size: 0.8rem; border-top: 1px solid var(--border);">
+        &copy; 2026 LucentIA Research · Neo4j Zero to Expert
+    </footer>
+    <script>
+        const navbar = document.getElementById('navbar');
+        window.addEventListener('scroll', () => navbar.classList.toggle('scrolled', window.scrollY > 50));
+        document.getElementById('navToggle')?.addEventListener('click', () => document.querySelector('.nav-links').classList.toggle('open'));
+        function copyCode(btn) {
+            const code = btn.closest('.code-block').querySelector('pre').innerText;
+            navigator.clipboard.writeText(code).then(() => { btn.textContent = '✓ Copiado'; btn.classList.add('copied'); setTimeout(() => { btn.textContent = 'Copiar'; btn.classList.remove('copied'); }, 2000); });
+        }
+    </script>
+</body>
+</html>

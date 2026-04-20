@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Módulo 4: Modelado de Grafos | Neo4j Zero to Expert</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <nav class="navbar" id="navbar">
+        <div class="nav-inner">
+            <div class="nav-brand"><span class="brand-icon">🔬</span> Neo4j Raw</div>
+            <ul class="nav-links">
+                <li><a href="index.html">Inicio</a></li>
+                <li><a href="intro.html">M1: Fundamentos</a></li>
+                <li><a href="cypher-basics.html">M2: Cypher I</a></li>
+                <li><a href="cypher-intermediate.html">M3: Cypher II</a></li>
+                <li><a href="modeling.html" class="active">M4: Modelado</a></li>
+                <li><a href="expert.html">M5: Expert</a></li>
+                <li><a href="lab.html">M6: Lab</a></li>
+            </ul>
+            <button class="nav-mobile-btn" id="navToggle">☰</button>
+        </div>
+    </nav>
+
+    <header class="page-hero">
+        <span class="page-hero-icon">🗺️</span>
+        <h1>Módulo 4: <span class="gradient-text">Modelado de Grafos</span></h1>
+        <p>La filosofía, las decisiones y los patrones que separan un grafo eficiente del caos. Modelar para las consultas, no para la normalización.</p>
+    </header>
+
+    <main class="content">
+
+        <h2>1. La Filosofía del Modelado en Grafos</h2>
+        <p>En bases de datos relacionales modelas para <strong>normalización</strong>: sin redundancia, tercera forma normal. En grafos modelas para las <strong>consultas que vas a ejecutar</strong>. El objetivo primario es la traversal eficiente, no la pureza académica.</p>
+
+        <div class="concept-grid">
+            <div class="concept-card orange">
+                <div class="concept-icon">🎯</div>
+                <h3>Primero las preguntas</h3>
+                <p>¿Cuáles son las 5 consultas más importantes que tu sistema hará? El modelo debe hacer esas consultas triviales.</p>
+            </div>
+            <div class="concept-card cyan">
+                <div class="concept-icon">↔️</div>
+                <h3>Relaciones son ciudadanos de primera</h3>
+                <p>En tablas, las relaciones son una penalización (JOIN). En grafos, son traversal O(1) por nodo, completamente gratuitas.</p>
+            </div>
+            <div class="concept-card green">
+                <div class="concept-icon">🔄</div>
+                <h3>Desnormalización controlada</h3>
+                <p>Duplicar una propiedad para evitar un MATCH adicional es legítimo. La redundancia al servicio del rendimiento es una virtud.</p>
+            </div>
+            <div class="concept-card amber">
+                <div class="concept-icon">🌍</div>
+                <h3>El dominio es el grafo</h3>
+                <p>Las entidades del mundo real se convierten en nodos. Las acciones y relaciones se convierten en edges con tipo.</p>
+            </div>
+        </div>
+
+        <h2>2. Metodología Paso a Paso</h2>
+
+        <div class="code-block">
+            <div class="code-header"><span class="code-lang">proceso — Cómo modelar un dominio nuevo</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+            <pre><code>1. Identificar entidades (candidatos a nodo)
+   → Sustantivos del dominio: Usuario, Vehiculo, Sensor, Paper, Producto
+
+2. Identificar relaciones (candidatos a edge)
+   → Verbos del dominio: CONDUCE, EQUIPADO_CON, PUBLICÓ, COMPRÓ
+
+3. Identificar propiedades de identidad
+   → ¿Qué hace único a cada nodo? email, doi, sku, vin, id
+
+4. Definir las 5-10 queries principales del sistema
+   → "Dame los vehículos con LIDAR a menos de 50km del accidente X"
+   → "Papers del investigador Y con más de 100 citas"
+
+5. Evaluar cada atributo: ¿propiedad o nodo?
+
+6. Identificar los antipatrones
+
+7. Crear el Schema Diagram (nodos, labels, rel types, propiedades key)</code></pre>
+        </div>
+
+        <h2>3. Árbol de Decisión: ¿Propiedad, Nodo o Relación?</h2>
+
+        <p>Cuando modelas datos en LPG, cada pieza de información puede vivir en tres lugares distintos: como <strong>propiedad</strong> dentro de un nodo, como un <strong>nodo propio</strong>, o como una <strong>relación</strong> (o propiedad de una relación). La elección no es estética — afecta directamente al rendimiento de las consultas, a la capacidad de búsqueda y a la consistencia del grafo. El árbol de decisión siguiente fuerza las preguntas correctas en el orden correcto.</p>
+
+        <div class="diagram-demo">
+            <div class="diagram-demo-label">Árbol de Decisión — ¿Dónde va este dato?</div>
+            <svg viewBox="0 0 720 520" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:720px;display:block;margin:0 auto">
+                <defs>
+                    <marker id="arr" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#94a3b8"/></marker>
+                    <marker id="arrG" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#10b981"/></marker>
+                    <marker id="arrY" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#f59e0b"/></marker>
+                    <marker id="arrP" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#a78bfa"/></marker>
+                </defs>
+                <!-- START -->
+                <rect x="260" y="10" width="200" height="44" rx="22" fill="#1e293b" stroke="#64748b" stroke-width="1.5"/>
+                <text x="360" y="37" fill="#f1f5f9" font-size="13" font-family="Inter" text-anchor="middle" font-weight="600">Tienes un dato nuevo</text>
+                <line x1="360" y1="54" x2="360" y2="80" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#arr)"/>
+                <!-- Q1 -->
+                <rect x="200" y="82" width="320" height="44" rx="8" fill="#0f172a" stroke="#6366f1" stroke-width="1.5"/>
+                <text x="360" y="99" fill="#a5b4fc" font-size="12" font-family="Inter" text-anchor="middle">¿Describe una entidad del mundo real</text>
+                <text x="360" y="115" fill="#a5b4fc" font-size="12" font-family="Inter" text-anchor="middle">que tiene identidad propia?</text>
+                <!-- YES → nodo -->
+                <line x1="360" y1="126" x2="360" y2="160" stroke="#10b981" stroke-width="1.5" marker-end="url(#arrG)"/>
+                <text x="368" y="147" fill="#10b981" font-size="11" font-family="Inter">SÍ</text>
+                <!-- Q2 -->
+                <rect x="200" y="162" width="320" height="44" rx="8" fill="#0f172a" stroke="#6366f1" stroke-width="1.5"/>
+                <text x="360" y="179" fill="#a5b4fc" font-size="12" font-family="Inter" text-anchor="middle">¿Múltiples nodos comparten este valor</text>
+                <text x="360" y="195" fill="#a5b4fc" font-size="12" font-family="Inter" text-anchor="middle">o necesita sus propias propiedades?</text>
+                <!-- YES → nodo propio -->
+                <line x1="520" y1="184" x2="620" y2="184" stroke="#10b981" stroke-width="1.5" marker-end="url(#arrG)"/>
+                <text x="530" y="178" fill="#10b981" font-size="11" font-family="Inter">SÍ</text>
+                <rect x="622" y="162" width="90" height="44" rx="8" fill="#064e3b" stroke="#10b981" stroke-width="2"/>
+                <text x="667" y="183" fill="#6ee7b7" font-size="13" font-family="Inter" text-anchor="middle" font-weight="700">NODO</text>
+                <text x="667" y="198" fill="#6ee7b7" font-size="10" font-family="Inter" text-anchor="middle">:Ciudad, :Marca</text>
+                <!-- NO → Q3 -->
+                <line x1="360" y1="206" x2="360" y2="250" stroke="#f59e0b" stroke-width="1.5" marker-end="url(#arrY)"/>
+                <text x="368" y="231" fill="#f59e0b" font-size="11" font-family="Inter">NO</text>
+                <!-- Q3 -->
+                <rect x="200" y="252" width="320" height="44" rx="8" fill="#0f172a" stroke="#6366f1" stroke-width="1.5"/>
+                <text x="360" y="269" fill="#a5b4fc" font-size="12" font-family="Inter" text-anchor="middle">¿Expresa una conexión o evento entre</text>
+                <text x="360" y="285" fill="#a5b4fc" font-size="12" font-family="Inter" text-anchor="middle">dos entidades?</text>
+                <!-- YES → relación -->
+                <line x1="520" y1="274" x2="620" y2="274" stroke="#10b981" stroke-width="1.5" marker-end="url(#arrG)"/>
+                <text x="530" y="268" fill="#10b981" font-size="11" font-family="Inter">SÍ</text>
+                <rect x="622" y="252" width="90" height="44" rx="8" fill="#1e1b4b" stroke="#a78bfa" stroke-width="2"/>
+                <text x="667" y="270" fill="#c4b5fd" font-size="11" font-family="Inter" text-anchor="middle" font-weight="700">RELACIÓN</text>
+                <text x="667" y="286" fill="#c4b5fd" font-size="9" font-family="Inter" text-anchor="middle">[:COMPRA]</text>
+                <!-- NO → Q4 -->
+                <line x1="360" y1="296" x2="360" y2="340" stroke="#f59e0b" stroke-width="1.5" marker-end="url(#arrY)"/>
+                <text x="368" y="321" fill="#f59e0b" font-size="11" font-family="Inter">NO</text>
+                <!-- Q4 -->
+                <rect x="200" y="342" width="320" height="44" rx="8" fill="#0f172a" stroke="#6366f1" stroke-width="1.5"/>
+                <text x="360" y="359" fill="#a5b4fc" font-size="12" font-family="Inter" text-anchor="middle">¿Necesitarás buscar, indexar o filtrar</text>
+                <text x="360" y="375" fill="#a5b4fc" font-size="12" font-family="Inter" text-anchor="middle">por este dato?</text>
+                <!-- YES → propiedad indexada -->
+                <line x1="520" y1="364" x2="620" y2="364" stroke="#10b981" stroke-width="1.5" marker-end="url(#arrG)"/>
+                <text x="530" y="358" fill="#10b981" font-size="11" font-family="Inter">SÍ</text>
+                <rect x="622" y="342" width="90" height="44" rx="8" fill="#1c1917" stroke="#f59e0b" stroke-width="2"/>
+                <text x="667" y="360" fill="#fcd34d" font-size="10" font-family="Inter" text-anchor="middle" font-weight="700">PROPIEDAD</text>
+                <text x="667" y="376" fill="#fcd34d" font-size="9" font-family="Inter" text-anchor="middle">+ INDEX</text>
+                <!-- NO → propiedad simple -->
+                <line x1="360" y1="386" x2="360" y2="430" stroke="#f59e0b" stroke-width="1.5" marker-end="url(#arrY)"/>
+                <text x="368" y="412" fill="#f59e0b" font-size="11" font-family="Inter">NO</text>
+                <rect x="260" y="432" width="200" height="44" rx="8" fill="#1c1917" stroke="#78716c" stroke-width="1.5"/>
+                <text x="360" y="450" fill="#d6d3d1" font-size="11" font-family="Inter" text-anchor="middle" font-weight="700">PROPIEDAD simple</text>
+                <text x="360" y="466" fill="#d6d3d1" font-size="9" font-family="Inter" text-anchor="middle">{nombre, descripcion, peso}</text>
+                <!-- Q1 NO branch -->
+                <line x1="200" y1="104" x2="90" y2="104" stroke="#f59e0b" stroke-width="1.5" marker-end="url(#arrY)"/>
+                <text x="100" y="98" fill="#f59e0b" font-size="11" font-family="Inter">NO</text>
+                <line x1="90" y1="104" x2="90" y2="364" stroke="#f59e0b" stroke-width="1.5"/>
+                <line x1="90" y1="364" x2="198" y2="364" stroke="#f59e0b" stroke-width="1.5" marker-end="url(#arrY)"/>
+            </svg>
+        </div>
+
+        <h3>Cómo leer el árbol</h3>
+        <p>El árbol fuerza cuatro preguntas en secuencia. Seguirlas en orden evita los errores clásicos de modelado:</p>
+        <ol>
+            <li><strong>¿Tiene identidad propia?</strong> Si el dato es una entidad del mundo — una persona, una ciudad, un sensor, un documento — merece ser nodo. Si es solo un atributo descriptivo de otra entidad, no.</li>
+            <li><strong>¿Lo comparten múltiples nodos o tiene propiedades propias?</strong> Si varios vehículos tienen <code>marca: "Toyota"</code>, Toyota es un nodo. Si cada nodo tiene su propio valor único e irrepetible (un VIN, un timestamp), probablemente es propiedad.</li>
+            <li><strong>¿Es una conexión entre dos entidades?</strong> Si el dato dice "A hizo algo con B", es una relación. Si ese "algo" tiene contexto propio (cuándo, cuánto, cómo), ese contexto son propiedades de la relación.</li>
+            <li><strong>¿Necesitas buscar o filtrar por él?</strong> Todo atributo sobre el que vayas a hacer <code>WHERE</code> o necesites indexar debe ser propiedad explícita — no puede estar enterrado en un string JSON ni en un array sin índice.</li>
+        </ol>
+
+        <h3>Los tres destinos con ejemplos paralelos</h3>
+        <p>El mismo dominio — vehículos autónomos — modelado de las tres formas posibles:</p>
+
+        <div class="code-block">
+            <div class="code-header"><span class="code-lang">cypher — El mismo dato en sus tres formas posibles</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+            <pre><code><span class="cmt">-- 1. PROPIEDAD: el fabricante como string dentro del vehículo</span>
+<span class="cmt">--    Cuándo aplica: solo hay unos pocos fabricantes y nunca los consultas por separado</span>
+(v:Vehiculo {vin: <span class="str">"1HGCM826"</span>, fabricante: <span class="str">"Toyota"</span>, autonomia_km: <span class="num">450</span>})
+
+<span class="cmt">-- 2. NODO: el fabricante como entidad propia con relación</span>
+<span class="cmt">--    Cuándo aplica: múltiples vehículos comparten fabricante,</span>
+<span class="cmt">--    o necesitas datos del fabricante (sede, certificaciones, modelos)</span>
+(v:Vehiculo {vin: <span class="str">"1HGCM826"</span>})-[:FABRICADO_POR]->(f:Fabricante {nombre: <span class="str">"Toyota"</span>, pais: <span class="str">"Japón"</span>})
+
+<span class="cmt">-- 3. RELACIÓN con propiedades: la asignación del vehículo a una flota</span>
+<span class="cmt">--    Cuándo aplica: la conexión tiene contexto propio (desde cuándo, con qué rol)</span>
+(v:Vehiculo)-[:ASIGNADO_A {desde: <span class="str">"2024-01-01"</span>, rol: <span class="str">"reparto_urbano"</span>}]->(f:Flota {nombre: <span class="str">"Madrid-Centro"</span>})
+
+<span class="cmt">-- Caso de fallo típico: meter la relación como propiedad string</span>
+<span class="cmt">-- MAL: (v:Vehiculo {flota: "Madrid-Centro", asignado_desde: "2024-01-01"})</span>
+<span class="cmt">-- Si un vehículo cambia de flota, ¿borras el dato anterior? ¿Guardas historial?</span>
+<span class="cmt">-- Con una relación [:ASIGNADO_A] puedes tener múltiples con timestamps distintos.</span></code></pre>
+        </div>
+
+        <div class="info-box warning">
+            <div class="info-box-text">
+                <strong>WARN — La regla de los tres "nunca":</strong>
+                <ul style="margin:0.5rem 0 0 1rem">
+                    <li>Nunca guardes en una propiedad un valor que actualmentees o será compartido por múltiples nodos — crea un nodo.</li>
+                    <li>Nunca metas en una propiedad un JSON o array que necesites recorrer con lógica — crea nodos y relaciones.</li>
+                    <li>Nunca uses una relación genérica <code>[:RELACIONADO_CON]</code> cuando el tipo del vínculo tiene significado — el tipo de relación es parte del modelo, no decoración.</li>
+                </ul>
+            </div>
+        </div>
+
+        <h2>4. Patrones Canónicos</h2>
+
+        <h3>4.1 Nodo Intermedio (Hyperedge)</h3>
+        <p>Cuando una relación entre dos entidades necesita propiedades propias, o cuando la misma relación se da múltiples veces con contexto diferente.</p>
+
+        <div class="code-block">
+            <div class="code-header"><span class="code-lang">cypher — Nodo intermedio de autoría</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+            <pre><code><span class="cmt">-- MAL: relación con demasiadas propiedades</span>
+(inv)-[:PUBLICÓ {ano: <span class="num">2025</span>, rol: <span class="str">"first_author"</span>, revision_score: <span class="num">4.5</span>}]->(p:Paper)
+
+<span class="cmt">-- BIEN: nodo intermedio que captura la autoría completa</span>
+(inv:Investigador)-[:ES_AUTOR]->(a:Autoria)-[:DE_PAPER]->(p:Paper)
+<span class="kw">SET</span> a.rol = <span class="str">"first_author"</span>, a.orden = <span class="num">1</span>, a.revision_score = <span class="num">4.5</span>
+
+<span class="cmt">-- Ahora puedes: "dame las autorías de Deivit con score > 4"</span>
+<span class="kw">MATCH</span> (inv:Investigador {nombre: <span class="str">"Deivit"</span>})-[:ES_AUTOR]->(a:Autoria)-[:DE_PAPER]->(p:Paper)
+<span class="kw">WHERE</span> a.revision_score > <span class="num">4</span>
+<span class="kw">RETURN</span> p.titulo, a.rol, a.revision_score</code></pre>
+        </div>
+
+        <h3>4.2 Time Tree</h3>
+        <div class="code-block">
+            <div class="code-header"><span class="code-lang">cypher — Time Tree</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+            <pre><code><span class="cmt">-- Jerarquía temporal: Año → Mes → Día</span>
+(:Año {valor: <span class="num">2026</span>})-[:TIENE_MES]->(:Mes {valor: <span class="num">3</span>})-[:TIENE_DIA]->(:Dia {valor: <span class="num">26</span>})
+
+<span class="cmt">-- Accidentes de Q1 2026 por mes</span>
+<span class="kw">MATCH</span> (año:Año {valor: <span class="num">2026</span>})-[:TIENE_MES]->(mes:Mes)
+<span class="kw">WHERE</span> mes.valor <span class="kw">IN</span> [<span class="num">1</span>, <span class="num">2</span>, <span class="num">3</span>]
+<span class="kw">MATCH</span> (mes)-[:TIENE_DIA]->(:Dia)<-[:OCURRIÓ_EL]-(acc:Accidente)
+<span class="kw">RETURN</span> mes.valor, <span class="fn">count</span>(acc) <span class="kw">AS</span> accidentes_por_mes</code></pre>
+        </div>
+
+        <h3>4.3 Versioning / Linked List</h3>
+        <div class="code-block">
+            <div class="code-header"><span class="code-lang">cypher — Historial de ubicaciones como linked list</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+            <pre><code>(v:Vehiculo {id: <span class="str">"AV-001"</span>})-[:UBICACION_ACTUAL]->(ub:Ubicacion {ts: <span class="fn">datetime</span>()})
+(ub)-[:ANTERIOR]->(ub_prev:Ubicacion)
+
+<span class="cmt">-- Últimas 5 ubicaciones</span>
+<span class="kw">MATCH</span> (v:Vehiculo {id: <span class="str">"AV-001"</span>})-[:UBICACION_ACTUAL]->(ub:Ubicacion)
+<span class="kw">MATCH</span> cadena = (ub)-[:ANTERIOR*0..4]->(hist:Ubicacion)
+<span class="kw">RETURN</span> hist.latitud, hist.longitud, hist.ts <span class="kw">ORDER BY</span> hist.ts <span class="kw">DESC</span></code></pre>
+        </div>
+
+        <h2>5. Antipatrones Críticos</h2>
+        <p>Un antipatrón en modelado de grafos es una decisión que parece razonable al principio pero que degrada el rendimiento, dificulta las consultas o introduce inconsistencias a medida que el grafo crece. Los tres siguientes son los más frecuentes en producción.</p>
+
+        <h3>5.1 Fan-out — El Super Nodo</h3>
+        <p>Ocurre cuando un nodo acumula un número enorme de relaciones — cientos de miles o millones. El motor Neo4j, al hacer un traversal desde ese nodo, tiene que cargar y recorrer todas sus relaciones aunque solo necesites una fracción. El coste deja de ser O(1) y se convierte en O(grado del nodo).</p>
+
+        <div class="diagram-demo">
+            <div class="diagram-demo-label">Fan-out — Super Nodo vs modelo corregido</div>
+            <svg viewBox="0 0 680 260" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:680px;display:block;margin:0 auto">
+                <defs>
+                    <marker id="aR" markerWidth="7" markerHeight="7" refX="5" refY="3" orient="auto"><path d="M0,0 L0,6 L7,3 z" fill="#ef4444"/></marker>
+                    <marker id="aG" markerWidth="7" markerHeight="7" refX="5" refY="3" orient="auto"><path d="M0,0 L0,6 L7,3 z" fill="#10b981"/></marker>
+                </defs>
+                <!-- MAL -->
+                <text x="10" y="18" fill="#ef4444" font-size="11" font-family="JetBrains Mono">MAL: Super Nodo</text>
+                <!-- Madrid central -->
+                <circle cx="130" cy="130" r="38" fill="#3b0d0d" stroke="#ef4444" stroke-width="2"/>
+                <text x="130" y="126" fill="#fca5a5" font-size="11" text-anchor="middle" font-family="Inter" font-weight="700">:Ciudad</text>
+                <text x="130" y="141" fill="#fca5a5" font-size="10" text-anchor="middle" font-family="Inter">Madrid</text>
+                <!-- users around -->
+                <circle cx="40" cy="50" r="16" fill="#1e293b" stroke="#64748b" stroke-width="1"/><text x="40" y="54" fill="#94a3b8" font-size="9" text-anchor="middle" font-family="Inter">U1</text>
+                <line x1="56" y1="62" x2="95" y2="100" stroke="#ef4444" stroke-width="1" marker-end="url(#aR)"/>
+                <circle cx="40" cy="130" r="16" fill="#1e293b" stroke="#64748b" stroke-width="1"/><text x="40" y="134" fill="#94a3b8" font-size="9" text-anchor="middle" font-family="Inter">U2</text>
+                <line x1="56" y1="130" x2="92" y2="130" stroke="#ef4444" stroke-width="1" marker-end="url(#aR)"/>
+                <circle cx="40" cy="210" r="16" fill="#1e293b" stroke="#64748b" stroke-width="1"/><text x="40" y="214" fill="#94a3b8" font-size="9" text-anchor="middle" font-family="Inter">U3</text>
+                <line x1="56" y1="198" x2="95" y2="162" stroke="#ef4444" stroke-width="1" marker-end="url(#aR)"/>
+                <circle cx="130" cy="30" r="16" fill="#1e293b" stroke="#64748b" stroke-width="1"/><text x="130" y="34" fill="#94a3b8" font-size="9" text-anchor="middle" font-family="Inter">U4</text>
+                <line x1="130" y1="46" x2="130" y2="92" stroke="#ef4444" stroke-width="1" marker-end="url(#aR)"/>
+                <circle cx="130" cy="230" r="16" fill="#1e293b" stroke="#64748b" stroke-width="1"/><text x="130" y="234" fill="#94a3b8" font-size="9" text-anchor="middle" font-family="Inter">U5</text>
+                <line x1="130" y1="214" x2="130" y2="168" stroke="#ef4444" stroke-width="1" marker-end="url(#aR)"/>
+                <circle cx="220" cy="50" r="16" fill="#1e293b" stroke="#64748b" stroke-width="1"/><text x="220" y="54" fill="#94a3b8" font-size="9" text-anchor="middle" font-family="Inter">U6</text>
+                <line x1="204" y1="62" x2="165" y2="100" stroke="#ef4444" stroke-width="1" marker-end="url(#aR)"/>
+                <circle cx="220" cy="130" r="16" fill="#1e293b" stroke="#64748b" stroke-width="1"/><text x="220" y="134" fill="#94a3b8" font-size="9" text-anchor="middle" font-family="Inter">U7</text>
+                <line x1="204" y1="130" x2="168" y2="130" stroke="#ef4444" stroke-width="1" marker-end="url(#aR)"/>
+                <circle cx="220" cy="210" r="16" fill="#1e293b" stroke="#64748b" stroke-width="1"/><text x="220" y="214" fill="#94a3b8" font-size="9" text-anchor="middle" font-family="Inter">U8</text>
+                <line x1="204" y1="198" x2="165" y2="162" stroke="#ef4444" stroke-width="1" marker-end="url(#aR)"/>
+                <text x="80" y="252" fill="#ef4444" font-size="10" font-family="Inter" text-anchor="middle">1M usuarios → 1 nodo Ciudad</text>
+                <text x="80" y="265" fill="#ef4444" font-size="10" font-family="Inter" text-anchor="middle">Traversal carga 1M relaciones</text>
+                <!-- BIEN -->
+                <text x="370" y="18" fill="#10b981" font-size="11" font-family="JetBrains Mono">BIEN: propiedad indexada</text>
+                <rect x="370" y="28" width="290" height="50" rx="8" fill="#0f2419" stroke="#10b981" stroke-width="1.5"/>
+                <text x="515" y="48" fill="#6ee7b7" font-size="11" text-anchor="middle" font-family="Inter" font-weight="700">CREATE INDEX FOR (u:Usuario) ON (u.ciudad)</text>
+                <text x="515" y="66" fill="#6ee7b7" font-size="10" text-anchor="middle" font-family="Inter">(u:Usuario {ciudad: "Madrid", ...})</text>
+                <text x="370" y="105" fill="#94a3b8" font-size="10" font-family="Inter">Consulta directa por índice:</text>
+                <rect x="370" y="112" width="290" height="36" rx="6" fill="#0f172a" stroke="#334155" stroke-width="1"/>
+                <text x="515" y="128" fill="#93c5fd" font-size="10" text-anchor="middle" font-family="JetBrains Mono">MATCH (u:Usuario {ciudad: "Madrid"})</text>
+                <text x="515" y="142" fill="#93c5fd" font-size="10" text-anchor="middle" font-family="JetBrains Mono">RETURN u.nombre</text>
+                <text x="370" y="175" fill="#94a3b8" font-size="10" font-family="Inter">O segmentar con Time Tree si el nodo</text>
+                <text x="370" y="188" fill="#94a3b8" font-size="10" font-family="Inter">Ciudad es necesario como entidad:</text>
+                <rect x="370" y="195" width="290" height="36" rx="6" fill="#0f172a" stroke="#334155" stroke-width="1"/>
+                <text x="515" y="211" fill="#93c5fd" font-size="10" text-anchor="middle" font-family="JetBrains Mono">(:Ciudad)-[:ZONA]->(:Distrito)</text>
+                <text x="515" y="225" fill="#93c5fd" font-size="10" text-anchor="middle" font-family="JetBrains Mono">  -[:VIVE_EN]->(:Usuario)</text>
+            </svg>
+        </div>
+        <div class="code-block">
+            <div class="code-header"><span class="code-lang">cypher — detectar super nodos en tu grafo</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+            <pre><code><span class="cmt">-- Nodos con más de 100k relaciones: candidatos a super nodo</span>
+<span class="kw">MATCH</span> (n)
+<span class="kw">WHERE</span> <span class="fn">size</span>((n)--()) > <span class="num">100000</span>
+<span class="kw">RETURN</span> labels(n), n.nombre, <span class="fn">size</span>((n)--()) <span class="kw">AS</span> grado
+<span class="kw">ORDER BY</span> grado <span class="kw">DESC LIMIT</span> <span class="num">10</span></code></pre>
+        </div>
+
+        <h3>5.2 Relaciones sin tipo semántico</h3>
+        <p>Una relación cuyo tipo es <code>:RELACIONADO_CON</code>, <code>:CONECTADO_A</code> o <code>:TIENE</code> no aporta información al modelo. El tipo de relación en LPG es parte del esquema — es el vocabulario con el que el grafo describe el mundo. Perderlo obliga a guardar el "tipo real" como propiedad, lo que hace las consultas más lentas e ilegibles.</p>
+
+        <div class="diagram-demo">
+            <div class="diagram-demo-label">Relación genérica vs relación semántica</div>
+            <svg viewBox="0 0 660 180" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:660px;display:block;margin:0 auto">
+                <defs>
+                    <marker id="aR2" markerWidth="7" markerHeight="7" refX="5" refY="3" orient="auto"><path d="M0,0 L0,6 L7,3 z" fill="#ef4444"/></marker>
+                    <marker id="aG2" markerWidth="7" markerHeight="7" refX="5" refY="3" orient="auto"><path d="M0,0 L0,6 L7,3 z" fill="#10b981"/></marker>
+                </defs>
+                <!-- MAL -->
+                <text x="10" y="18" fill="#ef4444" font-size="11" font-family="JetBrains Mono">MAL: tipo genérico + prop tipo</text>
+                <rect x="10" y="28" width="100" height="36" rx="18" fill="#1e293b" stroke="#64748b" stroke-width="1.5"/>
+                <text x="60" y="50" fill="#f1f5f9" font-size="11" text-anchor="middle" font-family="Inter">:Persona</text>
+                <rect x="180" y="28" width="120" height="36" rx="6" fill="#3b0d0d" stroke="#ef4444" stroke-width="1.5"/>
+                <text x="240" y="42" fill="#fca5a5" font-size="10" text-anchor="middle" font-family="JetBrains Mono">:RELACIONADO_CON</text>
+                <text x="240" y="56" fill="#f87171" font-size="9" text-anchor="middle" font-family="Inter">{tipo: "compró"}</text>
+                <rect x="370" y="28" width="100" height="36" rx="18" fill="#1e293b" stroke="#64748b" stroke-width="1.5"/>
+                <text x="420" y="50" fill="#f1f5f9" font-size="11" text-anchor="middle" font-family="Inter">:Producto</text>
+                <line x1="112" y1="46" x2="178" y2="46" stroke="#ef4444" stroke-width="1.5" marker-end="url(#aR2)"/>
+                <line x1="302" y1="46" x2="368" y2="46" stroke="#ef4444" stroke-width="1.5" marker-end="url(#aR2)"/>
+                <text x="10" y="88" fill="#f87171" font-size="10" font-family="Inter">Consulta: WHERE r.tipo = 'compró'  → sin índice de relación, scan completo</text>
+                <!-- BIEN -->
+                <text x="10" y="118" fill="#10b981" font-size="11" font-family="JetBrains Mono">BIEN: tipo semántico explícito</text>
+                <rect x="10" y="128" width="100" height="36" rx="18" fill="#1e293b" stroke="#64748b" stroke-width="1.5"/>
+                <text x="60" y="150" fill="#f1f5f9" font-size="11" text-anchor="middle" font-family="Inter">:Persona</text>
+                <rect x="180" y="128" width="100" height="36" rx="6" fill="#064e3b" stroke="#10b981" stroke-width="1.5"/>
+                <text x="230" y="142" fill="#6ee7b7" font-size="11" text-anchor="middle" font-family="JetBrains Mono">:COMPRÓ</text>
+                <text x="230" y="156" fill="#6ee7b7" font-size="9" text-anchor="middle" font-family="Inter">{precio, fecha}</text>
+                <rect x="350" y="128" width="100" height="36" rx="18" fill="#1e293b" stroke="#64748b" stroke-width="1.5"/>
+                <text x="400" y="150" fill="#f1f5f9" font-size="11" text-anchor="middle" font-family="Inter">:Producto</text>
+                <line x1="112" y1="146" x2="178" y2="146" stroke="#10b981" stroke-width="1.5" marker-end="url(#aG2)"/>
+                <line x1="282" y1="146" x2="348" y2="146" stroke="#10b981" stroke-width="1.5" marker-end="url(#aG2)"/>
+                <text x="10" y="178" fill="#6ee7b7" font-size="10" font-family="Inter">MATCH (p)-[:COMPRÓ]->(prod)  → traversal nativo por tipo, sin filtro adicional</text>
+            </svg>
+        </div>
+
+        <h3>5.3 JSON embebido en propiedades</h3>
+        <p>Guardar un objeto JSON como string dentro de una propiedad rompe el modelo de grafos. Neo4j no puede hacer índices sobre el contenido interno de ese string, no puede recorrerlo con Cypher y cualquier consulta sobre él requiere parseo en la capa de aplicación. Es meter una base de datos documental dentro de una de grafos — lo peor de ambos mundos.</p>
+
+        <div class="diagram-demo">
+            <div class="diagram-demo-label">JSON embebido vs estructura nativa de grafos</div>
+            <svg viewBox="0 0 660 220" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:660px;display:block;margin:0 auto">
+                <defs>
+                    <marker id="aG3" markerWidth="7" markerHeight="7" refX="5" refY="3" orient="auto"><path d="M0,0 L0,6 L7,3 z" fill="#10b981"/></marker>
+                </defs>
+                <!-- MAL -->
+                <text x="10" y="16" fill="#ef4444" font-size="11" font-family="JetBrains Mono">MAL: JSON como string</text>
+                <rect x="10" y="24" width="300" height="70" rx="8" fill="#3b0d0d" stroke="#ef4444" stroke-width="1.5"/>
+                <text x="20" y="42" fill="#fca5a5" font-size="10" font-family="JetBrains Mono">(:Paper {</text>
+                <text x="20" y="57" fill="#fca5a5" font-size="10" font-family="JetBrains Mono">  titulo: "GNN causales",</text>
+                <text x="20" y="72" fill="#ef4444" font-size="10" font-family="JetBrains Mono">  autores: '["Ana","Bea"]'  ← string</text>
+                <text x="20" y="85" fill="#fca5a5" font-size="10" font-family="JetBrains Mono">})</text>
+                <text x="10" y="108" fill="#f87171" font-size="10" font-family="Inter">Para buscar por autor → parseo en app o apoc.convert.fromJsonList()</text>
+                <text x="10" y="121" fill="#f87171" font-size="10" font-family="Inter">No indexable. No recorrible con MATCH. Inconsistencias garantizadas.</text>
+                <!-- BIEN -->
+                <text x="10" y="150" fill="#10b981" font-size="11" font-family="JetBrains Mono">BIEN: nodos y relaciones</text>
+                <!-- Paper -->
+                <rect x="10" y="158" width="95" height="36" rx="18" fill="#1e293b" stroke="#6366f1" stroke-width="1.5"/>
+                <text x="57" y="180" fill="#a5b4fc" font-size="10" text-anchor="middle" font-family="Inter">:Paper</text>
+                <!-- Ana -->
+                <rect x="180" y="140" width="80" height="32" rx="16" fill="#1e293b" stroke="#10b981" stroke-width="1.5"/>
+                <text x="220" y="160" fill="#6ee7b7" font-size="10" text-anchor="middle" font-family="Inter">:Persona Ana</text>
+                <!-- Bea -->
+                <rect x="180" y="186" width="80" height="32" rx="16" fill="#1e293b" stroke="#10b981" stroke-width="1.5"/>
+                <text x="220" y="206" fill="#6ee7b7" font-size="10" text-anchor="middle" font-family="Inter">:Persona Bea</text>
+                <line x1="107" y1="168" x2="178" y2="156" stroke="#10b981" stroke-width="1.5" marker-end="url(#aG3)"/>
+                <text x="130" y="152" fill="#6ee7b7" font-size="9" font-family="Inter">:ES_AUTOR</text>
+                <line x1="107" y1="178" x2="178" y2="196" stroke="#10b981" stroke-width="1.5" marker-end="url(#aG3)"/>
+                <text x="130" y="198" fill="#6ee7b7" font-size="9" font-family="Inter">:ES_AUTOR</text>
+                <text x="270" y="160" fill="#6ee7b7" font-size="10" font-family="Inter">MATCH (paper)-[:ES_AUTOR]->(a)</text>
+                <text x="270" y="175" fill="#6ee7b7" font-size="10" font-family="Inter">RETURN a.nombre</text>
+                <text x="270" y="192" fill="#6ee7b7" font-size="10" font-family="Inter">→ traversal nativo, indexable,</text>
+                <text x="270" y="207" fill="#6ee7b7" font-size="10" font-family="Inter">   historial posible, consistente.</text>
+            </svg>
+        </div>
+        <div class="info-box danger">
+            <div class="info-box-text"><strong>FAIL — Señales de que tienes JSON embebido:</strong> si en tu código de aplicación llamas a <code>JSON.parse(nodo.propiedad)</code> justo después de un MATCH, tienes un antipatrón de modelado. Esa lógica de parseo debería ser un traversal en Cypher.</div>
+        </div>
+
+        <h4>Cómo se resuelve — y por qué MongoDB no es la respuesta</h4>
+        <p>La solución <strong>no</strong> es mover ese JSON a MongoDB y enlazarlo desde Neo4j. Eso añade una dependencia de infraestructura, latencia de red entre dos bases de datos, y complejidad operativa para resolver lo que es simplemente un problema de modelado. El JSON ya contiene la estructura de grafo que necesitas — solo hay que extraerla.</p>
+        <p>La migración tiene tres pasos: parsear el JSON con APOC, crear los nodos y relaciones correspondientes, y eliminar la propiedad problemática.</p>
+
+        <div class="code-block">
+            <div class="code-header"><span class="code-lang">cypher — Migración: extraer JSON embebido a nodos y relaciones</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+            <pre><code><span class="cmt">-- SITUACIÓN DE PARTIDA:</span>
+<span class="cmt">-- (:Paper {titulo: "GNN causales", autores: '["Ana","Bea"]', keywords: '["GNN","causal"]'})</span>
+
+<span class="cmt">-- PASO 1: migrar el array de autores a nodos :Persona con relación :ES_AUTOR_DE</span>
+<span class="kw">MATCH</span> (p:Paper)
+<span class="kw">WHERE</span> p.autores <span class="kw">IS NOT NULL</span>
+<span class="kw">WITH</span> p, <span class="fn">apoc.convert.fromJsonList</span>(p.autores) <span class="kw">AS</span> lista_autores
+<span class="kw">UNWIND</span> lista_autores <span class="kw">AS</span> nombre_autor
+<span class="kw">MERGE</span> (a:Persona {nombre: nombre_autor})
+<span class="kw">MERGE</span> (a)-[:ES_AUTOR_DE]->(p)
+
+<span class="cmt">-- PASO 2: migrar el array de keywords a nodos :Keyword con relación :TIENE_KEYWORD</span>
+<span class="kw">MATCH</span> (p:Paper)
+<span class="kw">WHERE</span> p.keywords <span class="kw">IS NOT NULL</span>
+<span class="kw">WITH</span> p, <span class="fn">apoc.convert.fromJsonList</span>(p.keywords) <span class="kw">AS</span> lista_kw
+<span class="kw">UNWIND</span> lista_kw <span class="kw">AS</span> kw
+<span class="kw">MERGE</span> (k:Keyword {valor: kw})
+<span class="kw">MERGE</span> (p)-[:TIENE_KEYWORD]->(k)
+
+<span class="cmt">-- PASO 3: eliminar las propiedades JSON ya migradas</span>
+<span class="kw">MATCH</span> (p:Paper)
+<span class="kw">WHERE</span> p.autores <span class="kw">IS NOT NULL</span>
+<span class="kw">REMOVE</span> p.autores, p.keywords
+
+<span class="cmt">-- VERIFICAR: ahora los autores son traversables y los keywords indexables</span>
+<span class="kw">MATCH</span> (a:Persona)-[:ES_AUTOR_DE]->(p:Paper)-[:TIENE_KEYWORD]->(k:Keyword)
+<span class="kw">WHERE</span> k.valor = <span class="str">"GNN"</span>
+<span class="kw">RETURN</span> p.titulo, <span class="fn">collect</span>(a.nombre) <span class="kw">AS</span> autores</code></pre>
+        </div>
+
+        <p>Si el JSON tiene estructura anidada más compleja — por ejemplo un objeto con múltiples campos en lugar de un array plano — el proceso es el mismo pero usando <code>apoc.convert.fromJsonMap</code> para parsear el objeto y acceder a sus campos por clave.</p>
+
+        <div class="code-block">
+            <div class="code-header"><span class="code-lang">cypher — Migrar JSON de objeto anidado a nodo con propiedades</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+            <pre><code><span class="cmt">-- SITUACIÓN: (:Sensor {id: "S-01", config: '{"frecuencia_hz": 10, "rango_m": 150, "modelo": "VLP-16"}'})</span>
+<span class="cmt">-- El config es un objeto, no un array. Puede ser un nodo propio si varios sensores comparten config.</span>
+
+<span class="kw">MATCH</span> (s:Sensor)
+<span class="kw">WHERE</span> s.config <span class="kw">IS NOT NULL</span>
+<span class="kw">WITH</span> s, <span class="fn">apoc.convert.fromJsonMap</span>(s.config) <span class="kw">AS</span> cfg
+<span class="kw">MERGE</span> (c:ConfigSensor {modelo: cfg.modelo, frecuencia_hz: cfg.frecuencia_hz, rango_m: cfg.rango_m})
+<span class="kw">MERGE</span> (s)-[:TIENE_CONFIG]->(c)
+<span class="kw">REMOVE</span> s.config
+
+<span class="cmt">-- Si la config es idéntica en múltiples sensores, MERGE los comparte automáticamente.</span>
+<span class="cmt">-- Si es única por sensor, considera aplanarla directamente como propiedades del sensor:</span>
+<span class="kw">MATCH</span> (s:Sensor)
+<span class="kw">WHERE</span> s.config <span class="kw">IS NOT NULL</span>
+<span class="kw">WITH</span> s, <span class="fn">apoc.convert.fromJsonMap</span>(s.config) <span class="kw">AS</span> cfg
+<span class="kw">SET</span> s.frecuencia_hz = cfg.frecuencia_hz,
+    s.rango_m       = cfg.rango_m,
+    s.modelo        = cfg.modelo
+<span class="kw">REMOVE</span> s.config</code></pre>
+        </div>
+
+        <h4>Cuándo SÍ usar MongoDB junto a Neo4j</h4>
+        <p>Hay un caso legítimo para tener ambas bases de datos en el mismo sistema: cuando parte de tus datos son genuinamente documentales — texto libre largo, blobs de configuración que nunca se consultan por campos internos, o payloads raw de eventos — y otra parte son las relaciones entre esas entidades. En ese caso, el patrón correcto es:</p>
+        <ul>
+            <li>En <strong>MongoDB</strong>: el documento completo con todos sus campos, incluyendo el contenido que no necesitas recorrer. Identificado por un <code>_id</code>.</li>
+            <li>En <strong>Neo4j</strong>: el nodo con solo los campos que participan en traversals o necesitan índice, más una propiedad <code>mongo_id</code> que actúa de referencia externa.</li>
+        </ul>
+        <div class="code-block">
+            <div class="code-header"><span class="code-lang">cypher — Referencia a documento MongoDB desde nodo Neo4j</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+            <pre><code><span class="cmt">-- Neo4j solo guarda lo que necesita para el grafo</span>
+(:Paper {
+  doi:      <span class="str">"10.1234/gnn-causal"</span>,
+  titulo:   <span class="str">"GNN causales en conducción"</span>,
+  year:     <span class="num">2025</span>,
+  mongo_id: <span class="str">"64a3f2b1c89de12345678901"</span>  <span class="cmt">-- apunta al documento completo en MongoDB</span>
+})
+
+<span class="cmt">-- El traversal de relaciones vive 100% en Neo4j</span>
+<span class="kw">MATCH</span> (a:Autor)-[:ES_AUTOR_DE]->(p:Paper)-[:CITA]->(citado:Paper)
+<span class="kw">WHERE</span> p.year > <span class="num">2023</span>
+<span class="kw">RETURN</span> p.titulo, p.mongo_id, <span class="fn">collect</span>(citado.titulo) <span class="kw">AS</span> citas
+
+<span class="cmt">-- En la capa de aplicación, con los mongo_id recuperados,</span>
+<span class="cmt">-- haces una segunda consulta a MongoDB para obtener el abstract completo,</span>
+<span class="cmt">-- las figuras, el PDF, etc.</span>
+<span class="cmt">-- Cada base de datos hace lo que mejor sabe hacer.</span></code></pre>
+        </div>
+        <div class="info-box info">
+            <div class="info-box-text"><strong>INFO — La regla de separación:</strong> si necesitas un campo para un <code>MATCH</code>, un <code>WHERE</code> o una relación → va en Neo4j. Si es solo para mostrarlo al usuario final y nunca participa en lógica de grafo → puede quedarse en MongoDB. Lo que nunca debes hacer es meter en Neo4j un JSON que luego parseas en la app para extraer el campo que sí necesitabas en el grafo.</div>
+        </div>
+
+        <div class="code-block">
+            <div class="code-header"><span class="code-lang">cypher — Schema e-commerce y sus queries principales</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+            <pre><code><span class="cmt">-- NODOS</span>
+(:Cliente {id, nombre, email})-[:VIVE_EN]->(:Ciudad {nombre, pais})
+(:Producto {sku, nombre, precio})-[:PERTENECE_A]->(:Categoria {nombre})
+(:Pedido {id, fecha, estado, total})-[:HECHO_POR]->(:Cliente)
+(:Pedido)-[:CONTIENE]->(lp:LineaPedido {cantidad, precio_unitario})-[:DE_PRODUCTO]->(:Producto)
+(:Reseña {puntuacion, texto})-[:ESCRITA_POR]->(:Cliente)
+(:Reseña)-[:SOBRE]->(:Producto)
+
+<span class="cmt">-- Productos más comprados por vecinos de ciudad</span>
+<span class="kw">MATCH</span> (c:Cliente {email: <span class="str">"user@lab.es"</span>})-[:VIVE_EN]->(ciudad:Ciudad)
+<span class="kw">MATCH</span> (ciudad)<-[:VIVE_EN]-(vecino:Cliente)<-[:HECHO_POR]-(p:Pedido)
+<span class="kw">MATCH</span> (p)-[:CONTIENE]->(lp:LineaPedido)-[:DE_PRODUCTO]->(prod:Producto)
+<span class="kw">RETURN</span> prod.nombre, <span class="fn">count</span>(*) <span class="kw">AS</span> popularidad <span class="kw">ORDER BY</span> popularidad <span class="kw">DESC LIMIT</span> <span class="num">10</span>
+
+<span class="cmt">-- Productos bien valorados en una categoría</span>
+<span class="kw">MATCH</span> (cat:Categoria {nombre: <span class="str">"Electrónica"</span>})<-[:PERTENECE_A]-(p:Producto)
+<span class="kw">MATCH</span> (r:Reseña)-[:SOBRE]->(p)
+<span class="kw">WITH</span> p, <span class="fn">avg</span>(r.puntuacion) <span class="kw">AS</span> media
+<span class="kw">WHERE</span> media > <span class="num">4</span>
+<span class="kw">RETURN</span> p.nombre, media <span class="kw">ORDER BY</span> media <span class="kw">DESC</span></code></pre>
+        </div>
+
+        <h2>7. Migración SQL → Grafo</h2>
+        <div class="table-wrapper">
+            <table>
+                <thead><tr><th>SQL</th><th>Neo4j</th><th>Notas</th></tr></thead>
+                <tbody>
+                    <tr><td>Tabla USERS</td><td>Nodo :User</td><td>Columnas → propiedades</td></tr>
+                    <tr><td>Tabla JOIN (user_roles)</td><td>Relación :TIENE_ROL</td><td>La tabla desaparece</td></tr>
+                    <tr><td>Foreign Key</td><td>Relación tipada</td><td>FK → nombre semántico de rel</td></tr>
+                    <tr><td>NULL en columna</td><td>Propiedad ausente</td><td>Sin campo, no "null"</td></tr>
+                    <tr><td>Tabla catálogo</td><td>Nodo compartido con label</td><td>Un nodo, múltiples relaciones</td></tr>
+                    <tr><td>Tabla N:M con atributos</td><td>Nodo intermedio</td><td>Hyperedge enriquecido</td></tr>
+                    <tr><td>Self-JOIN jerárquico</td><td>Relación :PADRE_DE recursiva</td><td>shortestPath() sin JOINs</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <h2>🧪 Ejercicios — Módulo 4</h2>
+        <div class="info-box info">
+            <div class="info-box-icon">📝</div>
+            <div class="info-box-text"><strong>E1:</strong> Modela un sistema de sensores para vehículos autónomos con al menos 6 tipos de nodo y 8 tipos de relación. Escribe el Cypher de creación completo.</div>
+        </div>
+        <div class="info-box info">
+            <div class="info-box-icon">📝</div>
+            <div class="info-box-text"><strong>E2:</strong> Añade un Time Tree al modelo e-commerce para registrar pedidos por año/mes. Escribe la query que devuelve los productos más vendidos en Q1 2026.</div>
+        </div>
+        <div class="info-box warning">
+            <div class="info-box-icon">📝</div>
+            <div class="info-box-text"><strong>E3 (Avanzado):</strong> Diseña el modelo para un Knowledge Graph de accidentes de vehículos autónomos: accidentes, causas raíz, sensores implicados, condiciones ambientales. ¿Qué nodo tiene riesgo de fan-out? ¿Cómo lo mitigarías?</div>
+        </div>
+
+        <div style="margin-top: 4rem; display: flex; justify-content: space-between;">
+            <a href="cypher-intermediate.html" class="btn btn-outline">← M3: Cypher II</a>
+            <a href="expert.html" class="btn btn-primary">Siguiente: Expert →</a>
+        </div>
+    </main>
+
+    <footer style="text-align: center; padding: 2rem; color: var(--text3); font-size: 0.8rem; border-top: 1px solid var(--border);">
+        &copy; 2026 LucentIA Research · Neo4j Zero to Expert
+    </footer>
+    <script>
+        const navbar = document.getElementById('navbar');
+        window.addEventListener('scroll', () => navbar.classList.toggle('scrolled', window.scrollY > 50));
+        document.getElementById('navToggle')?.addEventListener('click', () => document.querySelector('.nav-links').classList.toggle('open'));
+        function copyCode(btn) {
+            const code = btn.closest('.code-block').querySelector('pre').innerText;
+            navigator.clipboard.writeText(code).then(() => { btn.textContent = '✓ Copiado'; btn.classList.add('copied'); setTimeout(() => { btn.textContent = 'Copiar'; btn.classList.remove('copied'); }, 2000); });
+        }
+    </script>
+</body>
+</html>
