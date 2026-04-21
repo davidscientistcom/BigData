@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Lab 2 — Red Social (Facebook-style) | Neo4j Raw</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<nav class="navbar" id="navbar">
+    <div class="nav-inner">
+        <div class="nav-brand"><span class="brand-icon">🔬</span> Neo4j Raw</div>
+        <ul class="nav-links">
+            <li><a href="index.html">Inicio</a></li>
+            <li><a href="intro.html">M1: Fundamentos</a></li>
+            <li><a href="cypher-basics.html">M2: Cypher I</a></li>
+            <li><a href="cypher-intermediate.html">M3: Cypher II</a></li>
+            <li><a href="modeling.html">M4: Modelado</a></li>
+            <li><a href="expert.html">M5: Expert</a></li>
+            <li><a href="lab.html">M6: Lab</a></li>
+            <li><a href="lab1.html">Lab 1</a></li>
+            <li><a href="lab2.html" class="active">Lab 2</a></li>
+        </ul>
+        <button class="nav-mobile-btn" id="navToggle">☰</button>
+    </div>
+</nav>
+
+<header class="page-hero">
+    <span class="page-hero-icon">🌐</span>
+    <h1>Lab 2 — <span class="gradient-text">Red Social (Facebook-style)</span></h1>
+    <p>Diseña y construye desde cero una red social completa: usuarios, amistades, posts y likes. Implementa las consultas que hacen útiles los grafos — recomendaciones, caminos y centralidad.</p>
+</header>
+
+<main class="content">
+
+<!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+     1. POR QUÉ GRAFO
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+<h2>1. ¿Por qué un grafo para una red social?</h2>
+<p>Las redes sociales son el caso de uso canónico de los grafos. Las consultas más valiosas — "¿quién te recomiendo como amigo?", "¿cómo llegas a esta persona?", "¿quién influye más en tu red?" — son <strong>atravesales de grafo</strong> que en SQL requieren múltiples JOINs recursivos o tablas de cierre transitivo. En Neo4j son una sola línea de Cypher.</p>
+
+<div class="table-wrapper">
+    <table>
+        <thead><tr><th>Consulta</th><th>SQL</th><th>Cypher</th></tr></thead>
+        <tbody>
+            <tr><td>Amigos directos</td><td>1 JOIN a tabla de amistades</td><td><code>(u)-[:FRIENDS_WITH]-(f)</code></td></tr>
+            <tr><td>Amigos de amigos</td><td>2 JOINs + DISTINCT + WHERE filtro</td><td><code>(u)-[:FRIENDS_WITH*2]-(f)</code></td></tr>
+            <tr><td>Camino más corto</td><td>CTE recursiva + ROW_NUMBER</td><td><code>shortestPath((a)-[*..N]-(b))</code></td></tr>
+            <tr><td>Amigos en común</td><td>Subquery con INTERSECT</td><td><code>count(DISTINCT bridge)</code> en patrón 2-hop</td></tr>
+        </tbody>
+    </table>
+</div>
+
+<!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+     2. DISEÑO DEL ESQUEMA
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+<h2>2. Diseño del esquema</h2>
+
+<h3>2.1 Nodos</h3>
+<div class="table-wrapper">
+    <table>
+        <thead><tr><th>Label</th><th>Propiedades clave</th><th>Descripción</th></tr></thead>
+        <tbody>
+            <tr><td><code>:User</code></td><td><code>userId</code> (único), <code>name</code>, <code>city</code>, <code>joinedAt</code></td><td>Cuenta de usuario</td></tr>
+            <tr><td><code>:Post</code></td><td><code>postId</code> (único), <code>content</code>, <code>createdAt</code>, <code>views</code></td><td>Publicación de contenido</td></tr>
+            <tr><td><code>:Tag</code></td><td><code>name</code> (único)</td><td>Etiqueta temática</td></tr>
+        </tbody>
+    </table>
+</div>
+
+<h3>2.2 Relaciones</h3>
+<div class="table-wrapper">
+    <table>
+        <thead><tr><th>Tipo</th><th>Origen → Destino</th><th>Propiedades</th><th>Semántica</th></tr></thead>
+        <tbody>
+            <tr><td><code>:FRIENDS_WITH</code></td><td>User → User</td><td><code>since</code></td><td>Amistad — se consulta sin dirección con <code>-[]-</code></td></tr>
+            <tr><td><code>:POSTED</code></td><td>User → Post</td><td><code>at</code></td><td>Autoría del post</td></tr>
+            <tr><td><code>:LIKED</code></td><td>User → Post</td><td><code>at</code></td><td>Like de un usuario a un post</td></tr>
+            <tr><td><code>:COMMENTED</code></td><td>User → Post</td><td><code>text</code>, <code>at</code></td><td>Comentario de usuario en un post</td></tr>
+            <tr><td><code>:TAGGED_WITH</code></td><td>Post → Tag</td><td>—</td><td>Etiqueta asociada al post</td></tr>
+        </tbody>
+    </table>
+</div>
+
+<div class="info-box tip">
+    <div class="info-box-icon">💡</div>
+    <div class="info-box-text">
+        <strong>¿FRIENDS_WITH debe ser bidireccional?</strong> Modelamos la amistad como una sola relación dirigida arbitrariamente (A→B). En las consultas usamos <code>-[:FRIENDS_WITH]-</code> sin flecha para explorar ambos sentidos. Esto evita el anti-patrón de duplicar la relación.
+    </div>
+</div>
+
+<!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+     3. CONSTRUIR EL DATASET
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+<h2>3. Construir el dataset desde cero</h2>
+
+<h3>3.1 Limpieza e inicialización</h3>
+<div class="code-block">
+    <div class="code-header"><span class="code-lang">cypher — Paso 0: Reset</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+    <pre><code>// Elimina todo lo existente (solo en Labs)
+MATCH (n) DETACH DELETE n;</code></pre>
+</div>
+
+<h3>3.2 Constraints e índices</h3>
+<div class="code-block">
+    <div class="code-header"><span class="code-lang">cypher — Paso 1: Esquema</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+    <pre><code>CREATE CONSTRAINT user_id_unique  IF NOT EXISTS FOR (u:User) REQUIRE u.userId  IS UNIQUE;
+CREATE CONSTRAINT post_id_unique  IF NOT EXISTS FOR (p:Post) REQUIRE p.postId  IS UNIQUE;
+CREATE CONSTRAINT tag_name_unique IF NOT EXISTS FOR (t:Tag)  REQUIRE t.name    IS UNIQUE;
+
+CREATE INDEX user_name_idx IF NOT EXISTS FOR (u:User) ON (u.name);
+CREATE INDEX user_city_idx IF NOT EXISTS FOR (u:User) ON (u.city);</code></pre>
+</div>
+
+<h3>3.3 Insertar usuarios</h3>
+<div class="code-block">
+    <div class="code-header"><span class="code-lang">cypher — Paso 2: Usuarios</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+    <pre><code>UNWIND [
+  {id:"u1", name:"Alice",  city:"Madrid",    joined:"2019-03-10"},
+  {id:"u2", name:"Bob",    city:"Barcelona", joined:"2018-07-22"},
+  {id:"u3", name:"Clara",  city:"Madrid",    joined:"2020-01-05"},
+  {id:"u4", name:"David",  city:"Valencia",  joined:"2017-11-30"},
+  {id:"u5", name:"Eva",    city:"Sevilla",   joined:"2021-06-14"},
+  {id:"u6", name:"Frank",  city:"Barcelona", joined:"2019-09-01"},
+  {id:"u7", name:"Gloria", city:"Madrid",    joined:"2022-02-28"},
+  {id:"u8", name:"Hector", city:"Valencia",  joined:"2016-04-18"}
+] AS row
+MERGE (u:User {userId: row.id})
+  ON CREATE SET u.name = row.name, u.city = row.city,
+                u.joinedAt = date(row.joined), u.active = true;</code></pre>
+</div>
+
+<h3>3.4 Insertar amistades</h3>
+<div class="code-block">
+    <div class="code-header"><span class="code-lang">cypher — Paso 3: FRIENDS_WITH</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+    <pre><code>UNWIND [
+  {a:"u1", b:"u2", since:"2020-01-10"},
+  {a:"u1", b:"u3", since:"2020-05-20"},
+  {a:"u2", b:"u3", since:"2021-03-07"},
+  {a:"u2", b:"u4", since:"2019-08-15"},
+  {a:"u3", b:"u5", since:"2022-02-11"},
+  {a:"u4", b:"u6", since:"2020-11-30"},
+  {a:"u5", b:"u7", since:"2023-01-05"},
+  {a:"u6", b:"u7", since:"2021-07-22"},
+  {a:"u6", b:"u8", since:"2018-12-01"},
+  {a:"u7", b:"u8", since:"2022-09-09"}
+] AS row
+MATCH (a:User {userId: row.a}), (b:User {userId: row.b})
+MERGE (a)-[r:FRIENDS_WITH]->(b)
+  ON CREATE SET r.since = date(row.since);</code></pre>
+</div>
+
+<h3>3.5 Insertar posts</h3>
+<div class="code-block">
+    <div class="code-header"><span class="code-lang">cypher — Paso 4: Posts</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+    <pre><code>UNWIND [
+  {pid:"p1", author:"u1", content:"Mi primer post de grafos!", views:320, at:"2023-01-10"},
+  {pid:"p2", author:"u2", content:"Neo4j es increible para redes sociales.", views:540, at:"2023-01-15"},
+  {pid:"p3", author:"u3", content:"Tutorial: MATCH multi-hop en Cypher.", views:890, at:"2023-02-01"},
+  {pid:"p4", author:"u1", content:"Alguien mas usa GDS para PageRank?", views:210, at:"2023-02-14"},
+  {pid:"p5", author:"u4", content:"Comparativa: Neo4j vs ArangoDB.", views:1200, at:"2023-03-05"},
+  {pid:"p6", author:"u6", content:"Comunidades detectadas con Louvain.", views:670, at:"2023-03-20"}
+] AS row
+MATCH (u:User {userId: row.author})
+MERGE (p:Post {postId: row.pid})
+  ON CREATE SET p.content = row.content, p.views = row.views, p.createdAt = date(row.at)
+MERGE (u)-[:POSTED {at: date(row.at)}]->(p);</code></pre>
+</div>
+
+<h3>3.6 Insertar likes</h3>
+<div class="code-block">
+    <div class="code-header"><span class="code-lang">cypher — Paso 5: LIKED</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+    <pre><code>UNWIND [
+  {user:"u2", post:"p1"}, {user:"u3", post:"p1"}, {user:"u4", post:"p1"},
+  {user:"u1", post:"p2"}, {user:"u5", post:"p2"}, {user:"u7", post:"p2"},
+  {user:"u1", post:"p3"}, {user:"u2", post:"p3"}, {user:"u6", post:"p3"}, {user:"u8", post:"p3"},
+  {user:"u3", post:"p5"}, {user:"u6", post:"p5"}, {user:"u8", post:"p5"},
+  {user:"u1", post:"p6"}, {user:"u5", post:"p6"}
+] AS row
+MATCH (u:User {userId: row.user}), (p:Post {postId: row.post})
+MERGE (u)-[:LIKED {at: date()}]->(p);</code></pre>
+</div>
+
+<h3>3.7 Insertar comentarios</h3>
+<div class="code-block">
+    <div class="code-header"><span class="code-lang">cypher — Paso 6: COMMENTED</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+    <pre><code>UNWIND [
+  {user:"u2", post:"p1", text:"Gran post Alice!"},
+  {user:"u5", post:"p3", text:"Muy claro el tutorial."},
+  {user:"u8", post:"p5", text:"Falta hablar de TigerGraph."},
+  {user:"u3", post:"p2", text:"Totalmente de acuerdo."}
+] AS row
+MATCH (u:User {userId: row.user}), (p:Post {postId: row.post})
+CREATE (u)-[:COMMENTED {text: row.text, at: date()}]->(p);</code></pre>
+</div>
+
+<h3>3.8 Insertar tags</h3>
+<div class="code-block">
+    <div class="code-header"><span class="code-lang">cypher — Paso 7: Tags</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+    <pre><code>UNWIND [
+  {post:"p1", tag:"grafos"}, {post:"p2", tag:"grafos"}, {post:"p3", tag:"cypher"},
+  {post:"p3", tag:"tutorial"}, {post:"p4", tag:"gds"}, {post:"p5", tag:"grafos"},
+  {post:"p5", tag:"comparativa"}, {post:"p6", tag:"gds"}, {post:"p6", tag:"comunidades"}
+] AS row
+MATCH (p:Post {postId: row.post})
+MERGE (t:Tag {name: row.tag})
+MERGE (p)-[:TAGGED_WITH]->(t);</code></pre>
+</div>
+
+<h3>3.9 Verificación del grafo completo</h3>
+<div class="code-block">
+    <div class="code-header"><span class="code-lang">cypher</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+    <pre><code>MATCH (n) RETURN labels(n)[0] AS label, count(n) AS total ORDER BY total DESC;
+MATCH ()-[r]->() RETURN type(r) AS relacion, count(r) AS total ORDER BY total DESC;</code></pre>
+</div>
+<p><strong>Salida esperada:</strong></p>
+<div class="table-wrapper">
+    <table>
+        <thead><tr><th>label / relacion</th><th>total</th></tr></thead>
+        <tbody>
+            <tr><td>User</td><td>8</td></tr>
+            <tr><td>Post</td><td>6</td></tr>
+            <tr><td>Tag</td><td>6</td></tr>
+            <tr><td>LIKED</td><td>15</td></tr>
+            <tr><td>FRIENDS_WITH</td><td>10</td></tr>
+            <tr><td>TAGGED_WITH</td><td>9</td></tr>
+            <tr><td>POSTED</td><td>6</td></tr>
+            <tr><td>COMMENTED</td><td>4</td></tr>
+        </tbody>
+    </table>
+</div>
+
+<!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+     4. CONSULTAS RESUELTAS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+<h2>4. Consultas resueltas paso a paso</h2>
+
+<h3>Q1 — Amigos directos de Alice</h3>
+<div class="code-block">
+    <div class="code-header"><span class="code-lang">cypher</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+    <pre><code>MATCH (me:User {name:"Alice"})-[r:FRIENDS_WITH]-(friend:User)
+RETURN friend.name AS amigo, friend.city AS ciudad, r.since AS desde
+ORDER BY r.since;</code></pre>
+</div>
+<p><strong>Salida esperada:</strong></p>
+<div class="table-wrapper">
+    <table>
+        <thead><tr><th>amigo</th><th>ciudad</th><th>desde</th></tr></thead>
+        <tbody>
+            <tr><td>Bob</td><td>Barcelona</td><td>2020-01-10</td></tr>
+            <tr><td>Clara</td><td>Madrid</td><td>2020-05-20</td></tr>
+        </tbody>
+    </table>
+</div>
+
+<h3>Q2 — Recomendación de amigos (amigos de amigos)</h3>
+<p>Sugerir nuevos amigos a Alice mostrando los amigos en común, excluyendo sus amigos ya directos y a sí misma.</p>
+<div class="code-block">
+    <div class="code-header"><span class="code-lang">cypher</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+    <pre><code>MATCH (me:User {name:"Alice"})-[:FRIENDS_WITH]-(friend)-[:FRIENDS_WITH]-(candidate:User)
+WHERE NOT (me)-[:FRIENDS_WITH]-(candidate)
+  AND me &lt;&gt; candidate
+RETURN candidate.name         AS recomendado,
+       candidate.city         AS ciudad,
+       count(DISTINCT friend) AS amigos_en_comun
+ORDER BY amigos_en_comun DESC, candidate.name;</code></pre>
+</div>
+<p><strong>Salida esperada:</strong></p>
+<div class="table-wrapper">
+    <table>
+        <thead><tr><th>recomendado</th><th>ciudad</th><th>amigos_en_comun</th></tr></thead>
+        <tbody>
+            <tr><td>David</td><td>Valencia</td><td>1</td></tr>
+            <tr><td>Eva</td><td>Sevilla</td><td>1</td></tr>
+        </tbody>
+    </table>
+</div>
+<div class="info-box info">
+    <div class="info-box-icon">ℹ️</div>
+    <div class="info-box-text">
+        <strong>¿Por qué <code>count(DISTINCT friend)</code>?</strong> Porque un candidato puede ser amigo de múltiples amigos de Alice. El DISTINCT evita contar el mismo puente más de una vez cuando hay varios caminos.
+    </div>
+</div>
+
+<h3>Q3 — Amigos en común entre dos usuarios</h3>
+<div class="code-block">
+    <div class="code-header"><span class="code-lang">cypher</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+    <pre><code>MATCH (a:User {name:"Bob"})-[:FRIENDS_WITH]-(common)-[:FRIENDS_WITH]-(b:User {name:"Clara"})
+RETURN common.name AS en_comun;</code></pre>
+</div>
+<p><strong>Salida esperada:</strong> <code>Alice</code> — amiga compartida de Bob y Clara.</p>
+
+<h3>Q4 — Grado de separación entre Alice y Hector</h3>
+<div class="code-block">
+    <div class="code-header"><span class="code-lang">cypher</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+    <pre><code>MATCH path = shortestPath(
+  (a:User {name:"Alice"})-[:FRIENDS_WITH*..8]-(h:User {name:"Hector"})
+)
+RETURN [n IN nodes(path) | n.name] AS ruta, length(path) AS saltos;</code></pre>
+</div>
+<p><strong>Salida esperada:</strong></p>
+<div class="table-wrapper">
+    <table>
+        <thead><tr><th>ruta</th><th>saltos</th></tr></thead>
+        <tbody>
+            <tr><td>["Alice","Bob","David","Frank","Hector"]</td><td>4</td></tr>
+        </tbody>
+    </table>
+</div>
+
+<h3>Q5 — Usuarios más populares (por número de amigos)</h3>
+<div class="code-block">
+    <div class="code-header"><span class="code-lang">cypher</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+    <pre><code>MATCH (u:User)
+OPTIONAL MATCH (u)-[:FRIENDS_WITH]-(friend)
+RETURN u.name AS usuario, u.city AS ciudad,
+       count(DISTINCT friend) AS num_amigos
+ORDER BY num_amigos DESC
+LIMIT 5;</code></pre>
+</div>
+<p><strong>Salida esperada (top 3):</strong></p>
+<div class="table-wrapper">
+    <table>
+        <thead><tr><th>usuario</th><th>ciudad</th><th>num_amigos</th></tr></thead>
+        <tbody>
+            <tr><td>Bob</td><td>Barcelona</td><td>3</td></tr>
+            <tr><td>Frank</td><td>Barcelona</td><td>3</td></tr>
+            <tr><td>Gloria</td><td>Madrid</td><td>3</td></tr>
+        </tbody>
+    </table>
+</div>
+
+<h3>Q6 — Posts más populares (por likes)</h3>
+<div class="code-block">
+    <div class="code-header"><span class="code-lang">cypher</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+    <pre><code>MATCH (p:Post)
+OPTIONAL MATCH (:User)-[:LIKED]->(p)
+WITH p, count(*) AS likes
+MATCH (author:User)-[:POSTED]->(p)
+RETURN p.postId AS post, author.name AS autor,
+       left(p.content, 45) AS preview,
+       p.views AS views, likes
+ORDER BY likes DESC;</code></pre>
+</div>
+<p><strong>Salida esperada (top 3):</strong></p>
+<div class="table-wrapper">
+    <table>
+        <thead><tr><th>post</th><th>autor</th><th>views</th><th>likes</th></tr></thead>
+        <tbody>
+            <tr><td>p3</td><td>Clara</td><td>890</td><td>4</td></tr>
+            <tr><td>p1</td><td>Alice</td><td>320</td><td>3</td></tr>
+            <tr><td>p5</td><td>David</td><td>1200</td><td>3</td></tr>
+        </tbody>
+    </table>
+</div>
+
+<h3>Q7 — Intereses compartidos por tag</h3>
+<p>Encuentra pares de usuarios que han dado like a posts con el mismo tag — señal de interés compartido para futuras recomendaciones.</p>
+<div class="code-block">
+    <div class="code-header"><span class="code-lang">cypher</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+    <pre><code>MATCH (a:User)-[:LIKED]->(p1:Post)-[:TAGGED_WITH]->(t:Tag)
+      &lt;-[:TAGGED_WITH]-(p2:Post)&lt;-[:LIKED]-(b:User)
+WHERE a.userId &lt; b.userId
+RETURN a.name AS u1, b.name AS u2,
+       collect(DISTINCT t.name) AS tags_comunes,
+       count(DISTINCT t)        AS num_tags
+ORDER BY num_tags DESC
+LIMIT 8;</code></pre>
+</div>
+
+<h3>Q8 — Recomendación de posts (collaborative filtering)</h3>
+<p>Recomendar a Alice posts que han gustado a sus amigos pero que ella todavía no ha visto (no ha dado like y no son suyos).</p>
+<div class="code-block">
+    <div class="code-header"><span class="code-lang">cypher</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+    <pre><code>MATCH (me:User {name:"Alice"})-[:FRIENDS_WITH]-(friend)-[:LIKED]->(rec:Post)
+WHERE NOT (me)-[:LIKED]->(rec)
+  AND NOT (me)-[:POSTED]->(rec)
+RETURN rec.postId AS post,
+       left(rec.content, 50) AS preview,
+       count(DISTINCT friend) AS amigos_que_gustaron
+ORDER BY amigos_que_gustaron DESC;</code></pre>
+</div>
+
+<!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+     5. GDS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+<h2>5. Análisis avanzado: Centralidad y Comunidades (GDS)</h2>
+
+<div class="info-box warning">
+    <div class="info-box-icon">⚠️</div>
+    <div class="info-box-text">
+        Estas consultas requieren el plugin <strong>Graph Data Science (GDS)</strong>. Para activarlo en Docker añade el parámetro: <code>-e NEO4JPLUGINS='["graph-data-science"]'</code> al comando <code>docker run</code>.
+    </div>
+</div>
+
+<h3>5.1 PageRank — usuarios influyentes</h3>
+<div class="code-block">
+    <div class="code-header"><span class="code-lang">cypher</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+    <pre><code>// 1. Crear proyección en memoria
+CALL gds.graph.project(
+  'social',
+  'User',
+  {FRIENDS_WITH: {orientation: 'UNDIRECTED'}}
+);
+
+// 2. Calcular PageRank (stream: no persiste resultados)
+CALL gds.pageRank.stream('social')
+YIELD nodeId, score
+RETURN gds.util.asNode(nodeId).name AS usuario, round(score, 4) AS pagerank
+ORDER BY pagerank DESC;
+
+// 3. Limpiar la proyección al terminar
+CALL gds.graph.drop('social');</code></pre>
+</div>
+
+<h3>5.2 Label Propagation — detección de comunidades</h3>
+<div class="code-block">
+    <div class="code-header"><span class="code-lang">cypher</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+    <pre><code>CALL gds.graph.project('social-lpa', 'User', {FRIENDS_WITH: {orientation:'UNDIRECTED'}});
+
+CALL gds.labelPropagation.stream('social-lpa')
+YIELD nodeId, communityId
+RETURN communityId,
+       collect(gds.util.asNode(nodeId).name) AS miembros,
+       count(*) AS tamano
+ORDER BY tamano DESC;
+
+CALL gds.graph.drop('social-lpa');</code></pre>
+</div>
+
+<!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+     6. EJERCICIOS PROPUESTOS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+<h2>6. Ejercicios propuestos</h2>
+
+<div class="info-box info">
+    <div class="info-box-icon">ℹ️</div>
+    <div class="info-box-text">
+        <strong>E1:</strong> Encuentra usuarios de Madrid que no han publicado ningún post. Pista: <code>OPTIONAL MATCH (u)-[:POSTED]->(p)</code> + <code>WHERE p IS NULL</code>.
+    </div>
+</div>
+<div class="info-box info">
+    <div class="info-box-icon">ℹ️</div>
+    <div class="info-box-text">
+        <strong>E2:</strong> ¿Cuántos likes acumula cada <code>:Tag</code> en total? Suma los likes de todos los posts etiquetados con ese tag. Ordena de mayor a menor.
+    </div>
+</div>
+<div class="info-box info">
+    <div class="info-box-icon">ℹ️</div>
+    <div class="info-box-text">
+        <strong>E3:</strong> Calcula el <em>engagement rate</em> de cada post: <code>(likes + comentarios) / views * 100.0</code>. Devuelve los 3 posts con mayor engagement. Pista: usa <code>size([(u)-[:LIKED]->(p) | u])</code> para contar likes inline.
+    </div>
+</div>
+<div class="info-box info">
+    <div class="info-box-icon">ℹ️</div>
+    <div class="info-box-text">
+        <strong>E4 (avanzado):</strong> Detecta triángulos de amistad — grupos de 3 usuarios donde todos son amigos entre sí. ¿Cuántos triángulos distintos hay? Pista: <code>WHERE a.userId &lt; b.userId AND b.userId &lt; c.userId</code> para evitar duplicados.
+    </div>
+</div>
+
+<!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+     7. EXTENSIONES DEL MODELO
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+<h2>7. Extensiones del modelo</h2>
+<div class="table-wrapper">
+    <table>
+        <thead><tr><th>Extensión</th><th>Nuevos elementos</th><th>Consulta de ejemplo</th></tr></thead>
+        <tbody>
+            <tr><td>Grupos / Comunidades</td><td><code>:Group</code>, <code>:MEMBER_OF</code></td><td>Posts populares en grupos donde eres miembro</td></tr>
+            <tr><td>Mensajes directos</td><td><code>:Message</code>, <code>:SENT_TO</code></td><td>Historial de conversación entre dos usuarios</td></tr>
+            <tr><td>Follows asimétrico (Twitter-style)</td><td><code>:FOLLOWS</code> (dirigida)</td><td>Feed: posts de las cuentas que sigues</td></tr>
+            <tr><td>Reacciones múltiples</td><td>Propiedad <code>type</code> en <code>:LIKED</code></td><td>Distribución de tipos de reacción por post</td></tr>
+            <tr><td>Historias / Stories</td><td><code>:Story</code>, <code>:VIEWED</code></td><td>Quién ha visto mi historia en las últimas 24h</td></tr>
+        </tbody>
+    </table>
+</div>
+
+<div style="margin-top: 4rem; display: flex; justify-content: space-between;">
+    <a href="lab1.html" class="btn btn-outline">← Lab 1: Crear la BD</a>
+    <a href="expert.html" class="btn btn-primary">M5: Expert →</a>
+</div>
+
+</main>
+
+<footer style="text-align:center;padding:2rem;color:var(--text3);font-size:0.8rem;border-top:1px solid var(--border);">
+    &copy; 2026 LucentIA Research · Neo4j Zero to Expert
+</footer>
+<script>
+    const navbar = document.getElementById('navbar');
+    window.addEventListener('scroll', () => navbar.classList.toggle('scrolled', window.scrollY > 50));
+    document.getElementById('navToggle')?.addEventListener('click', () => document.querySelector('.nav-links').classList.toggle('open'));
+    function copyCode(btn) {
+        const code = btn.closest('.code-block').querySelector('pre').innerText;
+        navigator.clipboard.writeText(code).then(() => {
+            btn.textContent = '✓ Copiado';
+            btn.classList.add('copied');
+            setTimeout(() => { btn.textContent = 'Copiar'; btn.classList.remove('copied'); }, 2000);
+        });
+    }
+</script>
+</body>
+</html>

@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Lab 1 — Crear la BD desde cero | Neo4j Raw</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<nav class="navbar" id="navbar">
+    <div class="nav-inner">
+        <div class="nav-brand"><span class="brand-icon">🔬</span> Neo4j Raw</div>
+        <ul class="nav-links">
+            <li><a href="index.html">Inicio</a></li>
+            <li><a href="intro.html">M1: Fundamentos</a></li>
+            <li><a href="cypher-basics.html">M2: Cypher I</a></li>
+            <li><a href="cypher-intermediate.html">M3: Cypher II</a></li>
+            <li><a href="modeling.html">M4: Modelado</a></li>
+            <li><a href="expert.html">M5: Expert</a></li>
+            <li><a href="lab.html">M6: Lab</a></li>
+            <li><a href="lab1.html" class="active">Lab 1</a></li>
+            <li><a href="lab2.html">Lab 2</a></li>
+        </ul>
+        <button class="nav-mobile-btn" id="navToggle">☰</button>
+    </div>
+</nav>
+
+<header class="page-hero">
+    <span class="page-hero-icon">🛠️</span>
+    <h1>Lab 1 — <span class="gradient-text">Crear la BD desde cero</span></h1>
+    <p>Levanta Neo4j, define el esquema con constraints e índices, y domina <code>CREATE</code>, <code>MERGE</code> y <code>MATCH</code> con ejercicios reales y salidas esperadas.</p>
+</header>
+
+<main class="content">
+
+<!-- ═══════════════════════════════════════════════
+     1. ENTORNO
+═══════════════════════════════════════════════ -->
+<h2>1. Entorno: levantar Neo4j con Docker</h2>
+<p>El entorno más reproducible para practicar es un contenedor Docker limpio. Estas instrucciones son <strong>agnósticas</strong> — funcionan en cualquier máquina con Docker instalado.</p>
+
+<h3>1.1 Requisitos previos</h3>
+<ul>
+    <li>Docker Engine ≥ 24 o Docker Desktop</li>
+    <li>Puerto <strong>7474</strong> (HTTP Browser) y <strong>7687</strong> (Bolt) libres en tu máquina</li>
+    <li>~512 MB de RAM disponibles para el contenedor</li>
+</ul>
+
+<h3>1.2 Iniciar el contenedor</h3>
+<div class="code-block">
+    <div class="code-header"><span class="code-lang">bash</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+    <pre><code>docker run \
+  --name neo4j-lab \
+  -p 7474:7474 -p 7687:7687 \
+  -e NEO4J_AUTH=neo4j/your_password \
+  -e NEO4J_server_memory_heap_max__size=512m \
+  --rm \
+  neo4j:5.18</code></pre>
+</div>
+
+<div class="info-box tip">
+    <div class="info-box-icon">💡</div>
+    <div class="info-box-text">
+        <strong>Flag <code>--rm</code></strong>: elimina el contenedor al pararlo. Perfecto para Labs donde quieres empezar desde cero cada vez. Si quieres persistencia entre reinicios, añade <code>-v $PWD/neo4j-data:/data</code>.
+    </div>
+</div>
+
+<h3>1.3 Verificar que Neo4j está listo</h3>
+<p>El arranque tarda ~10-20 segundos. Cuando veas en la consola la línea:</p>
+<div class="code-block">
+    <div class="code-header"><span class="code-lang">log</span></div>
+    <pre><code>INFO  Remote interface available at http://localhost:7474/</code></pre>
+</div>
+<p>abre <a href="http://localhost:7474" target="_blank">http://localhost:7474</a> en el navegador e introduce las credenciales: usuario <code>neo4j</code>, contraseña <code>your_password</code>.</p>
+
+<h3>1.4 Acceso alternativo: cypher-shell</h3>
+<div class="code-block">
+    <div class="code-header"><span class="code-lang">bash</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+    <pre><code># Desde el host (requiere cypher-shell instalado localmente)
+cypher-shell -u neo4j -p your_password -a bolt://localhost:7687
+
+# O desde dentro del mismo contenedor
+docker exec -it neo4j-lab cypher-shell -u neo4j -p your_password</code></pre>
+</div>
+
+<div class="info-box warning">
+    <div class="info-box-icon">⚠️</div>
+    <div class="info-box-text">
+        <strong>Primer login obligatorio:</strong> Neo4j te forzará a cambiar la contraseña en el primer acceso si usas la interfaz web. En cypher-shell puedes pasar la nueva contraseña directamente con <code>ALTER CURRENT USER SET PASSWORD FROM 'old' TO 'new';</code>
+    </div>
+</div>
+
+<h3>1.5 Seleccionar la base de datos correcta</h3>
+<p>Neo4j Enterprise permite múltiples bases de datos. En Community Edition (la imagen gratuita) solo existe <code>neo4j</code> por defecto. Antes de cualquier operación, asegúrate de estar en ella:</p>
+<div class="code-block">
+    <div class="code-header"><span class="code-lang">cypher</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+    <pre><code>:use neo4j    -- en el Browser
+
+-- o en cypher-shell:
+SHOW DATABASES;
+-- verifica que neo4j está en estado "online"</code></pre>
+</div>
+
+<!-- ═══════════════════════════════════════════════
+     2. CONSTRAINTS E ÍNDICES
+═══════════════════════════════════════════════ -->
+<h2>2. Esquema: Constraints e Índices</h2>
+<p>En grafos, el "esquema" no es un DDL rígido como en SQL — es opcional pero altamente recomendado. Los <strong>constraints</strong> garantizan integridad; los <strong>índices</strong> garantizan rendimiento.</p>
+
+<h3>2.1 ¿Por qué definirlos antes de insertar datos?</h3>
+<div class="info-box info">
+    <div class="info-box-icon">ℹ️</div>
+    <div class="info-box-text">
+        Si creas un constraint <em>después</em> de insertar datos, Neo4j intentará validar retroactivamente todos los nodos existentes. Si hay duplicados, el constraint fallará con un error. <strong>Define siempre el esquema antes de cargar datos.</strong>
+    </div>
+</div>
+
+<h3>2.2 Constraint de unicidad</h3>
+<p>Impide que existan dos nodos con el mismo valor en una propiedad. Implícitamente crea también un índice sobre esa propiedad.</p>
+<div class="code-block">
+    <div class="code-header"><span class="code-lang">cypher</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+    <pre><code>-- Constraint de unicidad: no puede haber dos :Persona con el mismo email
+CREATE CONSTRAINT persona_email_unique
+  IF NOT EXISTS
+  FOR (p:Persona)
+  REQUIRE p.email IS UNIQUE;
+
+-- Constraint de unicidad sobre un :Producto por su SKU
+CREATE CONSTRAINT producto_sku_unique
+  IF NOT EXISTS
+  FOR (pr:Producto)
+  REQUIRE pr.sku IS UNIQUE;</code></pre>
+</div>
+
+<h3>2.3 Constraint de existencia (propiedad obligatoria)</h3>
+<div class="code-block">
+    <div class="code-header"><span class="code-lang">cypher</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+    <pre><code>-- Todo nodo :Persona debe tener la propiedad nombre
+CREATE CONSTRAINT persona_nombre_exists
+  IF NOT EXISTS
+  FOR (p:Persona)
+  REQUIRE p.nombre IS NOT NULL;</code></pre>
+</div>
+
+<div class="info-box warning">
+    <div class="info-box-icon">⚠️</div>
+    <div class="info-box-text">
+        <strong>Constraints de existencia</strong> solo están disponibles en Neo4j Enterprise Edition. En Community Edition (imagen gratuita) solo puedes usar constraints de unicidad.
+    </div>
+</div>
+
+<h3>2.4 Índices adicionales (sin unicidad)</h3>
+<div class="code-block">
+    <div class="code-header"><span class="code-lang">cypher</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+    <pre><code>-- Índice para acelerar búsquedas por nombre (sin unicidad)
+CREATE INDEX persona_nombre_idx
+  IF NOT EXISTS
+  FOR (p:Persona) ON (p.nombre);
+
+-- Índice compuesto: ciudad + fechaNacimiento
+CREATE INDEX persona_ciudad_fecha_idx
+  IF NOT EXISTS
+  FOR (p:Persona) ON (p.ciudad, p.fechaNacimiento);</code></pre>
+</div>
+
+<h3>2.5 Verificar los constraints e índices creados</h3>
+<div class="code-block">
+    <div class="code-header"><span class="code-lang">cypher</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+    <pre><code>SHOW CONSTRAINTS;
+SHOW INDEXES;</code></pre>
+</div>
+<p>Deberías ver algo como:</p>
+<div class="table-wrapper">
+    <table>
+        <thead><tr><th>name</th><th>type</th><th>labelsOrTypes</th><th>properties</th><th>state</th></tr></thead>
+        <tbody>
+            <tr><td>persona_email_unique</td><td>UNIQUENESS</td><td>Persona</td><td>[email]</td><td>ONLINE</td></tr>
+            <tr><td>producto_sku_unique</td><td>UNIQUENESS</td><td>Producto</td><td>[sku]</td><td>ONLINE</td></tr>
+            <tr><td>persona_nombre_idx</td><td>RANGE</td><td>Persona</td><td>[nombre]</td><td>ONLINE</td></tr>
+        </tbody>
+    </table>
+</div>
+
+<!-- ═══════════════════════════════════════════════
+     3. CREATE
+═══════════════════════════════════════════════ -->
+<h2>3. CREATE — Crear nodos y relaciones</h2>
+<p><code>CREATE</code> siempre inserta <strong>nuevas entidades</strong>, sin comprobar si ya existen. Es el comando más directo pero el más peligroso si se invoca varias veces sobre los mismos datos.</p>
+
+<h3>3.1 Mecánica interna</h3>
+<div class="info-box info">
+    <div class="info-box-icon">ℹ️</div>
+    <div class="info-box-text">
+        Cada <code>CREATE</code> abre una transacción, asigna un <strong>Node ID interno</strong> (autoincremental, no reutilizable), escribe en el store de nodos y en el store de propiedades. Si hay un constraint de unicidad y el valor ya existe, la transacción hace <strong>rollback completo</strong> y lanza <code>ConstraintValidationFailed</code>.
+    </div>
+</div>
+
+<h3>3.2 Crear un nodo simple</h3>
+<div class="code-block">
+    <div class="code-header"><span class="code-lang">cypher</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+    <pre><code>-- Nodo sin propiedades (válido pero poco útil)
+CREATE (:Persona);
+
+-- Nodo con label y propiedades
+CREATE (:Persona {
+  nombre: "Ana García",
+  email:  "ana@example.com",
+  edad:   28,
+  ciudad: "Valencia"
+});
+
+-- Guardar referencia para usar en la misma query
+CREATE (p:Persona {nombre: "Carlos López", email: "carlos@example.com"})
+RETURN p.nombre, id(p) AS interno;</code></pre>
+</div>
+
+<h3>3.3 Crear múltiples nodos en una sola sentencia</h3>
+<div class="code-block">
+    <div class="code-header"><span class="code-lang">cypher</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+    <pre><code>CREATE
+  (:Persona {nombre: "Bea Ruiz",   email: "bea@example.com",   ciudad: "Madrid"}),
+  (:Persona {nombre: "Diego Mora", email: "diego@example.com", ciudad: "Barcelona"}),
+  (:Persona {nombre: "Elena Sanz", email: "elena@example.com", ciudad: "Sevilla"});</code></pre>
+</div>
+
+<h3>3.4 Crear nodos y relaciones en el mismo CREATE</h3>
+<div class="code-block">
+    <div class="code-header"><span class="code-lang">cypher</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+    <pre><code>-- Crea ambos nodos Y la relación en una sola transacción
+CREATE (emp:Empresa {nombre: "Acme", sede: "Madrid"})
+CREATE (emp)-[:TIENE_SEDE_EN]->(:Ciudad {nombre: "Madrid"});
+
+-- O en una sola cláusula CREATE (nodos inlineados)
+CREATE (:Investigador {nombre: "Raúl"})-[:TRABAJA_EN]->(:Universidad {nombre: "UPV"});</code></pre>
+</div>
+
+<h3>3.5 Crear relación entre nodos ya existentes</h3>
+<div class="code-block">
+    <div class="code-header"><span class="code-lang">cypher</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+    <pre><code>-- Primero localiza los nodos, luego conecta
+MATCH (a:Persona {email: "ana@example.com"})
+MATCH (b:Persona {email: "carlos@example.com"})
+CREATE (a)-[:CONOCE {desde: date("2023-05-01")}]->(b);</code></pre>
+</div>
+
+<div class="info-box danger">
+    <div class="info-box-icon">🚨</div>
+    <div class="info-box-text">
+        <strong>Anti-patrón frecuente:</strong> ejecutar <code>CREATE (:Persona {email: "ana@example.com"})</code> dos veces. Si hay un constraint de unicidad en <code>email</code>, la segunda ejecución fallará con error. Si <em>no</em> hay constraint, se crearán <strong>dos nodos Ana</strong> — duplicados silenciosos.
+    </div>
+</div>
+
+<h3>3.6 Cuándo usar CREATE (y cuándo no)</h3>
+<div class="table-wrapper">
+    <table>
+        <thead><tr><th>Situación</th><th>Usa CREATE</th><th>Usa MERGE</th></tr></thead>
+        <tbody>
+            <tr><td>Insertar registros únicos garantizados (carga inicial única)</td><td>✅</td><td></td></tr>
+            <tr><td>Crear eventos o logs (siempre nuevos)</td><td>✅</td><td></td></tr>
+            <tr><td>Insertar entidades que pueden repetirse</td><td></td><td>✅</td></tr>
+            <tr><td>Scripts idempotentes (se pueden re-ejecutar)</td><td></td><td>✅</td></tr>
+        </tbody>
+    </table>
+</div>
+
+<!-- ═══════════════════════════════════════════════
+     4. MERGE
+═══════════════════════════════════════════════ -->
+<h2>4. MERGE — Insertar o actualizar (upsert)</h2>
+<p><code>MERGE</code> es el equivalente al patrón <em>upsert</em>: busca si el patrón especificado ya existe en el grafo; si existe, lo vincula; si no existe, lo <strong>crea</strong>. Es el comando fundamental para scripts idempotentes.</p>
+
+<h3>4.1 Mecánica interna de MERGE</h3>
+<div class="info-box info">
+    <div class="info-box-icon">ℹ️</div>
+    <div class="info-box-text">
+        <strong>MERGE evalúa el patrón completo</strong>. Para un nodo, el patrón incluye label + todas las propiedades especificadas. Si cambias una sola propiedad del patrón (p.ej. añades <code>edad</code>), MERGE no reconocerá el nodo existente y creará uno nuevo. Por eso: incluye en el patrón MERGE solo las propiedades que identifican la entidad (normalmente la clave natural), y usa <code>ON CREATE SET</code> / <code>ON MATCH SET</code> para el resto.
+    </div>
+</div>
+
+<h3>4.2 MERGE básico de nodo</h3>
+<div class="code-block">
+    <div class="code-header"><span class="code-lang">cypher</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+    <pre><code>-- Primera ejecución: crea el nodo
+MERGE (p:Persona {email: "ana@example.com"})
+RETURN p, "creado o encontrado" AS status;
+
+-- Segunda ejecución: find el nodo existente, no crea duplicado
+MERGE (p:Persona {email: "ana@example.com"})
+RETURN p, "creado o encontrado" AS status;</code></pre>
+</div>
+
+<h3>4.3 ON CREATE SET y ON MATCH SET</h3>
+<div class="code-block">
+    <div class="code-header"><span class="code-lang">cypher</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+    <pre><code>MERGE (p:Persona {email: "ana@example.com"})
+  ON CREATE SET
+    p.nombre    = "Ana García",
+    p.ciudad    = "Valencia",
+    p.creadoEn  = datetime()
+  ON MATCH SET
+    p.ultimoAcceso = datetime(),
+    p.accesos      = coalesce(p.accesos, 0) + 1
+RETURN p.nombre, p.accesos, p.creadoEn, p.ultimoAcceso;</code></pre>
+</div>
+<div class="table-wrapper">
+    <table>
+        <thead><tr><th>Cláusula</th><th>Se ejecuta cuando...</th><th>Uso típico</th></tr></thead>
+        <tbody>
+            <tr><td><code>ON CREATE SET</code></td><td>El nodo fue recién creado</td><td>Timestamps de creación, valores por defecto</td></tr>
+            <tr><td><code>ON MATCH SET</code></td><td>El nodo ya existía</td><td>Timestamps de actualización, contadores, versiones</td></tr>
+        </tbody>
+    </table>
+</div>
+
+<h3>4.4 MERGE de relación</h3>
+<div class="code-block">
+    <div class="code-header"><span class="code-lang">cypher</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+    <pre><code>-- Requiere que los nodos ya existan (o existirán si se hace MERGE de ellos antes)
+MATCH (a:Persona {email: "ana@example.com"})
+MATCH (b:Persona {email: "carlos@example.com"})
+MERGE (a)-[r:CONOCE]->(b)
+  ON CREATE SET r.desde = date(), r.peso = 1
+  ON MATCH SET  r.peso  = r.peso + 1
+RETURN r.desde, r.peso;</code></pre>
+</div>
+
+<div class="info-box warning">
+    <div class="info-box-icon">⚠️</div>
+    <div class="info-box-text">
+        <strong>MERGE de relación sin MATCH previo:</strong> si escribes <code>MERGE (a:Persona {email:"..."})-[:CONOCE]->(b:Persona {email:"..."})</code>, Neo4j evaluará el patrón completo de ambos nodos más la relación. Si algún nodo no existe, lo crea. Esto puede generar nodos nuevos inesperados. <strong>Usa MATCH para anclar primero los nodos.</strong>
+    </div>
+</div>
+
+<h3>4.5 MERGE en carga masiva con UNWIND</h3>
+<div class="code-block">
+    <div class="code-header"><span class="code-lang">cypher</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+    <pre><code>-- Insertar una lista de personas de forma idempotente
+UNWIND [
+  {email: "ana@example.com",   nombre: "Ana"},
+  {email: "carlos@example.com", nombre: "Carlos"},
+  {email: "bea@example.com",   nombre: "Bea"}
+] AS row
+MERGE (p:Persona {email: row.email})
+  ON CREATE SET p.nombre = row.nombre, p.creadoEn = datetime()
+  ON MATCH SET  p.nombre = row.nombre
+RETURN count(p) AS procesados;</code></pre>
+</div>
+
+<!-- ═══════════════════════════════════════════════
+     5. MATCH
+═══════════════════════════════════════════════ -->
+<h2>5. MATCH — Buscar patrones en el grafo</h2>
+<p><code>MATCH</code> es la cláusula principal de lectura en Cypher. Describe un <strong>patrón gráfico</strong> y Neo4j encuentra todas las instancias de ese patrón en el grafo.</p>
+
+<h3>5.1 MATCH de nodo simple</h3>
+<div class="code-block">
+    <div class="code-header"><span class="code-lang">cypher</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+    <pre><code>-- Todos los nodos :Persona
+MATCH (p:Persona)
+RETURN p.nombre, p.email, p.ciudad
+ORDER BY p.nombre;
+
+-- Con filtro WHERE
+MATCH (p:Persona)
+WHERE p.ciudad = "Madrid"
+RETURN p.nombre;
+
+-- Filtro inline (equivalente)
+MATCH (p:Persona {ciudad: "Madrid"})
+RETURN p.nombre;</code></pre>
+</div>
+
+<h3>5.2 MATCH con relación dirigida</h3>
+<div class="code-block">
+    <div class="code-header"><span class="code-lang">cypher</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+    <pre><code>-- Personas que Ana conoce directamente
+MATCH (ana:Persona {nombre: "Ana García"})-[:CONOCE]->(conocido:Persona)
+RETURN conocido.nombre;
+
+-- La relación inversa: quién conoce a Ana
+MATCH (alguien:Persona)-[:CONOCE]->(ana:Persona {nombre: "Ana García"})
+RETURN alguien.nombre;
+
+-- Sin importar dirección (ambos sentidos a la vez)
+MATCH (ana:Persona {nombre: "Ana García"})-[:CONOCE]-(cualquiera:Persona)
+RETURN cualquiera.nombre;</code></pre>
+</div>
+
+<h3>5.3 MATCH multi-hop (ruta variable)</h3>
+<div class="code-block">
+    <div class="code-header"><span class="code-lang">cypher</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+    <pre><code>-- Alcanzables en exactamente 2 saltos (amigos de amigos)
+MATCH (ana:Persona {nombre: "Ana García"})-[:CONOCE*2]->(lejano:Persona)
+RETURN lejano.nombre;
+
+-- Entre 1 y 3 saltos (alcanzabilidad flexible)
+MATCH (ana:Persona {nombre: "Ana García"})-[:CONOCE*1..3]->(lejano:Persona)
+RETURN DISTINCT lejano.nombre;
+
+-- Camino más corto entre dos personas
+MATCH p = shortestPath(
+  (ana:Persona {nombre: "Ana García"})-[:CONOCE*..10]-(elena:Persona {nombre: "Elena Sanz"})
+)
+RETURN [n IN nodes(p) | n.nombre] AS ruta, length(p) AS saltos;</code></pre>
+</div>
+
+<h3>5.4 MATCH con la relación capturada</h3>
+<div class="code-block">
+    <div class="code-header"><span class="code-lang">cypher</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+    <pre><code>-- Acceder a propiedades de la relación
+MATCH (a:Persona)-[r:CONOCE]->(b:Persona)
+RETURN a.nombre, b.nombre, r.desde, r.peso
+ORDER BY r.peso DESC;</code></pre>
+</div>
+
+<h3>5.5 OPTIONAL MATCH (LEFT JOIN del grafo)</h3>
+<div class="code-block">
+    <div class="code-header"><span class="code-lang">cypher</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+    <pre><code>-- Devuelve todas las personas, tengan o no relación CONOCE saliente
+-- (empresa_nombre será null si no la tienen)
+MATCH (p:Persona)
+OPTIONAL MATCH (p)-[:TRABAJA_EN]->(e:Empresa)
+RETURN p.nombre, e.nombre AS empresa;
+
+-- Salida esperada:
+-- p.nombre   | empresa
+-- Ana García | null          ← sin empresa asignada
+-- Raúl ...   | Acme          ← con empresa</code></pre>
+</div>
+
+<!-- ═══════════════════════════════════════════════
+     6. EJERCICIOS GUIADOS
+═══════════════════════════════════════════════ -->
+<h2>6. Ejercicios guiados</h2>
+<p>Ejecuta los siguientes bloques en orden. Cada uno muestra la salida esperada para que puedas verificar.</p>
+
+<h3>E1 — Construir el dataset base</h3>
+<div class="code-block">
+    <div class="code-header"><span class="code-lang">cypher — Paso 1: Limpieza inicial</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+    <pre><code>// Borrar todo para empezar desde cero (¡solo en Labs!)
+MATCH (n) DETACH DELETE n;</code></pre>
+</div>
+<div class="code-block">
+    <div class="code-header"><span class="code-lang">cypher — Paso 2: Constraints</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+    <pre><code>CREATE CONSTRAINT persona_email_unique IF NOT EXISTS
+  FOR (p:Persona) REQUIRE p.email IS UNIQUE;
+
+CREATE INDEX persona_ciudad_idx IF NOT EXISTS
+  FOR (p:Persona) ON (p.ciudad);</code></pre>
+</div>
+<div class="code-block">
+    <div class="code-header"><span class="code-lang">cypher — Paso 3: Insertar personas (idempotente)</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+    <pre><code>UNWIND [
+  {email:"ana@ex.com",    nombre:"Ana",    ciudad:"Valencia",  edad:28},
+  {email:"carlos@ex.com", nombre:"Carlos", ciudad:"Madrid",    edad:35},
+  {email:"bea@ex.com",    nombre:"Bea",    ciudad:"Madrid",    edad:31},
+  {email:"diego@ex.com",  nombre:"Diego",  ciudad:"Barcelona", edad:27},
+  {email:"elena@ex.com",  nombre:"Elena",  ciudad:"Sevilla",   edad:40}
+] AS row
+MERGE (p:Persona {email: row.email})
+  ON CREATE SET p.nombre = row.nombre, p.ciudad = row.ciudad, p.edad = row.edad;</code></pre>
+</div>
+<div class="code-block">
+    <div class="code-header"><span class="code-lang">cypher — Paso 4: Relaciones CONOCE</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+    <pre><code>UNWIND [
+  {de: "ana@ex.com",    a: "carlos@ex.com", desde: "2022-01-15"},
+  {de: "carlos@ex.com", a: "bea@ex.com",    desde: "2021-06-10"},
+  {de: "carlos@ex.com", a: "diego@ex.com",  desde: "2023-03-22"},
+  {de: "bea@ex.com",    a: "elena@ex.com",  desde: "2022-11-05"},
+  {de: "diego@ex.com",  a: "elena@ex.com",  desde: "2020-07-30"}
+] AS row
+MATCH (origen:Persona {email: row.de})
+MATCH (dest:Persona   {email: row.a})
+MERGE (origen)-[r:CONOCE]->(dest)
+  ON CREATE SET r.desde = date(row.desde);</code></pre>
+</div>
+
+<h3>E2 — Verificar el grafo creado</h3>
+<div class="code-block">
+    <div class="code-header"><span class="code-lang">cypher</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+    <pre><code>// Recuento de nodos y relaciones
+MATCH (n) RETURN labels(n)[0] AS label, count(n) AS total;
+MATCH ()-[r]->() RETURN type(r) AS relacion, count(r) AS total;</code></pre>
+</div>
+<p><strong>Salida esperada:</strong></p>
+<div class="table-wrapper">
+    <table>
+        <thead><tr><th>label</th><th>total</th></tr></thead>
+        <tbody>
+            <tr><td>Persona</td><td>5</td></tr>
+        </tbody>
+    </table>
+</div>
+<div class="table-wrapper">
+    <table>
+        <thead><tr><th>relacion</th><th>total</th></tr></thead>
+        <tbody>
+            <tr><td>CONOCE</td><td>5</td></tr>
+        </tbody>
+    </table>
+</div>
+
+<h3>E3 — Consultas MATCH de diagnóstico</h3>
+<div class="code-block">
+    <div class="code-header"><span class="code-lang">cypher</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+    <pre><code>// Q1: ¿A quién conoce Carlos directamente?
+MATCH (c:Persona {nombre:"Carlos"})-[:CONOCE]->(r:Persona)
+RETURN r.nombre AS conocido, r.ciudad;
+
+// Q2: Personas en Madrid
+MATCH (p:Persona {ciudad:"Madrid"})
+RETURN p.nombre, p.edad ORDER BY p.edad;
+
+// Q3: Grado de salida de cada persona (cuántos conoce)
+MATCH (p:Persona)
+OPTIONAL MATCH (p)-[:CONOCE]->(otro)
+RETURN p.nombre, count(otro) AS conocidos ORDER BY conocidos DESC;
+
+// Q4: ¿Existe ruta entre Ana y Elena?
+MATCH ruta = shortestPath(
+  (a:Persona {nombre:"Ana"})-[:CONOCE*..6]-(e:Persona {nombre:"Elena"})
+)
+RETURN [n IN nodes(ruta) | n.nombre] AS pasos, length(ruta) AS saltos;</code></pre>
+</div>
+
+<p><strong>Salida esperada Q4:</strong></p>
+<div class="table-wrapper">
+    <table>
+        <thead><tr><th>pasos</th><th>saltos</th></tr></thead>
+        <tbody>
+            <tr><td>["Ana","Carlos","Bea","Elena"]</td><td>3</td></tr>
+        </tbody>
+    </table>
+</div>
+
+<h3>E4 — MERGE idempotente: ejecuta dos veces</h3>
+<div class="code-block">
+    <div class="code-header"><span class="code-lang">cypher</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+    <pre><code>// Ejecuta este bloque dos veces y comprueba que accesos se incrementa
+MERGE (p:Persona {email:"ana@ex.com"})
+  ON MATCH SET p.ultimoLogin = datetime(), p.accesos = coalesce(p.accesos, 0) + 1
+RETURN p.nombre, p.accesos, p.ultimoLogin;</code></pre>
+</div>
+<p>Tras la segunda ejecución, <code>p.accesos</code> debe valer <strong>2</strong>.</p>
+
+<!-- ═══════════════════════════════════════════════
+     7. TROUBLESHOOTING
+═══════════════════════════════════════════════ -->
+<h2>7. Errores comunes y soluciones</h2>
+
+<div class="table-wrapper">
+    <table>
+        <thead><tr><th>Error</th><th>Causa</th><th>Solución</th></tr></thead>
+        <tbody>
+            <tr>
+                <td><code>ConstraintValidationFailed</code></td>
+                <td>CREATE sobre email duplicado cuando existe unique constraint</td>
+                <td>Usar MERGE en lugar de CREATE</td>
+            </tr>
+            <tr>
+                <td>CREATE crea nodos duplicados silenciosamente</td>
+                <td>No existe constraint de unicidad</td>
+                <td>Crear el constraint antes de insertar datos</td>
+            </tr>
+            <tr>
+                <td>MERGE crea nodo nuevo cuando ya debería existir</td>
+                <td>El patrón MERGE incluye propiedades no identificadoras (edad, ciudad…)</td>
+                <td>Solo poner la clave natural en MERGE; el resto en <code>ON CREATE/MATCH SET</code></td>
+            </tr>
+            <tr>
+                <td><code>MATCH</code> no devuelve resultados</td>
+                <td>Mayúsculas/minúsculas incorrectas en nombre de label o propiedad</td>
+                <td>Labels son case-sensitive: <code>:Persona</code> ≠ <code>:persona</code></td>
+            </tr>
+            <tr>
+                <td><code>Failed to invoke procedure shortestPath</code></td>
+                <td>No hay ruta entre los nodos (sin filtro de longitud)</td>
+                <td>Añadir <code>*..N</code> y verificar que existen relaciones del tipo correcto</td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+
+<!-- ═══════════════════════════════════════════════
+     8. RESUMEN
+═══════════════════════════════════════════════ -->
+<h2>8. Resumen</h2>
+<div class="table-wrapper">
+    <table>
+        <thead><tr><th>Comando</th><th>Descripción</th><th>¿Idempotente?</th><th>Cuándo usarlo</th></tr></thead>
+        <tbody>
+            <tr><td><code>CREATE</code></td><td>Crea siempre entidades nuevas</td><td>❌</td><td>Inserción única garantizada</td></tr>
+            <tr><td><code>MERGE</code></td><td>Crea si no existe, actualiza si existe</td><td>✅</td><td>Scripts repetibles, upsert</td></tr>
+            <tr><td><code>MATCH</code></td><td>Busca patrones en el grafo</td><td>—</td><td>Toda lectura / base de UPDATE/DELETE</td></tr>
+            <tr><td><code>OPTIONAL MATCH</code></td><td>Como MATCH pero sin descartar filas sin match</td><td>—</td><td>LEFT JOIN equivalente</td></tr>
+        </tbody>
+    </table>
+</div>
+
+<div style="margin-top: 4rem; display: flex; justify-content: space-between;">
+    <a href="lab.html" class="btn btn-outline">← M6: Lab</a>
+    <a href="lab2.html" class="btn btn-primary">Siguiente: Lab 2 — Red Social →</a>
+</div>
+
+</main>
+
+<footer style="text-align:center;padding:2rem;color:var(--text3);font-size:0.8rem;border-top:1px solid var(--border);">
+    &copy; 2026 LucentIA Research · Neo4j Zero to Expert
+</footer>
+<script>
+    const navbar = document.getElementById('navbar');
+    window.addEventListener('scroll', () => navbar.classList.toggle('scrolled', window.scrollY > 50));
+    document.getElementById('navToggle')?.addEventListener('click', () => document.querySelector('.nav-links').classList.toggle('open'));
+    function copyCode(btn) {
+        const code = btn.closest('.code-block').querySelector('pre').innerText;
+        navigator.clipboard.writeText(code).then(() => {
+            btn.textContent = '✓ Copiado';
+            btn.classList.add('copied');
+            setTimeout(() => { btn.textContent = 'Copiar'; btn.classList.remove('copied'); }, 2000);
+        });
+    }
+</script>
+</body>
+</html>
