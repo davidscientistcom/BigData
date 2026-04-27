@@ -1,0 +1,1055 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Cap 12 — Gatling | Paralelismo Real para Big Data</title>
+<link rel="stylesheet" href="styles.css"/>
+<style>
+.gatling-arch {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  margin: 1.5rem 0;
+}
+.gatling-box {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.2rem;
+  border-left: 4px solid var(--orange);
+}
+.gatling-box h4 {
+  color: var(--orange);
+  font-size: 0.82rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 0.5rem;
+  font-family: var(--font-mono);
+}
+.gatling-box p {
+  color: var(--text-secondary);
+  font-size: 0.88rem;
+  line-height: 1.5;
+}
+.report-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 0.75rem;
+  margin: 1.5rem 0;
+}
+.report-metric {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1rem;
+  text-align: center;
+}
+.report-metric .metric-value {
+  font-size: 2rem;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  color: var(--cyan);
+  display: block;
+}
+.report-metric .metric-label {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.compare-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1.5rem 0;
+  font-size: 0.88rem;
+}
+.compare-table th {
+  background: var(--bg-elevated);
+  color: var(--text-secondary);
+  text-align: left;
+  padding: 0.7rem 1rem;
+  border-bottom: 2px solid var(--border);
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 0.78rem;
+  letter-spacing: 0.06em;
+}
+.compare-table td {
+  padding: 0.65rem 1rem;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-primary);
+  vertical-align: top;
+}
+.compare-table tr:hover td { background: var(--bg-elevated); }
+.dsl-layer {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1rem 1.2rem;
+  margin: 0.5rem 0;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+.dsl-layer-label {
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  color: var(--orange);
+  min-width: 130px;
+  font-weight: 600;
+}
+.dsl-layer-desc {
+  font-size: 0.88rem;
+  color: var(--text-secondary);
+}
+</style>
+</head>
+<body>
+
+<nav class="sidebar">
+  <div class="sidebar-logo">LucentIA</div>
+  <div class="sidebar-course">Paralelismo Real<br/>para Big Data</div>
+  <ul class="sidebar-nav">
+    <li class="sidebar-section">Módulo 1 — Python</li>
+    <li><a href="m1_cap1_mapa_mental.html">Cap 1 · Mapa mental</a></li>
+    <li><a href="m1_cap2_gil.html">Cap 2 · El GIL</a></li>
+    <li><a href="m1_cap3_threading.html">Cap 3 · threading</a></li>
+    <li><a href="m1_cap4_multiprocessing.html">Cap 4 · multiprocessing</a></li>
+    <li><a href="m1_cap5_concurrent_futures.html">Cap 5 · concurrent.futures</a></li>
+    <li><a href="m1_cap6_asyncio.html">Cap 6 · asyncio</a></li>
+    <li class="sidebar-section">Módulo 2 — Stress Testing Python</li>
+    <li><a href="m2_cap7_locust_basico.html">Cap 7 · Locust básico</a></li>
+    <li><a href="m2_cap8_locust_avanzado.html">Cap 8 · Locust avanzado</a></li>
+    <li><a href="m2_cap9_stress_propio.html">Cap 9 · Stress tester propio</a></li>
+    <li class="sidebar-section">Módulo 3 — Java/JVM</li>
+    <li><a href="m3_cap10_java_threads.html">Cap 10 · Threads en Java</a></li>
+    <li><a href="m3_cap11_java_concurrent.html">Cap 11 · java.util.concurrent</a></li>
+    <li class="active"><a href="m3_cap12_gatling.html">Cap 12 · Gatling</a></li>
+    <li class="sidebar-section">Apéndice</li>
+    <li><a href="apendice_resultados.html">Interpretar resultados</a></li>
+    <li><a href="index.html">Inicio</a></li>
+  </ul>
+</nav>
+
+<main class="content">
+
+  <div class="page-header">
+    <div class="page-header-module">Módulo 3 — Java/JVM · Capítulo 12</div>
+    <h1 class="page-header-title">Gatling</h1>
+    <p class="page-header-sub">DSL declarativo · scenarios · feeders · throttle · informes HTML</p>
+  </div>
+
+  <!-- ── INTRO ── -->
+  <section>
+    <h2>Por qué Gatling para Big Data</h2>
+    <p>
+      Locust es perfecto cuando ya sabes Python y necesitas flexibilidad. Pero cuando necesitas
+      estresar un clúster de producción con cientos de miles de peticiones por segundo desde
+      una sola máquina, <strong>Gatling</strong> es otra categoría. Basado en Akka + Netty,
+      usa actores y canales NIO asíncronos — no hilos por usuario. Un proceso Gatling en un
+      servidor de 8 cores puede generar fácilmente 100.000 req/s contra un API REST o un
+      clúster Kafka.
+    </p>
+
+    <div class="gatling-arch">
+      <div class="gatling-box">
+        <h4>Motor</h4>
+        <p>Akka Actors + Netty NIO. No hay un hilo por usuario virtual — actores ligeros gestionados por el scheduler de Akka.</p>
+      </div>
+      <div class="gatling-box">
+        <h4>DSL Scala</h4>
+        <p>Las simulaciones se escriben en Scala. No necesitas saber Scala avanzado — el DSL se lee casi como inglés.</p>
+      </div>
+      <div class="gatling-box">
+        <h4>Informes HTML</h4>
+        <p>Genera automáticamente un informe interactivo con gráficas de percentiles, distribución de respuestas y errores.</p>
+      </div>
+      <div class="gatling-box">
+        <h4>Integración CI</h4>
+        <p>Plugin Maven/Gradle. Se ejecuta en Jenkins/GitLab CI con umbrales de fallo configurables.</p>
+      </div>
+    </div>
+
+    <div class="info-box info">
+      <span class="info-box-label">INFO</span>
+      Gatling usa Scala pero desde la versión 3.7 ofrece también una API Java. En este capítulo
+      usamos Scala para las simulaciones (es el estándar de la comunidad) y Java/Maven para la
+      integración CI. No hace falta dominar Scala — el DSL de Gatling es deliberadamente simple.
+    </div>
+  </section>
+
+  <!-- ── INSTALACION ── -->
+  <section>
+    <h2>1 · Instalación y estructura de proyecto</h2>
+
+    <h3>Opción A — Bundle standalone (más rápida para empezar)</h3>
+
+    <div class="code-block">
+      <div class="code-block-header">
+        <span>Instalación standalone</span>
+        <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+      </div>
+      <pre><code># Descargar Gatling Open Source (zip)
+# https://gatling.io/open-source/
+wget https://repo1.maven.org/maven2/io/gatling/highcharts/gatling-charts-highcharts-bundle/3.10.5/gatling-charts-highcharts-bundle-3.10.5-bundle.zip
+unzip gatling-charts-highcharts-bundle-3.10.5-bundle.zip
+cd gatling-charts-highcharts-bundle-3.10.5/
+
+# Estructura del bundle
+bin/          # gatling.sh / gatling.bat
+conf/         # gatling.conf, logback.xml
+lib/          # jars
+user-files/
+  simulations/   # ← aquí van tus ficheros .scala
+  resources/     # feeders CSV, JSON, etc.
+results/          # ← informes HTML generados aquí
+</code></pre>
+    </div>
+
+    <h3>Opción B — Maven (para integración CI/CD)</h3>
+
+    <div class="code-block">
+      <div class="code-block-header">
+        <span>pom.xml — plugin Gatling Maven</span>
+        <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+      </div>
+      <pre><code>&lt;project&gt;
+  &lt;modelVersion&gt;4.0.0&lt;/modelVersion&gt;
+  &lt;groupId&gt;es.lucentia&lt;/groupId&gt;
+  &lt;artifactId&gt;stress-bigdata&lt;/artifactId&gt;
+  &lt;version&gt;1.0&lt;/version&gt;
+
+  &lt;dependencies&gt;
+    &lt;dependency&gt;
+      &lt;groupId&gt;io.gatling.highcharts&lt;/groupId&gt;
+      &lt;artifactId&gt;gatling-charts-highcharts&lt;/artifactId&gt;
+      &lt;version&gt;3.10.5&lt;/version&gt;
+      &lt;scope&gt;test&lt;/scope&gt;
+    &lt;/dependency&gt;
+  &lt;/dependencies&gt;
+
+  &lt;build&gt;
+    &lt;plugins&gt;
+      &lt;plugin&gt;
+        &lt;groupId&gt;io.gatling&lt;/groupId&gt;
+        &lt;artifactId&gt;gatling-maven-plugin&lt;/artifactId&gt;
+        &lt;version&gt;4.9.6&lt;/version&gt;
+        &lt;configuration&gt;
+          &lt;simulationClass&gt;es.lucentia.BigDataSimulation&lt;/simulationClass&gt;
+          &lt;!-- Falla el build si p99 > 500ms o tasa error > 1% --&gt;
+          &lt;assertions&gt;
+            &lt;assertion&gt;global.responseTime.percentile(99).lte(500)&lt;/assertion&gt;
+            &lt;assertion&gt;global.failedRequests.percent.lte(1)&lt;/assertion&gt;
+          &lt;/assertions&gt;
+        &lt;/configuration&gt;
+      &lt;/plugin&gt;
+    &lt;/plugins&gt;
+  &lt;/build&gt;
+&lt;/project&gt;
+</code></pre>
+    </div>
+
+    <div class="code-block">
+      <div class="code-block-header">
+        <span>Ejecutar desde Maven</span>
+        <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+      </div>
+      <pre><code># Ejecutar simulación
+mvn gatling:test
+
+# Con parámetros de entorno
+mvn gatling:test -Dusers=500 -Dduration=120
+
+# Resultado: BUILD SUCCESS si assertions OK / FAILURE si se superan umbrales
+</code></pre>
+    </div>
+  </section>
+
+  <!-- ── DSL ── -->
+  <section>
+    <h2>2 · El DSL de Gatling — capas</h2>
+    <p>
+      Una simulación Gatling se construye en cuatro capas que se encajan como bloques. Entender
+      la jerarquía es clave para no mezclarlas.
+    </p>
+
+    <div class="dsl-layer">
+      <div class="dsl-layer-label">Simulation</div>
+      <div class="dsl-layer-desc">Clase que extiende <code>Simulation</code>. El punto de entrada. Define el protocolo HTTP, los escenarios y la inyección de carga.</div>
+    </div>
+    <div class="dsl-layer">
+      <div class="dsl-layer-label">ScenarioBuilder</div>
+      <div class="dsl-layer-desc">Define el flujo de un usuario virtual: qué pasos ejecuta, en qué orden, con qué pausas. Se crea con <code>scenario("nombre")</code>.</div>
+    </div>
+    <div class="dsl-layer">
+      <div class="dsl-layer-label">ChainBuilder</div>
+      <div class="dsl-layer-desc">Secuencia de acciones: <code>exec()</code>, <code>pause()</code>, <code>repeat()</code>, <code>doIf()</code>, <code>feed()</code>. Se encadena con <code>.exec()</code>.</div>
+    </div>
+    <div class="dsl-layer">
+      <div class="dsl-layer-label">HttpRequestBuilder</div>
+      <div class="dsl-layer-desc">Una petición HTTP individual: <code>http("nombre").get(url)</code>, con headers, body, checks y extracción de valores.</div>
+    </div>
+
+    <h3>Simulación mínima funcional</h3>
+
+    <div class="code-block">
+      <div class="code-block-header">
+        <span>MinimalSimulation.scala</span>
+        <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+      </div>
+      <pre><code>import io.gatling.core.Predef._
+import io.gatling.http.Predef._
+import scala.concurrent.duration._
+
+class MinimalSimulation extends Simulation {
+
+  // ── Protocolo HTTP base ──────────────────────────────────────
+  val protocolo = http
+    .baseUrl("http://localhost:8000")
+    .acceptHeader("application/json")
+    .contentTypeHeader("application/json")
+
+  // ── Escenario ────────────────────────────────────────────────
+  val escenario = scenario("Hello")
+    .exec(
+      http("GET /hello")
+        .get("/hello")
+        .check(status.is(200))
+    )
+    .pause(1, 3)  // pausa aleatoria entre 1 y 3 segundos
+
+  // ── Inyección de carga ───────────────────────────────────────
+  setUp(
+    escenario.inject(
+      atOnceUsers(10)  // 10 usuarios simultáneos al inicio
+    )
+  ).protocols(protocolo)
+}
+</code></pre>
+    </div>
+
+    <div class="code-block">
+      <div class="code-block-header">
+        <span>Ejecutar standalone</span>
+        <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+      </div>
+      <pre><code># Copiar el .scala a user-files/simulations/
+cp MinimalSimulation.scala gatling-bundle/user-files/simulations/
+
+# Ejecutar
+./bin/gatling.sh -s MinimalSimulation
+
+# Salida en consola:
+# ================================================================================
+# 2026-04-27 10:30:00 5s elapsed
+#           active: 10 / done: 0
+#           waiting: 0 / done: 0
+# ================================================================================
+# Global:   request count    500 (OK=490, KO=10)
+#           min response time    12 (OK=12, KO=403)
+#           50th percentile     45 (OK=44, KO=403)
+#           95th percentile     89 (OK=87, KO=403)
+# ================================================================================
+# Reports generated in .../results/minimalsimulation-20260427/
+</code></pre>
+    </div>
+  </section>
+
+  <!-- ── SCENARIOS ── -->
+  <section>
+    <h2>3 · Scenarios — flujos complejos</h2>
+    <p>
+      Un escenario real de Big Data no es una sola petición en bucle. Hay flujos multi-paso:
+      autenticarse, leer un batch, escribir un resultado, verificar el estado. Gatling soporta
+      todo esto de forma declarativa.
+    </p>
+
+    <h3>Checks y extracción de valores</h3>
+    <p>
+      <code>check()</code> valida la respuesta y puede extraer valores para usarlos en pasos
+      posteriores. Es el equivalente a <code>catch_response</code> en Locust.
+    </p>
+
+    <div class="code-block">
+      <div class="code-block-header">
+        <span>FlujoBigData.scala — autenticación + consulta</span>
+        <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+      </div>
+      <pre><code>import io.gatling.core.Predef._
+import io.gatling.http.Predef._
+import scala.concurrent.duration._
+
+class FlujoBigData extends Simulation {
+
+  val protocolo = http
+    .baseUrl("http://api-bigdata.local:8080")
+    .acceptHeader("application/json")
+    .contentTypeHeader("application/json")
+
+  // ── Paso 1: autenticación → extrae token ────────────────────
+  val autenticar = exec(
+    http("POST /auth/login")
+      .post("/auth/login")
+      .body(StringBody("""{"user":"stress","pass":"test123"}"""))
+      .check(
+        status.is(200),
+        jsonPath("$.token").saveAs("authToken")  // extrae y guarda en sesión
+      )
+  ).exitHereIfFailed  // si login falla, el usuario no continúa
+
+  // ── Paso 2: enviar evento a Kafka via REST ──────────────────
+  val enviarEvento = exec(
+    http("POST /kafka/produce")
+      .post("/kafka/produce")
+      .header("Authorization", "Bearer #{authToken}")  // usa el token extraído
+      .body(StringBody(
+        """{"topic":"stress-test","data":{"ts":"#{timestamp}","val":#{random}}}"""
+      ))
+      .check(
+        status.is(202),
+        jsonPath("$.offset").exists  // verifica que Kafka asignó offset
+      )
+  )
+
+  // ── Paso 3: consultar el estado del consumer group ──────────
+  val verificarConsumer = exec(
+    http("GET /kafka/consumer-groups/stress-group")
+      .get("/kafka/consumer-groups/stress-group")
+      .header("Authorization", "Bearer #{authToken}")
+      .check(
+        status.is(200),
+        jsonPath("$.lag").lte(1000)  // lag máximo aceptable: 1000 mensajes
+      )
+  )
+
+  // ── Escenario completo ───────────────────────────────────────
+  val escenario = scenario("Flujo Big Data")
+    .exec(autenticar)
+    .pause(500.milliseconds)
+    .repeat(50) {          // cada usuario envía 50 eventos
+      exec(
+        session => session.set("timestamp", System.currentTimeMillis())
+                          .set("random", (Math.random() * 1000).toInt)
+      )
+      .exec(enviarEvento)
+      .pause(100.milliseconds, 500.milliseconds)
+    }
+    .exec(verificarConsumer)
+
+  // ── Carga ────────────────────────────────────────────────────
+  setUp(
+    escenario.inject(
+      rampUsers(100).during(30.seconds)  // 100 usuarios en 30 segundos
+    )
+  ).protocols(protocolo)
+   .assertions(
+     global.responseTime.percentile(95).lte(200),
+     global.failedRequests.percent.lte(2)
+   )
+}
+</code></pre>
+    </div>
+
+    <div class="info-box info">
+      <span class="info-box-label">INFO</span>
+      <code>#{variable}</code> es la sintaxis de interpolación de sesión en Gatling (Gatling EL).
+      Cada usuario virtual tiene su propia sesión (<code>Session</code>) donde se guardan los valores
+      extraídos con <code>saveAs</code>. No es compartida entre usuarios — es thread-safe por diseño.
+    </div>
+  </section>
+
+  <!-- ── FEEDERS ── -->
+  <section>
+    <h2>4 · Feeders — datos realistas</h2>
+    <p>
+      Un <code>feeder</code> es una fuente de datos que alimenta las peticiones con valores
+      variables. Sin feeders, todos los usuarios envían los mismos datos — no es realista y
+      puede activar caches que enmascaren la carga real.
+    </p>
+
+    <h3>Tipos de feeder</h3>
+
+    <table class="compare-table">
+      <thead>
+        <tr><th>Tipo</th><th>Sintaxis</th><th>Comportamiento</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>CSV circular</td>
+          <td><code>csv("datos.csv").circular</code></td>
+          <td>Vuelve al inicio cuando se agota. Más usado.</td>
+        </tr>
+        <tr>
+          <td>CSV aleatorio</td>
+          <td><code>csv("datos.csv").random</code></td>
+          <td>Selecciona fila aleatoria. Evita patrones secuenciales.</td>
+        </tr>
+        <tr>
+          <td>JSON</td>
+          <td><code>jsonFile("datos.json").circular</code></td>
+          <td>Igual que CSV pero con JSON. Útil para payloads complejos.</td>
+        </tr>
+        <tr>
+          <td>Programático</td>
+          <td><code>Iterator.continually(Map(...))</code></td>
+          <td>Genera datos en código. Máxima flexibilidad.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="code-block">
+      <div class="code-block-header">
+        <span>recursos/usuarios.csv</span>
+        <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+      </div>
+      <pre><code>userId,topic,particion
+u001,events-raw,0
+u002,events-raw,1
+u003,events-processed,0
+u004,events-raw,2
+u005,events-processed,1
+</code></pre>
+    </div>
+
+    <div class="code-block">
+      <div class="code-block-header">
+        <span>FeederSimulation.scala</span>
+        <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+      </div>
+      <pre><code>import io.gatling.core.Predef._
+import io.gatling.http.Predef._
+import scala.concurrent.duration._
+
+class FeederSimulation extends Simulation {
+
+  // ── Feeder desde CSV ─────────────────────────────────────────
+  val csvFeeder = csv("usuarios.csv").circular
+
+  // ── Feeder programático — IDs únicos ─────────────────────────
+  val idFeeder = Iterator.continually(
+    Map("msgId" -> java.util.UUID.randomUUID().toString)
+  )
+
+  val protocolo = http.baseUrl("http://api-bigdata.local:8080")
+    .contentTypeHeader("application/json")
+
+  val escenario = scenario("Carga con Feeder")
+    .feed(csvFeeder)   // inyecta userId, topic, particion en sesión
+    .feed(idFeeder)    // inyecta msgId único
+    .exec(
+      http("Produce mensaje")
+        .post("/kafka/produce")
+        .body(StringBody(
+          """{
+            "msgId": "#{msgId}",
+            "userId": "#{userId}",
+            "topic": "#{topic}",
+            "partition": #{particion}
+          }"""
+        ))
+        .check(status.is(202))
+    )
+
+  setUp(
+    escenario.inject(rampUsers(200).during(60.seconds))
+  ).protocols(protocolo)
+}
+</code></pre>
+    </div>
+
+    <div class="info-box warn">
+      <span class="info-box-label">WARN</span>
+      Si el CSV tiene pocas filas y muchos usuarios, con <code>.queue</code> (por defecto) los
+      últimos usuarios se quedarán sin datos y fallarán. Usa siempre <code>.circular</code>
+      o <code>.random</code> para tests de larga duración.
+    </div>
+  </section>
+
+  <!-- ── THROTTLE ── -->
+  <section>
+    <h2>5 · Perfiles de carga e inyección — throttle</h2>
+    <p>
+      El perfil de carga define cuántos usuarios se inyectan y cuándo. Es la diferencia entre
+      un test de capacidad (¿cuánto aguanta?), un test de pico (¿qué pasa con un spike repentino?)
+      y un test de resistencia (¿se degrada con el tiempo?).
+    </p>
+
+    <h3>Modelos de inyección — open vs closed</h3>
+
+    <div class="code-block">
+      <div class="code-block-header">
+        <span>Perfiles de inyección</span>
+        <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+      </div>
+      <pre><code>// ── Modelo abierto (usuarios entran, pueden salir) ──────────
+setUp(escenario.inject(
+  nothingFor(5.seconds),                  // warm-up silencioso
+  atOnceUsers(20),                        // burst inicial: 20 de golpe
+  rampUsers(80).during(30.seconds),       // sube a 80 en 30 s
+  constantUsersPerSec(10).during(60.seconds),  // 10 nuevos/s durante 1 min
+  rampUsersPerSec(10).to(50).during(30.seconds),  // sube de 10 a 50/s
+  stressPeakUsers(200).during(20.seconds) // pico masivo en 20 s
+))
+
+// ── Modelo cerrado (concurrencia constante) ──────────────────
+// Útil para emular thread pools de tamaño fijo
+setUp(escenario.inject(
+  constantConcurrentUsers(50).during(2.minutes),  // 50 usuarios activos siempre
+  rampConcurrentUsers(10).to(100).during(60.seconds)
+))
+
+// ── throttle — límite de req/s independiente de usuarios ─────
+// Útil cuando el sistema tiene rate limits conocidos
+setUp(escenario.inject(atOnceUsers(1000)))
+  .throttle(
+    reachRps(100).in(10.seconds),    // sube a 100 rps en 10 s
+    holdFor(1.minute),               // mantiene 100 rps durante 1 min
+    jumpToRps(200),                  // salta a 200 rps
+    holdFor(30.seconds)              // mantiene 200 rps
+  )
+  .protocols(protocolo)
+</code></pre>
+    </div>
+
+    <div class="info-box info">
+      <span class="info-box-label">INFO</span>
+      <strong>Modelo abierto</strong>: los usuarios entran a una tasa fija independientemente de
+      si los anteriores han terminado. Modela sistemas web reales donde los usuarios no esperan.
+      <strong>Modelo cerrado</strong>: siempre hay exactamente N usuarios activos. Modela
+      thread pools, connection pools o sistemas con backpressure. La elección afecta drásticamente
+      el comportamiento observado bajo saturación.
+    </div>
+
+    <h3>Ejemplo — test de capacidad completo para clúster Kafka/REST</h3>
+
+    <div class="code-block">
+      <div class="code-block-header">
+        <span>CapacidadBigData.scala</span>
+        <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+      </div>
+      <pre><code>import io.gatling.core.Predef._
+import io.gatling.http.Predef._
+import scala.concurrent.duration._
+
+class CapacidadBigData extends Simulation {
+
+  val baseUrl   = System.getProperty("baseUrl", "http://localhost:8080")
+  val maxUsers  = System.getProperty("maxUsers", "500").toInt
+  val duracion  = System.getProperty("duracion", "120").toInt.seconds
+
+  val protocolo = http
+    .baseUrl(baseUrl)
+    .acceptHeader("application/json")
+    .contentTypeHeader("application/json")
+    .shareConnections  // reutiliza conexiones TCP entre usuarios
+
+  val feederEventos = Iterator.continually(Map(
+    "eventId"   -> java.util.UUID.randomUUID().toString,
+    "timestamp" -> System.currentTimeMillis(),
+    "payload"   -> s"""{"sensor":"s${(Math.random()*100).toInt}","val":${(Math.random()*100).toInt}}"""
+  ))
+
+  val producirEvento = exec(
+    http("POST /events")
+      .post("/events")
+      .body(StringBody(
+        """{"id":"#{eventId}","ts":#{timestamp},"data":#{payload}}"""
+      ))
+      .check(
+        status.in(200, 201, 202),
+        responseTimeInMillis.lte(500)  // falla si la respuesta tarda > 500ms
+      )
+  )
+
+  val consultarMetricas = exec(
+    http("GET /metrics/kafka")
+      .get("/metrics/kafka")
+      .check(
+        status.is(200),
+        jsonPath("$.consumer_lag").ofType[Int].lte(5000)
+      )
+  )
+
+  val escenarioProduccion = scenario("Producción continua")
+    .feed(feederEventos)
+    .exec(producirEvento)
+    .pause(50.milliseconds, 200.milliseconds)
+
+  val escenarioMonitor = scenario("Monitoring")
+    .exec(consultarMetricas)
+    .pause(5.seconds)
+
+  setUp(
+    // 90% productores, 10% monitoring
+    escenarioProduccion.inject(
+      nothingFor(5.seconds),
+      rampUsers((maxUsers * 0.9).toInt).during(30.seconds),
+      constantUsersPerSec(2).during(duracion)
+    ),
+    escenarioMonitor.inject(
+      nothingFor(10.seconds),
+      constantConcurrentUsers((maxUsers * 0.1).toInt).during(duracion)
+    )
+  ).protocols(protocolo)
+   .assertions(
+     global.responseTime.percentile(95).lte(300),
+     global.responseTime.percentile(99).lte(500),
+     global.failedRequests.percent.lte(1),
+     forAll.responseTime.max.lte(2000)  // ninguna petición > 2s
+   )
+}
+</code></pre>
+    </div>
+
+    <div class="code-block">
+      <div class="code-block-header">
+        <span>Ejecutar con parámetros</span>
+        <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+      </div>
+      <pre><code># Standalone
+./bin/gatling.sh -s CapacidadBigData \
+  -DbaseUrl=http://api-prod:8080 \
+  -DmaxUsers=1000 \
+  -Dduracion=300
+
+# Maven
+mvn gatling:test \
+  -DbaseUrl=http://api-prod:8080 \
+  -DmaxUsers=1000 \
+  -Dduracion=300
+</code></pre>
+    </div>
+  </section>
+
+  <!-- ── INFORME ── -->
+  <section>
+    <h2>6 · Leer el informe HTML de Gatling</h2>
+    <p>
+      El informe HTML es la principal razón por la que muchos equipos eligen Gatling sobre
+      alternativas. Se genera automáticamente en <code>results/</code> y no necesita servidor —
+      ábrelo con el navegador directamente.
+    </p>
+
+    <div class="report-grid">
+      <div class="report-metric">
+        <span class="metric-value">p50</span>
+        <span class="metric-label">Mediana real de usuarios</span>
+      </div>
+      <div class="report-metric">
+        <span class="metric-value">p95</span>
+        <span class="metric-label">Umbral SLA habitual</span>
+      </div>
+      <div class="report-metric">
+        <span class="metric-value">p99</span>
+        <span class="metric-label">Peor caso excluido 1%</span>
+      </div>
+      <div class="report-metric">
+        <span class="metric-value">req/s</span>
+        <span class="metric-label">Throughput real alcanzado</span>
+      </div>
+    </div>
+
+    <h3>Secciones del informe y qué buscar</h3>
+
+    <table class="compare-table">
+      <thead>
+        <tr>
+          <th>Sección</th>
+          <th>Qué muestra</th>
+          <th>Señal de alarma</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Global Statistics</td>
+          <td>Totales: peticiones, OK/KO, percentiles globales</td>
+          <td>KO% > 1%, p99 > SLA</td>
+        </tr>
+        <tr>
+          <td>Response Time Distribution</td>
+          <td>Histograma de latencias</td>
+          <td>Distribución bimodal: dos picos separados indican dos poblaciones (cacheadas vs no)</td>
+        </tr>
+        <tr>
+          <td>Response Time Percentiles over Time</td>
+          <td>Evolución de p50/p95/p99 durante el test</td>
+          <td>Latencias que suben progresivamente = cola creciendo, sistema saturado</td>
+        </tr>
+        <tr>
+          <td>Active Users over Time</td>
+          <td>Usuarios activos por segundo</td>
+          <td>Diferencia entre usuarios inyectados y activos = usuarios esperando (backpressure)</td>
+        </tr>
+        <tr>
+          <td>Requests/s over Time</td>
+          <td>Throughput real vs esperado</td>
+          <td>Throughput que se estabiliza por debajo del máximo = cuello de botella identificado</td>
+        </tr>
+        <tr>
+          <td>Errors</td>
+          <td>Distribución de errores por tipo</td>
+          <td>Timeouts de conexión = red o backlog; 5xx = aplicación; checks fallidos = lógica negocio</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3>Interpretar la gráfica de percentiles en el tiempo</h3>
+
+    <div class="diagram-block">
+<pre>
+  Latencia (ms)
+  400 │                                        ╭─── p99
+  350 │                                  ╭─────╯
+  300 │                           ╭──────╯           ← sistema saturado
+  250 │                    ╭──────╯
+  200 │                                        ╭─── p95
+  150 │             ╭──────────────────────────╯
+  100 │ ───────────────────────────────────────── p50
+   50 │
+      └─────────────────────────────────────────────► tiempo
+           fase normal    saturación empieza aquí ↑
+
+  Señal: p99 diverge de p50 = percentil alto absorbe la saturación primero
+  Acción: identificar qué operación sube primero (pestaña "Request Details")
+</pre>
+    </div>
+  </section>
+
+  <!-- ── KAFKA via REST ── -->
+  <section>
+    <h2>7 · Gatling + Kafka — estrategias reales</h2>
+    <p>
+      Gatling en su versión open source es un stress tester HTTP. Para estresar Kafka directamente
+      (sin capa HTTP) hay dos estrategias:
+    </p>
+
+    <h3>Estrategia A — API REST sobre Kafka (recomendada)</h3>
+    <p>
+      Si tu arquitectura tiene Kafka REST Proxy (Confluent) o un microservicio REST que produce
+      a Kafka, úsalo. Gatling ataca el REST proxy y mide el pipeline completo incluyendo la
+      latencia de producción a Kafka. Es el escenario más realista para Big Data.
+    </p>
+
+    <div class="code-block">
+      <div class="code-block-header">
+        <span>KafkaRestProxy.scala — Confluent REST Proxy</span>
+        <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+      </div>
+      <pre><code>import io.gatling.core.Predef._
+import io.gatling.http.Predef._
+import scala.concurrent.duration._
+
+class KafkaRestProxy extends Simulation {
+
+  val protocolo = http
+    .baseUrl("http://kafka-rest-proxy:8082")
+    .acceptHeader("application/vnd.kafka.v2+json")
+    .contentTypeHeader("application/vnd.kafka.json.v2+json")
+
+  val feeder = Iterator.continually(Map(
+    "key"   -> java.util.UUID.randomUUID().toString,
+    "value" -> s"""{"event":"click","user":"u${(Math.random()*1000).toInt}"}"""
+  ))
+
+  val producir = scenario("Kafka REST Producer")
+    .feed(feeder)
+    .exec(
+      http("Produce a topic")
+        .post("/topics/eventos-bigdata")
+        .body(StringBody(
+          """{"records":[{"key":"#{key}","value":#{value}}]}"""
+        ))
+        .check(
+          status.is(200),
+          jsonPath("$.offsets[0].error_code").notExists
+        )
+    )
+    .pause(10.milliseconds, 50.milliseconds)
+
+  setUp(
+    producir.inject(
+      rampUsers(500).during(30.seconds)
+    )
+  ).protocols(protocolo)
+   .assertions(
+     global.responseTime.percentile(95).lte(50),  // Kafka debe ser rápido
+     global.failedRequests.percent.lte(0.1)
+   )
+}
+</code></pre>
+    </div>
+
+    <h3>Estrategia B — Plugin Gatling para Kafka</h3>
+    <p>
+      Existe <code>gatling-kafka</code> (librería open source comunitaria) que añade soporte
+      nativo de Kafka al DSL. No es oficial de Gatling pero funciona bien para versiones 3.x.
+    </p>
+
+    <div class="code-block">
+      <div class="code-block-header">
+        <span>Dependencia Maven — gatling-kafka</span>
+        <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+      </div>
+      <pre><code>&lt;dependency&gt;
+  &lt;groupId&gt;io.github.amerouseful&lt;/groupId&gt;
+  &lt;artifactId&gt;gatling-kafka_2.13&lt;/artifactId&gt;
+  &lt;version&gt;1.1.0&lt;/version&gt;
+  &lt;scope&gt;test&lt;/scope&gt;
+&lt;/dependency&gt;
+</code></pre>
+    </div>
+
+    <div class="code-block">
+      <div class="code-block-header">
+        <span>KafkaNativeSimulation.scala</span>
+        <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+      </div>
+      <pre><code>import io.github.amerouseful.gatling.kafka.Predef._
+import io.github.amerouseful.gatling.kafka.protocol.KafkaProtocol
+import io.gatling.core.Predef._
+import org.apache.kafka.clients.producer.ProducerConfig
+import scala.concurrent.duration._
+
+class KafkaNativeSimulation extends Simulation {
+
+  val kafkaProtocol: KafkaProtocol = kafka
+    .topic("stress-test-topic")
+    .properties(Map(
+      ProducerConfig.BOOTSTRAP_SERVERS_CONFIG -> "kafka-broker:9092",
+      ProducerConfig.ACKS_CONFIG              -> "1",  // acks=1 para máximo throughput
+      ProducerConfig.LINGER_MS_CONFIG         -> "5",  // pequeño batching
+      ProducerConfig.BATCH_SIZE_CONFIG        -> "16384"
+    ))
+
+  val feeder = Iterator.continually(Map(
+    "msgKey" -> java.util.UUID.randomUUID().toString,
+    "msgVal" -> s"""{"ts":${System.currentTimeMillis()},"sensor":"s${(Math.random()*100).toInt}"}"""
+  ))
+
+  val scn = scenario("Kafka Producer Stress")
+    .feed(feeder)
+    .exec(
+      kafka("Enviar evento")
+        .send[String, String]
+        .key("#{msgKey}")
+        .payload("#{msgVal}")
+    )
+    .pause(5.milliseconds)
+
+  setUp(
+    scn.inject(
+      rampUsers(1000).during(30.seconds)
+    )
+  ).protocols(kafkaProtocol)
+   .assertions(
+     global.failedRequests.percent.lte(1)
+   )
+}
+</code></pre>
+    </div>
+
+    <div class="info-box warn">
+      <span class="info-box-label">WARN</span>
+      El plugin <code>gatling-kafka</code> no genera gráficas de latencia por partition en el
+      informe HTML estándar. Para métricas de Kafka a nivel de partition/broker, complementa
+      con JMX exporter de Kafka + Prometheus + Grafana mientras corre el test de Gatling.
+    </div>
+  </section>
+
+  <!-- ── COMPARATIVA FINAL ── -->
+  <section>
+    <h2>8 · Comparativa final — Locust vs Stress Propio vs Gatling</h2>
+
+    <table class="compare-table">
+      <thead>
+        <tr>
+          <th>Criterio</th>
+          <th>Locust (Python)</th>
+          <th>StressTester propio (asyncio)</th>
+          <th>Gatling (JVM)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Curva de aprendizaje</td>
+          <td>Baja (Python puro)</td>
+          <td>Media (asyncio)</td>
+          <td>Media (DSL Scala)</td>
+        </tr>
+        <tr>
+          <td>Throughput máximo</td>
+          <td>~10.000 req/s (gevent)</td>
+          <td>~50.000 req/s (aiohttp)</td>
+          <td>~100.000 req/s (Netty NIO)</td>
+        </tr>
+        <tr>
+          <td>Protocolos</td>
+          <td>HTTP, WebSocket, gRPC*</td>
+          <td>Cualquiera (código)</td>
+          <td>HTTP, WebSocket, gRPC, Kafka*</td>
+        </tr>
+        <tr>
+          <td>UI en vivo</td>
+          <td>Sí (web UI en :8089)</td>
+          <td>No (sólo consola)</td>
+          <td>No (informe post-test)</td>
+        </tr>
+        <tr>
+          <td>Informes</td>
+          <td>CSV / HTML básico</td>
+          <td>Lo que programes</td>
+          <td>HTML interactivo completo</td>
+        </tr>
+        <tr>
+          <td>Integración CI</td>
+          <td>Sí (assertions vía flags)</td>
+          <td>Manual (exit code)</td>
+          <td>Nativa (Maven plugin + assertions)</td>
+        </tr>
+        <tr>
+          <td>Modo distribuido</td>
+          <td>Sí (master/worker)</td>
+          <td>No nativo</td>
+          <td>Sí (Gatling Enterprise)</td>
+        </tr>
+        <tr>
+          <td>Cuándo usarlo</td>
+          <td>Iteración rápida, laboratorio</td>
+          <td>Protocolos personalizados (Kafka, gRPC directo)</td>
+          <td>Tests de producción, CI, informes formales</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="info-box success">
+      <span class="info-box-label">SUCCESS</span>
+      La estrategia real: usa <strong>Locust</strong> para explorar y ajustar durante el
+      desarrollo. Cuando tienes el escenario claro y necesitas saturar de verdad o integrar
+      en CI, migra ese escenario a <strong>Gatling</strong>. Para Kafka directo o WebSockets
+      con protocolo personalizado, usa el <strong>StressTester propio</strong> del Cap 9 o el
+      equivalente Java del Cap 11.
+    </div>
+  </section>
+
+  <!-- ── NAV ── -->
+  <div class="chapter-nav">
+    <a href="m3_cap11_java_concurrent.html" class="chapter-nav-btn">← Cap 11 · java.util.concurrent</a>
+    <a href="index.html" class="chapter-nav-btn">Índice</a>
+    <a href="apendice_resultados.html" class="chapter-nav-btn">Apéndice · Interpretar resultados →</a>
+  </div>
+
+</main>
+
+<script>
+function copyCode(btn) {
+  const pre = btn.closest('.code-block').querySelector('pre');
+  navigator.clipboard.writeText(pre.innerText).then(() => {
+    btn.textContent = 'Copiado';
+    setTimeout(() => btn.textContent = 'Copiar', 2000);
+  });
+}
+</script>
+
+</body>
+</html>

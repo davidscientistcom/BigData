@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cap 7 — Locust básico | Paralelismo Real para Big Data</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<nav class="sidebar">
+  <div class="sidebar-brand"><div class="brand-tag">LucentIA</div><h2>Paralelismo Real<br>para Big Data</h2></div>
+  <div class="sidebar-section">
+    <div class="sidebar-section-title">Módulo 1 — Python</div>
+    <a href="m1_cap1_mapa_mental.html"><span class="cap-num">01</span> Mapa mental</a>
+    <a href="m1_cap2_gil.html"><span class="cap-num">02</span> El GIL</a>
+    <a href="m1_cap3_threading.html"><span class="cap-num">03</span> threading</a>
+    <a href="m1_cap4_multiprocessing.html"><span class="cap-num">04</span> multiprocessing</a>
+    <a href="m1_cap5_concurrent_futures.html"><span class="cap-num">05</span> concurrent.futures</a>
+    <a href="m1_cap6_asyncio.html"><span class="cap-num">06</span> asyncio</a>
+  </div>
+  <div class="sidebar-section">
+    <div class="sidebar-section-title">Módulo 2 — Stress Testing</div>
+    <a href="m2_cap7_locust_basico.html" class="active"><span class="cap-num">07</span> Locust básico</a>
+    <a href="m2_cap8_locust_avanzado.html"><span class="cap-num">08</span> Locust avanzado</a>
+    <a href="m2_cap9_stress_propio.html"><span class="cap-num">09</span> Stress tester propio</a>
+  </div>
+  <div class="sidebar-section">
+    <div class="sidebar-section-title">Módulo 3 — Java/JVM</div>
+    <a href="m3_cap10_java_threads.html"><span class="cap-num">10</span> Threads en Java</a>
+    <a href="m3_cap11_java_concurrent.html"><span class="cap-num">11</span> java.util.concurrent</a>
+    <a href="m3_cap12_gatling.html"><span class="cap-num">12</span> Gatling</a>
+  </div>
+  <div class="sidebar-section">
+    <div class="sidebar-section-title">Apéndice</div>
+    <a href="apendice_resultados.html"><span class="cap-num">A</span> Leer resultados</a>
+  </div>
+</nav>
+
+<main class="main-content">
+  <div class="page-header">
+    <div class="module-tag">Módulo 2 — Capítulo 7</div>
+    <h1>Locust desde el laboratorio real</h1>
+    <p class="subtitle">El locustfile.py del workspace diseccionado línea a línea. HttpUser, @task, wait_time. Qué significan RPS, p95, p99 y fail_ratio en la UI.</p>
+  </div>
+
+  <div class="content">
+
+    <h2>Qué es Locust y cómo funciona internamente</h2>
+
+    <p>Locust es una herramienta de pruebas de carga escrita en Python. Cada "usuario virtual" es una instancia de una clase <code>HttpUser</code> que ejecuta tareas en bucle. Internamente, Locust usa <strong>gevent</strong>: una librería de corrutinas basada en greenlets que parchea las librerías de red de Python para que sean no bloqueantes. El resultado es que miles de usuarios virtuales conviven en un solo proceso Python sin crear miles de hilos del SO.</p>
+
+    <div class="diagram-block">
+      <pre>
+ARQUITECTURA INTERNA DE LOCUST
+
+┌──────────────────────────────────────────────────────────┐
+│  Proceso Locust (un solo proceso Python)                 │
+│                                                          │
+│  gevent event loop (basado en libev/libuv)               │
+│  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐   │
+│  │ Usuario 1│ │ Usuario 2│ │ Usuario 3│ │ ...N     │   │
+│  │ greenlet │ │ greenlet │ │ greenlet │ │ greenlets│   │
+│  │ ejecuta  │ │ espera   │ │ espera   │ │          │   │
+│  │ @task    │ │ red      │ │ red      │ │          │   │
+│  └──────────┘ └──────────┘ └──────────┘ └──────────┘   │
+│                                                          │
+│  Statistics aggregator  │  Web UI (puerto 8089)          │
+└──────────────────────────────────────────────────────────┘
+                   │
+                   ▼ peticiones HTTP
+         SISTEMA BAJO PRUEBA
+      </pre>
+    </div>
+
+    <h2>El laboratorio: locustfile.py del workspace</h2>
+
+    <p>Este es el fichero que existe en el workspace en <code>/Users/dgranados/BigData/Sistemas_de_Big Data/Unidad6_eventos/masivo/locustfile.py</code>. Es el punto de partida mínimo. Lo diseccionamos completo:</p>
+
+    <div class="code-block">
+      <div class="code-header">
+        <span class="code-lang">python — locustfile.py del workspace (laboratorio real)</span>
+        <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+      </div>
+      <pre><code>from locust import HttpUser, task, between
+
+class MiPrimerUsuario(HttpUser):
+    # Tiempo de espera entre tareas (segundos)
+    wait_time = between(1, 3)
+
+    # Host por defecto (podemos no ponerlo y usar --host en CLI)
+    host = "http://localhost:8000"
+
+    @task
+    def hola(self):
+        self.client.get("/hello")</code></pre>
+    </div>
+
+    <h3>Análisis línea a línea</h3>
+
+    <p><strong><code>from locust import HttpUser, task, between</code></strong></p>
+    <p><code>HttpUser</code> es la clase base para usuarios que hacen peticiones HTTP. Incluye un atributo <code>self.client</code> que es una sesión HTTP instrumentada: cada petición que hace se registra automáticamente en las estadísticas de Locust (latencia, estado, fallos).</p>
+
+    <p><strong><code>class MiPrimerUsuario(HttpUser):</code></strong></p>
+    <p>Cada instancia de esta clase representa un usuario virtual. Cuando lanzas Locust con 100 usuarios, Locust crea 100 instancias de <code>MiPrimerUsuario</code>, cada una ejecutando sus tareas en su propio greenlet.</p>
+
+    <p><strong><code>wait_time = between(1, 3)</code></strong></p>
+    <p>Después de ejecutar cada tarea, el usuario espera un tiempo aleatorio uniforme entre 1 y 3 segundos antes de ejecutar la siguiente. Este tiempo simula el "tiempo de pensar" de un usuario real. Sin <code>wait_time</code>, cada usuario ejecutaría tareas lo más rápido posible, generando una carga irreal.</p>
+
+    <p><strong><code>host = "http://localhost:8000"</code></strong></p>
+    <p>El destino de todas las peticiones. Puede sobreescribirse en la CLI con <code>--host</code> sin modificar el código. En el contexto de Big Data, aquí iría la URL del API del clúster: <code>http://kafka-api:8080</code>, <code>http://mongodb-api:5000</code>, etc.</p>
+
+    <p><strong><code>@task</code></strong></p>
+    <p>Marca un método como tarea ejecutable. Locust elige aleatoriamente entre los métodos marcados con <code>@task</code> en cada ciclo. Si hay un solo método con <code>@task</code>, siempre ejecuta ese. El decorador acepta un peso entero: <code>@task(3)</code> hace que esa tarea se ejecute 3 veces más que una con <code>@task(1)</code>.</p>
+
+    <p><strong><code>self.client.get("/hello")</code></strong></p>
+    <p><code>self.client</code> es una instancia de <code>HttpSession</code>, subclase de <code>requests.Session</code> parchada con gevent. Registra automáticamente: tiempo de respuesta, código HTTP, bytes recibidos, y si hubo error. La ruta <code>"/hello"</code> se concatena con <code>host</code> para formar la URL completa.</p>
+
+    <h2>Instalación y primera ejecución</h2>
+
+    <div class="code-block">
+      <div class="code-header">
+        <span class="code-lang">bash — instalar Locust en entorno conda</span>
+        <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+      </div>
+      <pre><code># Crear entorno aislado (Locust requiere Python 3.8+)
+conda create -n locust python=3.13
+conda activate locust
+
+# Instalar Locust
+pip install locust
+
+# Verificar instalación
+locust --version
+# Salida esperada: locust 2.x.x</code></pre>
+    </div>
+
+    <div class="code-block">
+      <div class="code-header">
+        <span class="code-lang">bash — lanzar Locust con el locustfile del workspace</span>
+        <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+      </div>
+      <pre><code">cd "/Users/dgranados/BigData/Sistemas_de_Big Data/Unidad6_eventos/masivo"
+
+# Lanzar con UI web (modo por defecto)
+locust -f locustfile.py
+
+# Salida esperada:
+# [2026-04-27 10:00:00,000] INFO/locust.main: Starting web interface at http://0.0.0.0:8089
+# [2026-04-27 10:00:00,000] INFO/locust.main: Starting Locust 2.x.x
+
+# Abrir en el navegador: http://localhost:8089</code></pre>
+    </div>
+
+    <h2>La UI de Locust: qué leer y qué significa</h2>
+
+    <div class="diagram-block">
+      <pre>
+PANTALLA DE CONFIGURACIÓN INICIAL (http://localhost:8089)
+
+┌────────────────────────────────────────────────────┐
+│  Number of users (peak concurrency): [100]         │
+│  Spawn rate (users started/second): [10]           │
+│  Host: http://localhost:8000                       │
+│                                         [Start]   │
+└────────────────────────────────────────────────────┘
+
+Number of users: cuántos usuarios virtuales habrá en total al final del ramp-up
+Spawn rate: cuántos usuarios nuevos se crean por segundo hasta llegar al total
+  → con 100 usuarios y spawn rate 10: los 100 usuarios estarán activos en 10 segundos
+      </pre>
+    </div>
+
+    <div class="diagram-block">
+      <pre>
+PANTALLA DE ESTADÍSTICAS EN TIEMPO REAL
+
+┌────────────────────────────────────────────────────────────────────────────┐
+│ TYPE  NAME          # Reqs  # Fails  Avg(ms)  Min  Max  Avg size  RPS     │
+│ GET   /hello         4,823      12     234    102  891    1,024   48.2   │
+│ ─────────────────────────────────────────────────────────────────────────  │
+│ Aggregated           4,823      12     234    102  891    1,024   48.2   │
+└────────────────────────────────────────────────────────────────────────────┘
+
+# Reqs:     peticiones totales realizadas desde el inicio del test
+# Fails:    peticiones que devolvieron error (4xx, 5xx, timeout, excepción)
+Avg(ms):    latencia media — puede ser engañosa si hay outliers
+Min/Max:    latencia mínima y máxima observadas
+RPS:        requests per second en el momento actual
+      </pre>
+    </div>
+
+    <div class="diagram-block">
+      <pre>
+PESTAÑA "CHARTS" — métricas en tiempo real
+
+RPS chart:    muestra cómo sube el throughput durante el ramp-up y si se estabiliza
+Response time chart:
+  - Línea verde:  p50 (mediana) — la mitad de las peticiones son más rápidas que esto
+  - Línea naranja: p95 — el 95% de las peticiones son más rápidas que esto
+  - Línea roja:   p99 — el 99% de las peticiones son más rápidas que esto
+
+Users chart:  muestra cómo crecen los usuarios durante el ramp-up
+
+PESTAÑA "FAILURES" — errores con detalle
+  Muestra las excepciones y sus conteos. Aquí verás:
+  - ConnectionRefusedError: el servidor no acepta más conexiones
+  - HTTPError 500: el servidor está fallando internamente
+  - ReadTimeout: el servidor no responde en tiempo
+      </pre>
+    </div>
+
+    <h2>Métricas críticas: p95 y p99</h2>
+
+    <p>La latencia media (<code>Avg</code>) es la métrica más usada y la más engañosa. Si 95 peticiones tardan 100ms y 5 tardan 5 segundos, la media es ~350ms pero la experiencia real de 1 de cada 20 usuarios es terrible.</p>
+
+    <p>Los percentiles dan una visión honesta de la distribución:</p>
+
+    <div class="concept-grid">
+      <div class="concept-card cyan">
+        <span class="concept-icon">p50</span>
+        <h3>Mediana</h3>
+        <p>La petición "típica". La mitad van más rápido, la mitad más lento. El usuario medio experimenta esto.</p>
+      </div>
+      <div class="concept-card orange">
+        <span class="concept-icon">p95</span>
+        <h3>Percentil 95</h3>
+        <p>El 95% de las peticiones son más rápidas que esto. El 5% más lento experimenta tiempos mayores.</p>
+      </div>
+      <div class="concept-card red">
+        <span class="concept-icon">p99</span>
+        <h3>Percentil 99</h3>
+        <p>El 1% más lento. En un sistema con 10.000 req/s, ese 1% son 100 peticiones por segundo con latencia alta.</p>
+      </div>
+    </div>
+
+    <div class="code-block">
+      <div class="code-header">
+        <span class="code-lang">python — calcular percentiles manualmente para entender la distribución</span>
+        <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+      </div>
+      <pre><code>import statistics
+
+latencias = [100, 105, 98, 102, 110, 95, 103, 108, 99, 101,
+             4500, 3200, 5100, 4800, 3900]  # 5 peticiones lentas
+
+latencias.sort()
+n = len(latencias)
+
+media    = statistics.mean(latencias)
+mediana  = statistics.median(latencias)
+p95      = latencias[int(n * 0.95)]
+p99      = latencias[int(n * 0.99)]
+
+print(f"Media:   {media:.0f}ms  ← engañosa (inflada por outliers)")
+print(f"Mediana: {mediana:.0f}ms  ← la experiencia real del usuario típico")
+print(f"p95:     {p95:.0f}ms")
+print(f"p99:     {p99:.0f}ms")</code></pre>
+    </div>
+
+    <h4>Output:</h4>
+    <div class="code-block">
+      <div class="code-header"><span class="code-lang">output</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+      <pre><code>Media:   1613ms  ← engañosa (inflada por outliers)
+Mediana:  102ms  ← la experiencia real del usuario típico
+p95:     4500ms
+p99:     5100ms</code></pre>
+    </div>
+
+    <h2>Ampliar el locustfile del workspace: varias tareas con pesos</h2>
+
+    <p>El locustfile original tiene una sola tarea. En un entorno de Big Data real, un clúster recibe diferentes tipos de peticiones con diferentes frecuencias. Aquí ampliamos el locustfile para simular un patrón más realista: lecturas frecuentes + escrituras ocasionales.</p>
+
+    <div class="code-block">
+      <div class="code-header">
+        <span class="code-lang">python — locustfile ampliado: simulación realista de carga Big Data</span>
+        <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+      </div>
+      <pre><code>from locust import HttpUser, task, between
+import random
+
+class BigDataUser(HttpUser):
+    wait_time = between(0.5, 2)
+    host = "http://localhost:8000"
+
+    @task(5)  # lectura: 5x más frecuente que escritura
+    def leer_datos(self):
+        """Simula una consulta de lectura al clúster."""
+        limite = random.choice([10, 50, 100, 500])
+        self.client.get(
+            f"/api/datos?limit={limite}&sort=-timestamp",
+            name="GET /api/datos"  # nombre en UI independiente de los params
+        )
+
+    @task(2)  # inserción batch: 2x más frecuente que bulk
+    def insertar_registro(self):
+        """Simula inserción de un registro."""
+        payload = {
+            "timestamp": "2026-04-27T10:00:00Z",
+            "sensor_id": random.randint(1, 100),
+            "valor": random.uniform(-50, 150)
+        }
+        self.client.post(
+            "/api/datos",
+            json=payload,
+            name="POST /api/datos"
+        )
+
+    @task(1)  # bulk insert: menos frecuente pero más pesado
+    def bulk_insert(self):
+        """Simula inserción masiva de 500 registros."""
+        documentos = [
+            {"sensor_id": random.randint(1, 100), "valor": random.random()}
+            for _ in range(500)
+        ]
+        self.client.post(
+            "/api/bulk",
+            json={"documentos": documentos},
+            name="POST /api/bulk (500 docs)"
+        )</code></pre>
+    </div>
+
+    <div class="info-box info">
+      <span class="info-box-icon">INFO</span>
+      <div class="info-box-text"><strong>El parámetro <code>name</code> en las peticiones:</strong> Sin el parámetro <code>name</code>, Locust agrupa las estadísticas por URL exacta. Con parámetros variables como <code>/api/datos?limit=10</code>, <code>/api/datos?limit=50</code>, etc., verías decenas de filas en la UI, una por cada combinación. Con <code>name="GET /api/datos"</code>, todas van a la misma fila.</div>
+    </div>
+
+    <h2>Ejecutar el test y verificar el sistema bajo prueba</h2>
+
+    <div class="code-block">
+      <div class="code-header">
+        <span class="code-lang">bash — lanzar Locust y monitorizar el sistema al mismo tiempo</span>
+        <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+      </div>
+      <pre><code"># Terminal 1: lanzar Locust
+locust -f locustfile.py --host http://localhost:8000
+
+# Terminal 2: monitorizar CPU y RAM del proceso destino mientras corre el test
+# Reemplaza 8000 con el puerto real de tu sistema
+watch -n 1 'lsof -i :8000 | head -5; echo "---"; ps aux | grep -v grep | grep -E "mongo|kafka|python|java" | awk "{print \$1,\$3,\$4,\$11}"'
+
+# Terminal 3: si el sistema es MongoDB, monitorizar métricas en tiempo real
+mongosh --eval "db.serverStatus().opcounters"
+# o con mongotop:
+mongotop 1  # muestra reads/writes por colección cada 1 segundo</code></pre>
+    </div>
+
+    <div class="info-box warning">
+      <span class="info-box-icon">WARN</span>
+      <div class="info-box-text"><strong>Siempre monitoriza el servidor durante el test.</strong> Si la CPU del servidor sube al 100%, el cuello de botella está en el servidor. Si la CPU del servidor está al 10% y los RPS no suben, el cuello de botella puede ser la red, la configuración de conexiones máximas, o el propio generador de carga. No confundas "el test va lento" con "el servidor no aguanta".</div>
+    </div>
+
+    <div class="chapter-nav">
+      <a href="m1_cap6_asyncio.html">← Cap 6: asyncio</a>
+      <a href="m2_cap8_locust_avanzado.html" class="next">Cap 8: Locust avanzado →</a>
+    </div>
+
+  </div>
+</main>
+<script>
+function copyCode(btn) {
+  const code = btn.closest('.code-block').querySelector('pre code');
+  navigator.clipboard.writeText(code.textContent);
+  btn.textContent = 'Copiado';
+  setTimeout(() => btn.textContent = 'Copiar', 2000);
+}
+</script>
+</body>
+</html>

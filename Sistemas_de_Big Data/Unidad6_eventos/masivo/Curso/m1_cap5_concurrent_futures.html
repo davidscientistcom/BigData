@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cap 5 — concurrent.futures | Paralelismo Real para Big Data</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<nav class="sidebar">
+  <div class="sidebar-brand"><div class="brand-tag">LucentIA</div><h2>Paralelismo Real<br>para Big Data</h2></div>
+  <div class="sidebar-section">
+    <div class="sidebar-section-title">Módulo 1 — Python</div>
+    <a href="m1_cap1_mapa_mental.html"><span class="cap-num">01</span> Mapa mental</a>
+    <a href="m1_cap2_gil.html"><span class="cap-num">02</span> El GIL</a>
+    <a href="m1_cap3_threading.html"><span class="cap-num">03</span> threading</a>
+    <a href="m1_cap4_multiprocessing.html"><span class="cap-num">04</span> multiprocessing</a>
+    <a href="m1_cap5_concurrent_futures.html" class="active"><span class="cap-num">05</span> concurrent.futures</a>
+    <a href="m1_cap6_asyncio.html"><span class="cap-num">06</span> asyncio</a>
+  </div>
+  <div class="sidebar-section">
+    <div class="sidebar-section-title">Módulo 2 — Stress Testing</div>
+    <a href="m2_cap7_locust_basico.html"><span class="cap-num">07</span> Locust básico</a>
+    <a href="m2_cap8_locust_avanzado.html"><span class="cap-num">08</span> Locust avanzado</a>
+    <a href="m2_cap9_stress_propio.html"><span class="cap-num">09</span> Stress tester propio</a>
+  </div>
+  <div class="sidebar-section">
+    <div class="sidebar-section-title">Módulo 3 — Java/JVM</div>
+    <a href="m3_cap10_java_threads.html"><span class="cap-num">10</span> Threads en Java</a>
+    <a href="m3_cap11_java_concurrent.html"><span class="cap-num">11</span> java.util.concurrent</a>
+    <a href="m3_cap12_gatling.html"><span class="cap-num">12</span> Gatling</a>
+  </div>
+  <div class="sidebar-section">
+    <div class="sidebar-section-title">Apéndice</div>
+    <a href="apendice_resultados.html"><span class="cap-num">A</span> Leer resultados</a>
+  </div>
+</nav>
+
+<main class="main-content">
+  <div class="page-header">
+    <div class="module-tag">Módulo 1 — Capítulo 5</div>
+    <h1>concurrent.futures: la API moderna</h1>
+    <p class="subtitle">Una interfaz unificada para threading y multiprocessing. submit(), map(), as_completed() y cancelación de futures. La forma idiomática de paralelismo en Python moderno.</p>
+  </div>
+
+  <div class="content">
+
+    <h2>Por qué existe concurrent.futures</h2>
+
+    <p>El módulo <code>threading</code> y <code>multiprocessing</code> dan control total pero requieren gestionar manualmente hilos/procesos, queues, joins y manejo de errores. <code>concurrent.futures</code> (añadido en Python 3.2) proporciona una interfaz de alto nivel que:</p>
+    <ul>
+      <li>Unifica la API para hilos y procesos (solo cambia el executor)</li>
+      <li>Devuelve <code>Future</code> objects que representan resultados pendientes</li>
+      <li>Propaga excepciones automáticamente desde los workers al código principal</li>
+      <li>Gestiona el ciclo de vida del pool de forma automática con context manager</li>
+    </ul>
+
+    <div class="concept-grid">
+      <div class="concept-card cyan">
+        <span class="concept-icon">EXECUTOR</span>
+        <h3>ThreadPoolExecutor</h3>
+        <p>Pool de hilos. Para IO-bound. El GIL se libera en I/O. Hasta ~500 workers.</p>
+      </div>
+      <div class="concept-card orange">
+        <span class="concept-icon">EXECUTOR</span>
+        <h3>ProcessPoolExecutor</h3>
+        <p>Pool de procesos. Para CPU-bound. Sin GIL compartido. Workers = núcleos físicos.</p>
+      </div>
+      <div class="concept-card green">
+        <span class="concept-icon">FUTURE</span>
+        <h3>Future</h3>
+        <p>Objeto que representa un resultado pendiente. Puede estar pending, running, done o cancelled.</p>
+      </div>
+    </div>
+
+    <h2>submit(): enviar tareas individuales</h2>
+
+    <p><code>executor.submit(funcion, *args, **kwargs)</code> envía una tarea al pool y devuelve un <code>Future</code> inmediatamente. El pool la ejecuta en background. El código principal puede continuar o esperar con <code>future.result()</code>.</p>
+
+    <div class="code-block">
+      <div class="code-header">
+        <span class="code-lang">python — submit básico con ThreadPoolExecutor</span>
+        <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+      </div>
+      <pre><code>from concurrent.futures import ThreadPoolExecutor
+import time
+import urllib.request
+
+def descargar(url):
+    """IO-bound: descarga una URL y devuelve el tamaño."""
+    with urllib.request.urlopen(url, timeout=10) as r:
+        return len(r.read())
+
+URLS = [
+    "https://httpbin.org/bytes/1024",
+    "https://httpbin.org/bytes/2048",
+    "https://httpbin.org/bytes/512",
+    "https://httpbin.org/bytes/4096",
+]
+
+with ThreadPoolExecutor(max_workers=4) as executor:
+    # submit devuelve Future inmediatamente
+    futures = {executor.submit(descargar, url): url for url in URLS}
+
+    for future in futures:
+        url = futures[future]
+        try:
+            bytes_descargados = future.result()  # bloquea hasta que esté listo
+            print(f"{url}: {bytes_descargados} bytes")
+        except Exception as e:
+            print(f"{url}: ERROR — {e}")</code></pre>
+    </div>
+
+    <h2>as_completed(): procesar resultados a medida que llegan</h2>
+
+    <p><code>as_completed(futures)</code> es un generador que yield los futures en el orden en que van terminando, no en el orden en que fueron enviados. Es el patrón correcto cuando quieres procesar resultados sin esperar a los más lentos.</p>
+
+    <div class="code-block">
+      <div class="code-header">
+        <span class="code-lang">python — as_completed: recoger resultados según terminan</span>
+        <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+      </div>
+      <pre><code>from concurrent.futures import ThreadPoolExecutor, as_completed
+import time
+import random
+
+def procesar_endpoint(endpoint_id, latencia_simulada):
+    """Simula una petición con latencia variable."""
+    time.sleep(latencia_simulada)
+    return {"id": endpoint_id, "latencia_ms": latencia_simulada * 1000}
+
+tareas = [(i, random.uniform(0.1, 2.0)) for i in range(10)]
+
+t0 = time.perf_counter()
+with ThreadPoolExecutor(max_workers=10) as executor:
+    futures = {
+        executor.submit(procesar_endpoint, eid, lat): eid
+        for eid, lat in tareas
+    }
+
+    # Los resultados llegan en orden de completado, no de envío
+    for future in as_completed(futures):
+        endpoint_id = futures[future]
+        resultado = future.result()
+        elapsed = time.perf_counter() - t0
+        print(f"t+{elapsed:.2f}s: endpoint {endpoint_id} → {resultado['latencia_ms']:.0f}ms")
+
+print(f"\nTotal: {time.perf_counter()-t0:.2f}s (secuencial hubiera tardado ~{sum(l for _,l in tareas):.1f}s)")</code></pre>
+    </div>
+
+    <h4>Output (los más rápidos aparecen primero):</h4>
+    <div class="code-block">
+      <div class="code-header"><span class="code-lang">output</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+      <pre><code>t+0.12s: endpoint 3 → 112ms
+t+0.34s: endpoint 7 → 338ms
+t+0.51s: endpoint 1 → 507ms
+...
+t+1.93s: endpoint 9 → 1928ms
+
+Total: 1.95s (secuencial hubiera tardado ~9.7s)</code></pre>
+    </div>
+
+    <h2>executor.map(): la forma más simple</h2>
+
+    <p><code>executor.map(funcion, iterable)</code> es similar a <code>pool.map()</code>: aplica la función a cada elemento, devuelve una lista de resultados en el mismo orden de entrada. A diferencia de <code>as_completed</code>, bloquea y preserva el orden.</p>
+
+    <div class="code-block">
+      <div class="code-header">
+        <span class="code-lang">python — executor.map con timeout global</span>
+        <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+      </div>
+      <pre><code>from concurrent.futures import ThreadPoolExecutor
+import urllib.request
+
+def fetch(url):
+    with urllib.request.urlopen(url, timeout=5) as r:
+        return r.status
+
+urls = ["https://httpbin.org/status/200"] * 8
+
+with ThreadPoolExecutor(max_workers=8) as executor:
+    # timeout=10: si algún future no termina en 10s, lanza TimeoutError
+    resultados = list(executor.map(fetch, urls, timeout=10))
+
+print(f"Respuestas: {resultados}")</code></pre>
+    </div>
+
+    <h2>ProcessPoolExecutor: el mismo API, paralelismo real</h2>
+
+    <p>Cambiar de <code>ThreadPoolExecutor</code> a <code>ProcessPoolExecutor</code> es una línea de código. El API es idéntico. La diferencia interna: los workers son procesos, no hilos.</p>
+
+    <div class="code-block">
+      <div class="code-header">
+        <span class="code-lang">python — ProcessPoolExecutor para CPU-bound</span>
+        <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+      </div>
+      <pre><code>from concurrent.futures import ProcessPoolExecutor, as_completed
+import hashlib
+import time
+
+def hashear_bloque(bloque_id, n_hashes):
+    """CPU-bound: genera n_hashes SHA-256 consecutivos."""
+    h = str(bloque_id).encode()
+    for _ in range(n_hashes):
+        h = hashlib.sha256(h).digest()
+    return bloque_id, h.hex()
+
+BLOQUES = list(range(16))      # 16 bloques de trabajo
+N_HASHES = 200_000             # hashes por bloque
+
+if __name__ == "__main__":
+    t0 = time.perf_counter()
+    resultados = {}
+
+    with ProcessPoolExecutor() as executor:
+        futures = {executor.submit(hashear_bloque, b, N_HASHES): b for b in BLOQUES}
+        for future in as_completed(futures):
+            bloque_id, hash_final = future.result()
+            resultados[bloque_id] = hash_final
+
+    print(f"{len(BLOQUES)} bloques procesados en {time.perf_counter()-t0:.2f}s")
+    print(f"Muestra: bloque 0 → {resultados[0][:32]}...")</code></pre>
+    </div>
+
+    <h2>Manejo de errores: excepciones en futures</h2>
+
+    <p>Cuando un worker lanza una excepción, el <code>Future</code> la captura y la re-lanza cuando el código principal llama a <code>.result()</code>. Esto hace el manejo de errores mucho más limpio que con callbacks.</p>
+
+    <div class="code-block">
+      <div class="code-header">
+        <span class="code-lang">python — capturar errores por future sin romper los demás</span>
+        <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+      </div>
+      <pre><code>from concurrent.futures import ThreadPoolExecutor, as_completed
+import urllib.request
+
+def fetch_seguro(url):
+    with urllib.request.urlopen(url, timeout=5) as r:
+        return r.status
+
+urls_mixtas = [
+    "https://httpbin.org/status/200",
+    "https://httpbin.org/status/404",  # lanzará HTTPError
+    "https://host-que-no-existe.xyz",  # lanzará URLError
+    "https://httpbin.org/status/500",  # lanzará HTTPError
+    "https://httpbin.org/status/200",
+]
+
+ok = 0
+errores = []
+
+with ThreadPoolExecutor(max_workers=5) as executor:
+    futures = {executor.submit(fetch_seguro, url): url for url in urls_mixtas}
+
+    for future in as_completed(futures):
+        url = futures[future]
+        try:
+            status = future.result()
+            ok += 1
+            print(f"OK    {url} → {status}")
+        except Exception as e:
+            errores.append({"url": url, "error": str(e)})
+            print(f"ERROR {url} → {e}")
+
+print(f"\nResumen: {ok} OK, {len(errores)} errores")</code></pre>
+    </div>
+
+    <div class="info-box info">
+      <span class="info-box-icon">INFO</span>
+      <div class="info-box-text"><strong>Ventaja sobre threading raw:</strong> Con <code>threading.Thread</code>, si el worker lanza una excepción y nadie la captura, se imprime en stderr pero el hilo termina silenciosamente. Con <code>Future.result()</code>, la excepción se propaga de forma explícita al hilo principal y no puede ser ignorada accidentalmente.</div>
+    </div>
+
+    <h2>Cancelar futures</h2>
+
+    <p>Un future puede cancelarse si todavía no ha empezado a ejecutarse. Una vez que un worker lo ha recogido, no puede cancelarse (el worker ya está ejecutando).</p>
+
+    <div class="code-block">
+      <div class="code-header">
+        <span class="code-lang">python — cancelar futures pendientes si uno falla</span>
+        <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+      </div>
+      <pre><code>from concurrent.futures import ThreadPoolExecutor
+import time
+
+def tarea_larga(id, duracion):
+    print(f"Tarea {id}: arrancando ({duracion}s)")
+    time.sleep(duracion)
+    if id == 3:
+        raise ValueError(f"Tarea {id} falló deliberadamente")
+    return f"tarea_{id}_ok"
+
+with ThreadPoolExecutor(max_workers=2) as executor:
+    futures = [executor.submit(tarea_larga, i, 1 + i * 0.5) for i in range(8)]
+
+    for future in futures:
+        try:
+            resultado = future.result(timeout=5)
+            print(f"Resultado: {resultado}")
+        except ValueError as e:
+            print(f"Fallo crítico: {e}")
+            # Cancelar todas las tareas pendientes
+            canceladas = sum(1 for f in futures if f.cancel())
+            print(f"Canceladas {canceladas} tareas pendientes")
+            break</code></pre>
+    </div>
+
+    <h2>wait(): esperar un subconjunto de futures</h2>
+
+    <div class="code-block">
+      <div class="code-header">
+        <span class="code-lang">python — wait con FIRST_COMPLETED para reacción rápida</span>
+        <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+      </div>
+      <pre><code>from concurrent.futures import ThreadPoolExecutor, wait, FIRST_COMPLETED
+import time
+import random
+
+def tarea(n):
+    tiempo = random.uniform(0.5, 3.0)
+    time.sleep(tiempo)
+    return n, tiempo
+
+with ThreadPoolExecutor(max_workers=5) as executor:
+    futures = {executor.submit(tarea, i) for i in range(5)}
+
+    while futures:
+        # Espera hasta que al menos uno termine
+        done, futures = wait(futures, return_when=FIRST_COMPLETED)
+        for f in done:
+            n, t = f.result()
+            print(f"Tarea {n} terminó en {t:.2f}s. Quedan {len(futures)} pendientes.")</code></pre>
+    </div>
+
+    <h2>Elegir el número correcto de workers</h2>
+
+    <table class="timeline-table">
+      <thead>
+        <tr><th>Executor</th><th>Regla de base</th><th>Ajuste</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>ThreadPoolExecutor</strong></td>
+          <td><code>min(32, os.cpu_count() + 4)</code> (default Python 3.8+)</td>
+          <td>Para IO-bound: subir hasta 100-500 según latencia del servicio remoto</td>
+        </tr>
+        <tr>
+          <td><strong>ProcessPoolExecutor</strong></td>
+          <td><code>os.cpu_count()</code> (default)</td>
+          <td>Nunca superar el número de núcleos físicos; más procesos = más overhead sin ganancia</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="code-block">
+      <div class="code-header">
+        <span class="code-lang">python — encontrar el número óptimo de workers para IO-bound</span>
+        <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+      </div>
+      <pre><code>from concurrent.futures import ThreadPoolExecutor
+import time
+import urllib.request
+
+def ping(url):
+    with urllib.request.urlopen(url, timeout=5) as r:
+        return r.status
+
+URL = "https://httpbin.org/status/200"
+N_REQUESTS = 50
+
+for n_workers in [1, 5, 10, 20, 50]:
+    t0 = time.perf_counter()
+    with ThreadPoolExecutor(max_workers=n_workers) as ex:
+        list(ex.map(ping, [URL] * N_REQUESTS))
+    elapsed = time.perf_counter() - t0
+    rps = N_REQUESTS / elapsed
+    print(f"Workers={n_workers:3d}: {elapsed:.2f}s → {rps:.1f} req/s")</code></pre>
+    </div>
+
+    <h4>Output típico (la ganancia se satura en algún punto):</h4>
+    <div class="code-block">
+      <div class="code-header"><span class="code-lang">output</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+      <pre><code>Workers=  1: 52.3s → 0.96 req/s
+Workers=  5: 11.1s → 4.5 req/s
+Workers= 10:  5.8s → 8.6 req/s
+Workers= 20:  3.2s → 15.6 req/s
+Workers= 50:  2.1s → 23.8 req/s  ← el límite lo pone el servidor, no el cliente</code></pre>
+    </div>
+
+    <div class="info-box warning">
+      <span class="info-box-icon">WARN</span>
+      <div class="info-box-text"><strong>Más workers no siempre significa más velocidad.</strong> El límite puede estar en el servidor destino (rate limiting, conexiones máximas), en el ancho de banda de red, o en el overhead de crear y gestionar demasiados hilos. Mide siempre en el entorno real.</div>
+    </div>
+
+    <div class="chapter-nav">
+      <a href="m1_cap4_multiprocessing.html">← Cap 4: multiprocessing</a>
+      <a href="m1_cap6_asyncio.html" class="next">Cap 6: asyncio →</a>
+    </div>
+
+  </div>
+</main>
+<script>
+function copyCode(btn) {
+  const code = btn.closest('.code-block').querySelector('pre code');
+  navigator.clipboard.writeText(code.textContent);
+  btn.textContent = 'Copiado';
+  setTimeout(() => btn.textContent = 'Copiar', 2000);
+}
+</script>
+</body>
+</html>

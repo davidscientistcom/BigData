@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cap 4 — multiprocessing | Paralelismo Real para Big Data</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<nav class="sidebar">
+  <div class="sidebar-brand"><div class="brand-tag">LucentIA</div><h2>Paralelismo Real<br>para Big Data</h2></div>
+  <div class="sidebar-section">
+    <div class="sidebar-section-title">Módulo 1 — Python</div>
+    <a href="m1_cap1_mapa_mental.html"><span class="cap-num">01</span> Mapa mental</a>
+    <a href="m1_cap2_gil.html"><span class="cap-num">02</span> El GIL</a>
+    <a href="m1_cap3_threading.html"><span class="cap-num">03</span> threading</a>
+    <a href="m1_cap4_multiprocessing.html" class="active"><span class="cap-num">04</span> multiprocessing</a>
+    <a href="m1_cap5_concurrent_futures.html"><span class="cap-num">05</span> concurrent.futures</a>
+    <a href="m1_cap6_asyncio.html"><span class="cap-num">06</span> asyncio</a>
+  </div>
+  <div class="sidebar-section">
+    <div class="sidebar-section-title">Módulo 2 — Stress Testing</div>
+    <a href="m2_cap7_locust_basico.html"><span class="cap-num">07</span> Locust básico</a>
+    <a href="m2_cap8_locust_avanzado.html"><span class="cap-num">08</span> Locust avanzado</a>
+    <a href="m2_cap9_stress_propio.html"><span class="cap-num">09</span> Stress tester propio</a>
+  </div>
+  <div class="sidebar-section">
+    <div class="sidebar-section-title">Módulo 3 — Java/JVM</div>
+    <a href="m3_cap10_java_threads.html"><span class="cap-num">10</span> Threads en Java</a>
+    <a href="m3_cap11_java_concurrent.html"><span class="cap-num">11</span> java.util.concurrent</a>
+    <a href="m3_cap12_gatling.html"><span class="cap-num">12</span> Gatling</a>
+  </div>
+  <div class="sidebar-section">
+    <div class="sidebar-section-title">Apéndice</div>
+    <a href="apendice_resultados.html"><span class="cap-num">A</span> Leer resultados</a>
+  </div>
+</nav>
+
+<main class="main-content">
+  <div class="page-header">
+    <div class="module-tag">Módulo 1 — Capítulo 4</div>
+    <h1>multiprocessing: procesos reales para CPU-bound</h1>
+    <p class="subtitle">Pool, Process, Queue y Pipe. Cómo esquivar el GIL con procesos independientes y cuándo el overhead de crearlos vale la pena.</p>
+  </div>
+
+  <div class="content">
+
+    <h2>Por qué procesos y no hilos para CPU-bound</h2>
+
+    <p>Como vimos en el Capítulo 2, el GIL impide que múltiples hilos ejecuten bytecode Python en paralelo. La solución es usar procesos en lugar de hilos. Cada proceso tiene su propio intérprete Python, su propio GIL y su propio espacio de memoria. El SO puede ejecutar varios procesos en núcleos distintos de forma completamente independiente.</p>
+
+    <p>El coste: los procesos no comparten memoria. Para pasar datos entre procesos hay que serializarlos (con pickle por defecto), lo que añade overhead. Este overhead es despreciable si las tareas son largas, pero puede dominar si las tareas son muy pequeñas y numerosas.</p>
+
+    <div class="diagram-block">
+      <pre>
+THREADING (memoria compartida, GIL serializa la CPU)
+
+Proceso Python
+├── GIL (solo uno puede ejecutar a la vez)
+├── Hilo 1: ejecuta → espera GIL → ejecuta → ...
+├── Hilo 2:           ejecuta → espera GIL → ...
+└── Hilo 3:                     ejecuta → ...
+Heap: compartido por todos (un objeto = una copia)
+
+MULTIPROCESSING (memoria aislada, sin GIL compartido)
+
+Proceso 1 (núcleo 0)   Proceso 2 (núcleo 1)   Proceso 3 (núcleo 2)
+├── GIL propio         ├── GIL propio         ├── GIL propio
+├── Hilo principal     ├── Hilo principal     ├── Hilo principal
+└── Heap propio        └── Heap propio        └── Heap propio
+    (copia del padre)       (copia del padre)
+
+Comunicación entre procesos: Queue, Pipe, Value, Array (con serialización)
+      </pre>
+    </div>
+
+    <h2>Process: lanzar un proceso hijo</h2>
+
+    <div class="code-block">
+      <div class="code-header">
+        <span class="code-lang">python — Process básico</span>
+        <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+      </div>
+      <pre><code>import multiprocessing
+import os
+import time
+
+def tarea_pesada(nombre, n):
+    pid = os.getpid()
+    print(f"[{nombre}] PID={pid} arrancando, n={n:,}")
+    resultado = sum(i * i for i in range(n))
+    print(f"[{nombre}] PID={pid} terminado, resultado={resultado:,}")
+    return resultado  # los valores de retorno de Process no son accesibles directamente
+
+if __name__ == "__main__":  # OBLIGATORIO en Windows y macOS
+    n = 5_000_000
+    print(f"Proceso padre: PID={os.getpid()}")
+
+    p1 = multiprocessing.Process(target=tarea_pesada, args=("P1", n))
+    p2 = multiprocessing.Process(target=tarea_pesada, args=("P2", n))
+
+    t0 = time.perf_counter()
+    p1.start()
+    p2.start()
+    p1.join()
+    p2.join()
+    print(f"Ambos procesos terminados en {time.perf_counter() - t0:.2f}s")</code></pre>
+    </div>
+
+    <div class="info-box warning">
+      <span class="info-box-icon">WARN</span>
+      <div class="info-box-text"><strong><code>if __name__ == "__main__":</code> es obligatorio.</strong> En Windows y macOS, Python usa <em>spawn</em> para crear procesos nuevos: importa el módulo completo en cada proceso hijo. Sin el guard, el código de creación de procesos se ejecuta recursivamente en cada hijo, causando un bucle infinito de creación de procesos hasta que el sistema se queda sin memoria.</div>
+    </div>
+
+    <h2>Pool: el patrón principal para trabajo masivo</h2>
+
+    <p><code>multiprocessing.Pool</code> crea un pool de procesos trabajadores que reutilizas para ejecutar múltiples tareas. Es más eficiente que crear y destruir un proceso por tarea, porque el overhead de creación se paga una sola vez.</p>
+
+    <h3>Pool.map: el método más simple</h3>
+
+    <p><code>pool.map(funcion, iterable)</code> aplica la función a cada elemento del iterable, distribuye el trabajo entre los procesos del pool, y devuelve una lista de resultados en el mismo orden que la entrada. Bloquea hasta que todos los resultados están disponibles.</p>
+
+    <div class="code-block">
+      <div class="code-header">
+        <span class="code-lang">python — Pool.map para procesar un dataset grande</span>
+        <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+      </div>
+      <pre><code>import multiprocessing
+import time
+import hashlib
+
+def procesar_registro(registro):
+    """CPU-bound: calcula el hash SHA-256 de un string de datos."""
+    datos = f"registro_{registro}_datos_" + "x" * 1000
+    return hashlib.sha256(datos.encode()).hexdigest()
+
+if __name__ == "__main__":
+    dataset = list(range(10_000))  # 10.000 registros a procesar
+    n_nucleos = multiprocessing.cpu_count()
+    print(f"CPUs disponibles: {n_nucleos}")
+
+    # Secuencial
+    t0 = time.perf_counter()
+    resultados_seq = [procesar_registro(r) for r in dataset]
+    t_seq = time.perf_counter() - t0
+    print(f"Secuencial: {t_seq:.2f}s")
+
+    # Pool.map con todos los núcleos
+    t0 = time.perf_counter()
+    with multiprocessing.Pool(n_nucleos) as pool:
+        resultados_par = pool.map(procesar_registro, dataset)
+    t_par = time.perf_counter() - t0
+    print(f"Pool({n_nucleos}):  {t_par:.2f}s  ({t_seq/t_par:.1f}x más rápido)")
+
+    # Verificar que los resultados son idénticos
+    assert resultados_seq == resultados_par, "Resultados distintos!"
+    print("Resultados verificados: idénticos")</code></pre>
+    </div>
+
+    <h4>Output esperado (4 núcleos):</h4>
+    <div class="code-block">
+      <div class="code-header"><span class="code-lang">output</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+      <pre><code>CPUs disponibles: 4
+Secuencial: 3.41s
+Pool(4):    0.94s  (3.6x más rápido)
+Resultados verificados: idénticos</code></pre>
+    </div>
+
+    <h3>Pool.map vs Pool.imap: cuándo usar cada uno</h3>
+
+    <div class="two-col">
+      <div class="mini-card">
+        <h5>Pool.map</h5>
+        <ul>
+          <li>Materializa toda la lista de entrada en memoria antes de distribuir</li>
+          <li>Devuelve todos los resultados de golpe (bloquea)</li>
+          <li>Correcto cuando el dataset cabe en RAM</li>
+          <li>Más simple de usar</li>
+        </ul>
+      </div>
+      <div class="mini-card">
+        <h5>Pool.imap</h5>
+        <ul>
+          <li>Lazy: consume el iterable de entrada elemento a elemento</li>
+          <li>Devuelve un iterador: puedes procesar resultados mientras llegan</li>
+          <li>Correcto para datasets que no caben en RAM</li>
+          <li>Requiere iterar el resultado explícitamente</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="code-block">
+      <div class="code-header">
+        <span class="code-lang">python — Pool.imap para datasets grandes (streaming)</span>
+        <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+      </div>
+      <pre><code>import multiprocessing
+import hashlib
+
+def procesar(n):
+    return hashlib.sha256(str(n).encode()).hexdigest()
+
+def generador_infinito():
+    """Genera datos sin cargarlos todos en RAM."""
+    n = 0
+    while True:
+        yield n
+        n += 1
+
+if __name__ == "__main__":
+    TOTAL = 50_000
+
+    with multiprocessing.Pool() as pool:
+        # imap procesa en paralelo pero consume el generador de forma lazy
+        for i, resultado in enumerate(pool.imap(procesar, generador_infinito(), chunksize=500)):
+            if i >= TOTAL:
+                break
+            if i % 10_000 == 0:
+                print(f"Procesados: {i:,} | Último: {resultado[:16]}...")
+
+    print(f"Total: {TOTAL:,} registros procesados")</code></pre>
+    </div>
+
+    <h3>Pool.apply_async: tareas heterogéneas con callback</h3>
+
+    <p><code>pool.apply_async(funcion, args)</code> envía una tarea al pool y devuelve un objeto <code>AsyncResult</code> inmediatamente. El proceso principal puede continuar y recoger el resultado más tarde con <code>.get()</code>. Es útil cuando las tareas tienen argumentos distintos o quieres gestionar resultados a medida que van llegando.</p>
+
+    <div class="code-block">
+      <div class="code-header">
+        <span class="code-lang">python — apply_async con callback para métricas en tiempo real</span>
+        <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+      </div>
+      <pre><code>import multiprocessing
+import time
+import random
+
+latencias = []
+lock = multiprocessing.Lock()
+
+def simular_procesamiento(item_id, peso):
+    """Simula procesamiento de duración variable."""
+    time.sleep(random.uniform(0.1, 0.5) * peso)
+    return {"id": item_id, "latencia_ms": peso * 300}
+
+def on_resultado(resultado):
+    """Callback ejecutado en el proceso principal cuando llega un resultado."""
+    latencias.append(resultado["latencia_ms"])
+    print(f"Completado item {resultado['id']}: {resultado['latencia_ms']:.0f}ms")
+
+def on_error(error):
+    print(f"ERROR: {error}")
+
+if __name__ == "__main__":
+    tareas = [(i, random.uniform(0.5, 2.0)) for i in range(12)]
+
+    with multiprocessing.Pool(4) as pool:
+        futures = []
+        for item_id, peso in tareas:
+            f = pool.apply_async(
+                simular_procesamiento,
+                args=(item_id, peso),
+                callback=on_resultado,
+                error_callback=on_error
+            )
+            futures.append(f)
+
+        # Esperar a que todos terminen
+        for f in futures:
+            f.wait()
+
+    print(f"\nLatencia media: {sum(latencias)/len(latencias):.0f}ms")</code></pre>
+    </div>
+
+    <h2>Queue y Pipe: comunicación entre procesos</h2>
+
+    <h3>multiprocessing.Queue</h3>
+
+    <p>Funciona igual que <code>queue.Queue</code> del módulo threading, pero es segura entre procesos (no entre hilos del mismo proceso). Usa internamente pipes y locks del SO.</p>
+
+    <div class="code-block">
+      <div class="code-header">
+        <span class="code-lang">python — Queue entre procesos: productor-consumidor real</span>
+        <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+      </div>
+      <pre><code>import multiprocessing
+import time
+import random
+
+def productor(cola, n):
+    for i in range(n):
+        item = {"id": i, "datos": f"payload_{i}" * 100}
+        cola.put(item)
+    cola.put(None)  # señal de fin
+
+def consumidor(cola, resultados):
+    while True:
+        item = cola.get()
+        if item is None:
+            break
+        # Simula procesamiento CPU-bound
+        tiempo = sum(ord(c) for c in item["datos"])
+        resultados.put({"id": item["id"], "resultado": tiempo % 1000})
+
+if __name__ == "__main__":
+    cola_entrada = multiprocessing.Queue(maxsize=100)
+    cola_salida  = multiprocessing.Queue()
+
+    p_prod = multiprocessing.Process(target=productor, args=(cola_entrada, 200))
+    p_cons = [multiprocessing.Process(target=consumidor, args=(cola_entrada, cola_salida))
+              for _ in range(3)]
+
+    t0 = time.perf_counter()
+    p_prod.start()
+    for p in p_cons: p.start()
+
+    p_prod.join()
+    # Enviar señal de fin a cada consumidor
+    for _ in p_cons:
+        cola_entrada.put(None)
+    for p in p_cons: p.join()
+
+    # Recoger resultados
+    resultados = []
+    while not cola_salida.empty():
+        resultados.append(cola_salida.get())
+
+    print(f"Procesados: {len(resultados)} items en {time.perf_counter()-t0:.2f}s")</code></pre>
+    </div>
+
+    <h3>Pipe: canal bidireccional de baja latencia</h3>
+
+    <p><code>multiprocessing.Pipe()</code> crea un par de conexiones. Es más rápido que Queue para comunicación entre exactamente dos procesos, pero no es thread-safe y no admite múltiples productores/consumidores.</p>
+
+    <div class="code-block">
+      <div class="code-header">
+        <span class="code-lang">python — Pipe para comunicación bidireccional entre dos procesos</span>
+        <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+      </div>
+      <pre><code>import multiprocessing
+
+def proceso_hijo(conn):
+    """Recibe números, devuelve sus cuadrados."""
+    while True:
+        n = conn.recv()
+        if n is None:
+            break
+        conn.send(n * n)
+    conn.close()
+
+if __name__ == "__main__":
+    conn_padre, conn_hijo = multiprocessing.Pipe(duplex=True)
+
+    p = multiprocessing.Process(target=proceso_hijo, args=(conn_hijo,))
+    p.start()
+    conn_hijo.close()  # el padre cierra el extremo del hijo
+
+    for n in [1, 5, 10, 100, 1000]:
+        conn_padre.send(n)
+        cuadrado = conn_padre.recv()
+        print(f"{n}² = {cuadrado}")
+
+    conn_padre.send(None)  # señal de fin
+    p.join()
+    conn_padre.close()</code></pre>
+    </div>
+
+    <h2>Memoria compartida: Value y Array</h2>
+
+    <p>Para datos simples que múltiples procesos necesitan leer y modificar sin serialización, <code>multiprocessing.Value</code> y <code>multiprocessing.Array</code> usan memoria compartida del SO. Son rápidos, pero requieren gestión explícita de locks.</p>
+
+    <div class="code-block">
+      <div class="code-header">
+        <span class="code-lang">python — Value con Lock para contador compartido entre procesos</span>
+        <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+      </div>
+      <pre><code>import multiprocessing
+import time
+
+def incrementar(contador, n):
+    for _ in range(n):
+        with contador.get_lock():  # Value incluye su propio lock
+            contador.value += 1
+
+if __name__ == "__main__":
+    contador = multiprocessing.Value('i', 0)  # 'i' = entero con signo
+    N = 50_000
+
+    procesos = [multiprocessing.Process(target=incrementar, args=(contador, N))
+                for _ in range(4)]
+
+    for p in procesos: p.start()
+    for p in procesos: p.join()
+
+    print(f"Esperado: {4 * N:,}")
+    print(f"Obtenido: {contador.value:,}")  # siempre correcto con get_lock()</code></pre>
+    </div>
+
+    <div class="info-box warning">
+      <span class="info-box-icon">WARN</span>
+      <div class="info-box-text"><strong>Value sin lock produce race conditions entre procesos.</strong> A diferencia de threading donde el GIL da cierta protección, en multiprocessing no hay ninguna protección implícita sobre Value. Siempre usa <code>get_lock()</code> cuando varios procesos modifican el mismo Value.</div>
+    </div>
+
+    <h2>Cuánto overhead añade crear un proceso</h2>
+
+    <p>Crear un proceso tiene un coste medible que no existe con hilos. En macOS/Linux el proceso hijo se crea con <em>fork</em> (copia del espacio de memoria del padre) o <em>spawn</em> (nuevo intérprete que importa el módulo). En Windows siempre es spawn. El tiempo de arranque es de 50-200ms dependiendo del tamaño del proceso padre.</p>
+
+    <div class="code-block">
+      <div class="code-header">
+        <span class="code-lang">python — medir el overhead de arrancar un proceso</span>
+        <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+      </div>
+      <pre><code>import multiprocessing
+import time
+
+def noop():
+    pass  # no hace nada
+
+if __name__ == "__main__":
+    # Overhead de crear y destruir un proceso sin Pool
+    t0 = time.perf_counter()
+    for _ in range(10):
+        p = multiprocessing.Process(target=noop)
+        p.start(); p.join()
+    overhead_sin_pool = (time.perf_counter() - t0) / 10
+    print(f"Overhead por proceso (sin Pool): {overhead_sin_pool*1000:.0f}ms")
+
+    # Con Pool: los procesos ya existen, overhead mínimo
+    with multiprocessing.Pool(4) as pool:
+        t0 = time.perf_counter()
+        for _ in range(10):
+            pool.apply(noop)
+        overhead_pool = (time.perf_counter() - t0) / 10
+    print(f"Overhead por tarea (con Pool):   {overhead_pool*1000:.1f}ms")
+
+    # Conclusión: si cada tarea dura menos que el overhead → no merece la pena</code></pre>
+    </div>
+
+    <h4>Output típico:</h4>
+    <div class="code-block">
+      <div class="code-header"><span class="code-lang">output</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+      <pre><code>Overhead por proceso (sin Pool): 87ms
+Overhead por tarea (con Pool):   2.3ms</code></pre>
+    </div>
+
+    <div class="info-box info">
+      <span class="info-box-icon">INFO</span>
+      <div class="info-box-text"><strong>Regla práctica:</strong> Si cada tarea dura menos de ~50ms, el overhead de Pool puede dominar y el resultado puede ser más lento que secuencial. Para tareas muy cortas y numerosas, es mejor agrupar el trabajo en chunks mayores o usar <code>pool.map(funcion, dataset, chunksize=N)</code> con un chunksize adecuado.</div>
+    </div>
+
+    <h2>Caso real: procesar un fichero de log en paralelo</h2>
+
+    <div class="code-block">
+      <div class="code-header">
+        <span class="code-lang">python — dividir y procesar un fichero grande en paralelo</span>
+        <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+      </div>
+      <pre><code>import multiprocessing
+import time
+import re
+
+def procesar_chunk(lineas):
+    """Extrae IPs y cuenta errores 500 en un chunk de líneas."""
+    patron_error = re.compile(r'(\d+\.\d+\.\d+\.\d+).*? 500 ')
+    ips_con_error = []
+    for linea in lineas:
+        m = patron_error.search(linea)
+        if m:
+            ips_con_error.append(m.group(1))
+    return ips_con_error
+
+def dividir_en_chunks(fichero, n_chunks):
+    """Lee el fichero y lo divide en n_chunks listas de líneas."""
+    with open(fichero) as f:
+        lineas = f.readlines()
+    tam = len(lineas) // n_chunks
+    return [lineas[i*tam:(i+1)*tam] for i in range(n_chunks)]
+
+if __name__ == "__main__":
+    # Para probar, generar un fichero de log sintético
+    import tempfile, random, os
+    ips = [f"192.168.{random.randint(0,255)}.{random.randint(1,254)}" for _ in range(100)]
+    codigos = [200, 200, 200, 404, 500]  # mayoría OK
+
+    with tempfile.NamedTemporaryFile(mode='w', suffix='.log', delete=False) as f:
+        nombre_fichero = f.name
+        for _ in range(100_000):
+            ip = random.choice(ips)
+            codigo = random.choice(codigos)
+            f.write(f'{ip} - - [27/Apr/2026:10:00:00 +0000] "GET /api/data HTTP/1.1" {codigo} 1234\n')
+
+    n_cpu = multiprocessing.cpu_count()
+    chunks = dividir_en_chunks(nombre_fichero, n_cpu)
+
+    t0 = time.perf_counter()
+    with multiprocessing.Pool(n_cpu) as pool:
+        resultados = pool.map(procesar_chunk, chunks)
+
+    # Aplanar resultados de todos los procesos
+    todas_ips = [ip for sublist in resultados for ip in sublist]
+    from collections import Counter
+    top5 = Counter(todas_ips).most_common(5)
+
+    print(f"Procesadas 100.000 líneas en {time.perf_counter()-t0:.3f}s con {n_cpu} procesos")
+    print(f"Total errores 500: {len(todas_ips)}")
+    print("Top 5 IPs con error 500:")
+    for ip, cuenta in top5:
+        print(f"  {ip}: {cuenta} errores")
+
+    os.unlink(nombre_fichero)</code></pre>
+    </div>
+
+    <h2>Resumen: cuándo usar qué de multiprocessing</h2>
+
+    <table class="timeline-table">
+      <thead>
+        <tr><th>API</th><th>Cuándo</th><th>Ventaja</th><th>Limitación</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Pool.map</strong></td>
+          <td>Dataset homogéneo, cabe en RAM</td>
+          <td>Simple, preserva orden</td>
+          <td>Bloquea hasta tener todos los resultados</td>
+        </tr>
+        <tr>
+          <td><strong>Pool.imap</strong></td>
+          <td>Dataset grande o generador</td>
+          <td>Streaming, sin cargar todo en RAM</td>
+          <td>Más lento que map por la serialización incremental</td>
+        </tr>
+        <tr>
+          <td><strong>Pool.apply_async</strong></td>
+          <td>Tareas heterogéneas, callbacks</td>
+          <td>No bloquea, callback al terminar</td>
+          <td>Gestión manual de futures</td>
+        </tr>
+        <tr>
+          <td><strong>Queue</strong></td>
+          <td>Comunicación productor-consumidor</td>
+          <td>Multi-productor, multi-consumidor</td>
+          <td>Overhead de serialización en cada put/get</td>
+        </tr>
+        <tr>
+          <td><strong>Pipe</strong></td>
+          <td>Canal entre exactamente 2 procesos</td>
+          <td>Más rápido que Queue</td>
+          <td>Solo 2 extremos, no thread-safe</td>
+        </tr>
+        <tr>
+          <td><strong>Value/Array</strong></td>
+          <td>Estado compartido simple</td>
+          <td>Sin serialización, acceso directo</td>
+          <td>Requiere lock manual, solo tipos C básicos</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="chapter-nav">
+      <a href="m1_cap3_threading.html">← Cap 3: threading</a>
+      <a href="m1_cap5_concurrent_futures.html" class="next">Cap 5: concurrent.futures →</a>
+    </div>
+
+  </div>
+</main>
+<script>
+function copyCode(btn) {
+  const code = btn.closest('.code-block').querySelector('pre code');
+  navigator.clipboard.writeText(code.textContent);
+  btn.textContent = 'Copiado';
+  setTimeout(() => btn.textContent = 'Copiar', 2000);
+}
+</script>
+</body>
+</html>

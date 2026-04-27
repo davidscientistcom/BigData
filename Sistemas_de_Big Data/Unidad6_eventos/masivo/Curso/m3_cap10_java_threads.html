@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cap 10 — Threads en Java | Paralelismo Real para Big Data</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<nav class="sidebar">
+  <div class="sidebar-brand"><div class="brand-tag">LucentIA</div><h2>Paralelismo Real<br>para Big Data</h2></div>
+  <div class="sidebar-section">
+    <div class="sidebar-section-title">Módulo 1 — Python</div>
+    <a href="m1_cap1_mapa_mental.html"><span class="cap-num">01</span> Mapa mental</a>
+    <a href="m1_cap2_gil.html"><span class="cap-num">02</span> El GIL</a>
+    <a href="m1_cap3_threading.html"><span class="cap-num">03</span> threading</a>
+    <a href="m1_cap4_multiprocessing.html"><span class="cap-num">04</span> multiprocessing</a>
+    <a href="m1_cap5_concurrent_futures.html"><span class="cap-num">05</span> concurrent.futures</a>
+    <a href="m1_cap6_asyncio.html"><span class="cap-num">06</span> asyncio</a>
+  </div>
+  <div class="sidebar-section">
+    <div class="sidebar-section-title">Módulo 2 — Stress Testing</div>
+    <a href="m2_cap7_locust_basico.html"><span class="cap-num">07</span> Locust básico</a>
+    <a href="m2_cap8_locust_avanzado.html"><span class="cap-num">08</span> Locust avanzado</a>
+    <a href="m2_cap9_stress_propio.html"><span class="cap-num">09</span> Stress tester propio</a>
+  </div>
+  <div class="sidebar-section">
+    <div class="sidebar-section-title">Módulo 3 — Java/JVM</div>
+    <a href="m3_cap10_java_threads.html" class="active"><span class="cap-num">10</span> Threads en Java</a>
+    <a href="m3_cap11_java_concurrent.html"><span class="cap-num">11</span> java.util.concurrent</a>
+    <a href="m3_cap12_gatling.html"><span class="cap-num">12</span> Gatling</a>
+  </div>
+  <div class="sidebar-section">
+    <div class="sidebar-section-title">Apéndice</div>
+    <a href="apendice_resultados.html"><span class="cap-num">A</span> Leer resultados</a>
+  </div>
+</nav>
+
+<main class="main-content">
+  <div class="page-header">
+    <div class="module-tag">Módulo 3 — Capítulo 10</div>
+    <h1>Threads en Java: sin GIL, con paralelismo real</h1>
+    <p class="subtitle">Thread, Runnable, ExecutorService. synchronized, volatile, AtomicInteger. El productor-consumidor con BlockingQueue. Por qué Java escala donde Python tiene límites.</p>
+  </div>
+
+  <div class="content">
+
+    <h2>Java y el GIL: la diferencia fundamental</h2>
+
+    <p>Java no tiene GIL. La JVM ejecuta múltiples threads en paralelo real en núcleos distintos. No hay mecanismo global que serialice la ejecución: cada thread en Java puede ejecutar bytecode JVM al mismo tiempo en su propio núcleo. Esta es la razón por la que herramientas como Gatling, JMeter, o Kafka brokers están escritas en Java/Scala: pueden saturar muchos núcleos desde un solo proceso sin las limitaciones de Python.</p>
+
+    <div class="two-col">
+      <div class="mini-card">
+        <h5>Python threading</h5>
+        <ul>
+          <li>GIL: solo un thread ejecuta bytecode a la vez</li>
+          <li>IO-bound: threading escala (GIL se libera en I/O)</li>
+          <li>CPU-bound: threading NO escala (GIL bloquea)</li>
+          <li>Solución CPU: multiprocessing (procesos separados)</li>
+        </ul>
+      </div>
+      <div class="mini-card">
+        <h5>Java threading</h5>
+        <ul>
+          <li>Sin GIL: múltiples threads ejecutan en paralelo real</li>
+          <li>IO-bound: threading escala perfectamente</li>
+          <li>CPU-bound: threading escala (usa múltiples núcleos)</li>
+          <li>Un solo proceso puede saturar todos los núcleos</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="info-box warning">
+      <span class="info-box-icon">WARN</span>
+      <div class="info-box-text"><strong>Sin GIL = más responsabilidad.</strong> En Python, el GIL da cierta protección implícita (operaciones simples sobre objetos Python son atómicas). En Java, no hay ninguna protección implícita. Cualquier dato compartido entre threads requiere sincronización explícita con <code>synchronized</code>, <code>volatile</code>, o clases de <code>java.util.concurrent</code>.</div>
+    </div>
+
+    <h2>Crear threads: Thread y Runnable</h2>
+
+    <h3>Opción 1: extender Thread</h3>
+
+    <div class="code-block">
+      <div class="code-header">
+        <span class="code-lang">java — Thread básico extendiendo la clase</span>
+        <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+      </div>
+      <pre><code>public class MiThread extends Thread {
+    private final String nombre;
+    private final int duracionMs;
+
+    public MiThread(String nombre, int duracionMs) {
+        this.nombre = nombre;
+        this.duracionMs = duracionMs;
+    }
+
+    @Override
+    public void run() {
+        System.out.println("[" + nombre + "] Arrancando en thread: " + Thread.currentThread().getName());
+        try {
+            Thread.sleep(duracionMs);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt(); // restaurar flag de interrupción
+            System.out.println("[" + nombre + "] Interrumpido");
+            return;
+        }
+        System.out.println("[" + nombre + "] Terminado");
+    }
+
+    public static void main(String[] args) throws InterruptedException {
+        MiThread t1 = new MiThread("A", 1000);
+        MiThread t2 = new MiThread("B", 500);
+        MiThread t3 = new MiThread("C", 1500);
+
+        long inicio = System.currentTimeMillis();
+        t1.start();
+        t2.start();
+        t3.start();
+
+        t1.join(); // esperar a que termine
+        t2.join();
+        t3.join();
+
+        long elapsed = System.currentTimeMillis() - inicio;
+        System.out.println("Todos terminados en " + elapsed + "ms (secuencial sería ~3000ms)");
+    }
+}</code></pre>
+    </div>
+
+    <h3>Opción 2: Runnable con lambda (forma moderna)</h3>
+
+    <div class="code-block">
+      <div class="code-header">
+        <span class="code-lang">java — Runnable con lambda (Java 8+)</span>
+        <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+      </div>
+      <pre><code>public class EjemploRunnable {
+    public static void main(String[] args) throws InterruptedException {
+        // Runnable como lambda: más limpio que extender Thread
+        Runnable tarea = () -> {
+            System.out.println("Thread: " + Thread.currentThread().getName());
+            try { Thread.sleep(500); } catch (InterruptedException e) { return; }
+            System.out.println("Tarea terminada");
+        };
+
+        Thread t = new Thread(tarea, "mi-thread-1");
+        t.start();
+        t.join();
+
+        // Opción aún más compacta con lambda inline
+        Thread t2 = new Thread(() -> System.out.println("Thread inline"), "inline");
+        t2.start();
+        t2.join();
+    }
+}</code></pre>
+    </div>
+
+    <h2>ExecutorService: el pool de threads de Java</h2>
+
+    <p>Igual que en Python con <code>ThreadPoolExecutor</code>, en Java la forma correcta de gestionar múltiples threads es con un <code>ExecutorService</code>. Crea el pool una vez, reutiliza los threads para muchas tareas, y lo cierra ordenadamente al final.</p>
+
+    <div class="code-block">
+      <div class="code-header">
+        <span class="code-lang">java — ExecutorService: pool de threads para Big Data</span>
+        <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+      </div>
+      <pre><code>import java.util.concurrent.*;
+import java.util.*;
+
+public class EjemploPool {
+
+    // Simula una petición HTTP a un sistema Big Data
+    static long peticionHTTP(int id) throws Exception {
+        long t0 = System.currentTimeMillis();
+        Thread.sleep(100 + (int)(Math.random() * 200)); // simula latencia de red
+        return System.currentTimeMillis() - t0;
+    }
+
+    public static void main(String[] args) throws InterruptedException {
+        int N_PETICIONES = 100;
+        int N_THREADS = 20;
+
+        ExecutorService pool = Executors.newFixedThreadPool(N_THREADS);
+        List<Future<Long>> futures = new ArrayList<>();
+
+        long inicio = System.currentTimeMillis();
+
+        // Enviar todas las tareas al pool
+        for (int i = 0; i < N_PETICIONES; i++) {
+            final int id = i;
+            Future<Long> future = pool.submit(() -> peticionHTTP(id));
+            futures.add(future);
+        }
+
+        // Recoger resultados
+        List<Long> latencias = new ArrayList<>();
+        int errores = 0;
+        for (Future<Long> f : futures) {
+            try {
+                latencias.add(f.get()); // bloquea hasta que el future esté listo
+            } catch (ExecutionException e) {
+                errores++;
+            }
+        }
+
+        pool.shutdown();
+        pool.awaitTermination(30, TimeUnit.SECONDS);
+
+        long elapsed = System.currentTimeMillis() - inicio;
+        Collections.sort(latencias);
+
+        System.out.printf("Peticiones:    %d%n", N_PETICIONES);
+        System.out.printf("Errores:       %d%n", errores);
+        System.out.printf("Duración:      %dms%n", elapsed);
+        System.out.printf("RPS:           %.1f%n", N_PETICIONES * 1000.0 / elapsed);
+        System.out.printf("p50:           %dms%n", latencias.get(latencias.size() / 2));
+        System.out.printf("p95:           %dms%n", latencias.get((int)(latencias.size() * 0.95)));
+        System.out.printf("p99:           %dms%n", latencias.get((int)(latencias.size() * 0.99)));
+    }
+}</code></pre>
+    </div>
+
+    <h2>synchronized: exclusión mutua en Java</h2>
+
+    <p><code>synchronized</code> en Java es el equivalente de <code>threading.Lock</code> en Python. Garantiza que solo un thread ejecuta el bloque marcado a la vez. Puede aplicarse a un método entero o a un bloque específico.</p>
+
+    <div class="code-block">
+      <div class="code-header">
+        <span class="code-lang">java — race condition y corrección con synchronized</span>
+        <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+      </div>
+      <pre><code>import java.util.concurrent.*;
+
+public class ContadorRace {
+
+    // SIN sincronización: race condition
+    static int contadorInseguro = 0;
+
+    static void incrementarInseguro() {
+        for (int i = 0; i < 100_000; i++) {
+            contadorInseguro++; // NO atómico: read + add + write
+        }
+    }
+
+    // CON synchronized: thread-safe
+    static int contadorSeguro = 0;
+
+    static synchronized void incrementarSeguro() {
+        for (int i = 0; i < 100_000; i++) {
+            contadorSeguro++;
+        }
+    }
+
+    public static void main(String[] args) throws InterruptedException {
+        // Test sin sincronización
+        ExecutorService pool = Executors.newFixedThreadPool(5);
+        for (int i = 0; i < 5; i++) {
+            pool.submit(ContadorRace::incrementarInseguro);
+        }
+        pool.shutdown();
+        pool.awaitTermination(10, TimeUnit.SECONDS);
+        System.out.println("Sin sync  → Esperado: 500,000 | Obtenido: " + contadorInseguro);
+
+        // Test con synchronized
+        pool = Executors.newFixedThreadPool(5);
+        for (int i = 0; i < 5; i++) {
+            pool.submit(ContadorRace::incrementarSeguro);
+        }
+        pool.shutdown();
+        pool.awaitTermination(10, TimeUnit.SECONDS);
+        System.out.println("Con sync  → Esperado: 500,000 | Obtenido: " + contadorSeguro);
+    }
+}</code></pre>
+    </div>
+
+    <h4>Output:</h4>
+    <div class="code-block">
+      <div class="code-header"><span class="code-lang">output</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+      <pre><code>Sin sync  → Esperado: 500,000 | Obtenido: 387,234  ← incorrecto, varía
+Con sync  → Esperado: 500,000 | Obtenido: 500,000  ← siempre correcto</code></pre>
+    </div>
+
+    <h2>AtomicInteger: más rápido que synchronized para contadores</h2>
+
+    <p><code>AtomicInteger</code> usa instrucciones CAS (Compare-And-Swap) del procesador: operaciones atómicas a nivel de hardware, sin locks. Para contadores simples es mucho más eficiente que <code>synchronized</code>.</p>
+
+    <div class="code-block">
+      <div class="code-header">
+        <span class="code-lang">java — AtomicInteger para métricas de alta frecuencia</span>
+        <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+      </div>
+      <pre><code>import java.util.concurrent.*;
+import java.util.concurrent.atomic.*;
+
+public class MetricasAtomicas {
+    // AtomicInteger: sin lock, operaciones atómicas por hardware
+    static final AtomicInteger totalOK    = new AtomicInteger(0);
+    static final AtomicInteger totalFail  = new AtomicInteger(0);
+    static final AtomicLong    totalMs    = new AtomicLong(0);
+
+    static void simularPeticion() {
+        long t0 = System.currentTimeMillis();
+        try {
+            Thread.sleep((long)(Math.random() * 200 + 50));
+            if (Math.random() < 0.05) throw new Exception("Error simulado");
+            totalOK.incrementAndGet();                             // atómico
+            totalMs.addAndGet(System.currentTimeMillis() - t0);   // atómico
+        } catch (Exception e) {
+            totalFail.incrementAndGet();
+        }
+    }
+
+    public static void main(String[] args) throws InterruptedException {
+        ExecutorService pool = Executors.newFixedThreadPool(50);
+        for (int i = 0; i < 1000; i++) {
+            pool.submit(MetricasAtomicas::simularPeticion);
+        }
+        pool.shutdown();
+        pool.awaitTermination(60, TimeUnit.SECONDS);
+
+        int ok   = totalOK.get();
+        int fail = totalFail.get();
+        long ms  = totalMs.get();
+
+        System.out.printf("OK:    %d | Fail: %d | Fail%%: %.1f%n", ok, fail, fail*100.0/(ok+fail));
+        System.out.printf("Latencia media (OK): %.0fms%n", ok > 0 ? ms * 1.0 / ok : 0);
+    }
+}</code></pre>
+    </div>
+
+    <h2>BlockingQueue: productor-consumidor thread-safe</h2>
+
+    <p><code>BlockingQueue</code> en Java es el equivalente de <code>queue.Queue</code> en Python. <code>put()</code> bloquea si la cola está llena; <code>take()</code> bloquea si está vacía. Es la base del patrón productor-consumidor en Java.</p>
+
+    <div class="code-block">
+      <div class="code-header">
+        <span class="code-lang">java — productor-consumidor con LinkedBlockingQueue</span>
+        <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+      </div>
+      <pre><code">import java.util.concurrent.*;
+import java.util.concurrent.atomic.*;
+
+public class ProductorConsumidor {
+
+    record Mensaje(int id, String datos) {}
+    static final Mensaje FIN = new Mensaje(-1, "FIN"); // señal de parada
+
+    static void productor(BlockingQueue<Mensaje> cola, int n) {
+        for (int i = 0; i < n; i++) {
+            try {
+                cola.put(new Mensaje(i, "datos_" + i));
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                return;
+            }
+        }
+        try {
+            cola.put(FIN); // señal de fin
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+    }
+
+    static AtomicInteger procesados = new AtomicInteger(0);
+
+    static void consumidor(BlockingQueue<Mensaje> cola, String nombre) {
+        while (true) {
+            try {
+                Mensaje m = cola.take();
+                if (m == FIN) {
+                    cola.put(FIN); // reinyectar para otros consumidores
+                    break;
+                }
+                Thread.sleep(10); // simula procesamiento
+                procesados.incrementAndGet();
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                return;
+            }
+        }
+    }
+
+    public static void main(String[] args) throws InterruptedException {
+        BlockingQueue<Mensaje> cola = new LinkedBlockingQueue<>(100); // buffer de 100
+        ExecutorService pool = Executors.newCachedThreadPool();
+
+        long t0 = System.currentTimeMillis();
+        pool.submit(() -> productor(cola, 500));
+        for (int i = 0; i < 4; i++) {
+            final String nombre = "C" + i;
+            pool.submit(() -> consumidor(cola, nombre));
+        }
+
+        pool.shutdown();
+        pool.awaitTermination(60, TimeUnit.SECONDS);
+        System.out.printf("Procesados: %d en %dms%n", procesados.get(),
+                          System.currentTimeMillis() - t0);
+    }
+}</code></pre>
+    </div>
+
+    <h2>volatile: visibilidad entre threads</h2>
+
+    <p><code>volatile</code> garantiza que el valor de una variable siempre se lea desde la memoria principal y no desde la caché de CPU del thread. Sin <code>volatile</code>, un thread puede ver un valor obsoleto de una variable que otro thread ha modificado.</p>
+
+    <div class="code-block">
+      <div class="code-header">
+        <span class="code-lang">java — volatile para stop flag compartido</span>
+        <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+      </div>
+      <pre><code>public class StopFlag {
+
+    // Sin volatile: el JIT puede cachear el valor en el registro del thread
+    // y el thread puede no ver la actualización del thread principal
+    static volatile boolean parar = false;
+
+    public static void main(String[] args) throws InterruptedException {
+        Thread worker = new Thread(() -> {
+            int iteraciones = 0;
+            while (!parar) {  // sin volatile, podría ejecutar para siempre
+                iteraciones++;
+            }
+            System.out.println("Worker detenido tras " + iteraciones + " iteraciones");
+        });
+
+        worker.start();
+        Thread.sleep(100); // dejar que el worker ejecute un rato
+        parar = true;      // visible inmediatamente gracias a volatile
+        worker.join();
+        System.out.println("Main: worker terminado");
+    }
+}</code></pre>
+    </div>
+
+    <div class="info-box info">
+      <span class="info-box-icon">INFO</span>
+      <div class="info-box-text"><strong>volatile no es suficiente para operaciones compuestas.</strong> <code>volatile</code> garantiza visibilidad pero no atomicidad. Para un contador compartido, <code>volatile int contador</code> no es thread-safe porque <code>contador++</code> es tres operaciones. Usa <code>AtomicInteger</code> para eso.</div>
+    </div>
+
+    <div class="chapter-nav">
+      <a href="m2_cap9_stress_propio.html">← Cap 9: Stress tester propio</a>
+      <a href="m3_cap11_java_concurrent.html" class="next">Cap 11: java.util.concurrent →</a>
+    </div>
+
+  </div>
+</main>
+<script>
+function copyCode(btn) {
+  const code = btn.closest('.code-block').querySelector('pre code');
+  navigator.clipboard.writeText(code.textContent);
+  btn.textContent = 'Copiado';
+  setTimeout(() => btn.textContent = 'Copiar', 2000);
+}
+</script>
+</body>
+</html>

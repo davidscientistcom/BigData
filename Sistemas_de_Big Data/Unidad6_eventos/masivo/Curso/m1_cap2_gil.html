@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cap 2 — El GIL | Paralelismo Real para Big Data</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<nav class="sidebar">
+  <div class="sidebar-brand">
+    <div class="brand-tag">LucentIA</div>
+    <h2>Paralelismo Real<br>para Big Data</h2>
+  </div>
+  <div class="sidebar-section">
+    <div class="sidebar-section-title">Módulo 1 — Python</div>
+    <a href="m1_cap1_mapa_mental.html"><span class="cap-num">01</span> Mapa mental</a>
+    <a href="m1_cap2_gil.html" class="active"><span class="cap-num">02</span> El GIL</a>
+    <a href="m1_cap3_threading.html"><span class="cap-num">03</span> threading</a>
+    <a href="m1_cap4_multiprocessing.html"><span class="cap-num">04</span> multiprocessing</a>
+    <a href="m1_cap5_concurrent_futures.html"><span class="cap-num">05</span> concurrent.futures</a>
+    <a href="m1_cap6_asyncio.html"><span class="cap-num">06</span> asyncio</a>
+  </div>
+  <div class="sidebar-section">
+    <div class="sidebar-section-title">Módulo 2 — Stress Testing</div>
+    <a href="m2_cap7_locust_basico.html"><span class="cap-num">07</span> Locust básico</a>
+    <a href="m2_cap8_locust_avanzado.html"><span class="cap-num">08</span> Locust avanzado</a>
+    <a href="m2_cap9_stress_propio.html"><span class="cap-num">09</span> Stress tester propio</a>
+  </div>
+  <div class="sidebar-section">
+    <div class="sidebar-section-title">Módulo 3 — Java/JVM</div>
+    <a href="m3_cap10_java_threads.html"><span class="cap-num">10</span> Threads en Java</a>
+    <a href="m3_cap11_java_concurrent.html"><span class="cap-num">11</span> java.util.concurrent</a>
+    <a href="m3_cap12_gatling.html"><span class="cap-num">12</span> Gatling</a>
+  </div>
+  <div class="sidebar-section">
+    <div class="sidebar-section-title">Apéndice</div>
+    <a href="apendice_resultados.html"><span class="cap-num">A</span> Leer resultados</a>
+  </div>
+</nav>
+
+<main class="main-content">
+  <div class="page-header">
+    <div class="module-tag">Módulo 1 — Capítulo 2</div>
+    <h1>El GIL: el enemigo que debes conocer</h1>
+    <p class="subtitle">El Global Interpreter Lock es la razón por la que Python con múltiples hilos no escala en CPU-bound. Entenderlo evita decisiones de diseño incorrectas.</p>
+  </div>
+
+  <div class="content">
+
+    <h2>Qué es el GIL y por qué existe</h2>
+
+    <p>El GIL (Global Interpreter Lock) es un mutex — un bloqueo de exclusión mutua — que protege el intérprete de CPython. En cualquier momento dado, <strong>solo un hilo puede ejecutar bytecode Python</strong>. Aunque tengas 16 hilos y 16 núcleos de CPU, el intérprete de Python solo ejecuta uno a la vez.</p>
+
+    <p>Existe desde los primeros días de Python por una razón concreta: CPython gestiona la memoria con un sistema de conteo de referencias. Cada objeto Python tiene un contador interno que registra cuántos otros objetos lo apuntan. Cuando ese contador llega a cero, el objeto se libera. Sin protección, dos hilos modificando el contador del mismo objeto al mismo tiempo producirían corrupción de memoria. El GIL es la solución simple a ese problema.</p>
+
+    <div class="diagram-block">
+      <pre>
+SIN GIL (situación de carrera en el contador de referencias)
+
+Hilo 1:   lee ref_count = 1
+Hilo 2:   lee ref_count = 1
+Hilo 1:   escribe ref_count = 0  → libera el objeto
+Hilo 2:   escribe ref_count = 0  → intenta liberar un objeto ya liberado
+                                     → CRASH o corrupción silenciosa
+
+CON GIL (solo un hilo modifica el contador a la vez)
+
+Hilo 1:   ADQUIERE GIL
+Hilo 1:   lee ref_count = 1, escribe ref_count = 0, libera objeto
+Hilo 1:   LIBERA GIL
+Hilo 2:   ADQUIERE GIL
+Hilo 2:   lee ref_count = 0  → objeto ya no existe, no hace nada
+Hilo 2:   LIBERA GIL
+      </pre>
+    </div>
+
+    <div class="info-box info">
+      <span class="info-box-icon">INFO</span>
+      <div class="info-box-text"><strong>El GIL es una decisión de implementación de CPython, no del lenguaje Python.</strong> Otras implementaciones como Jython (Python en JVM) o PyPy-STM no tienen GIL. Pero CPython es el intérprete que usa el 99% del mundo, así que en la práctica el GIL existe.</div>
+    </div>
+
+    <h2>Qué bloquea exactamente el GIL</h2>
+
+    <p>El GIL bloquea la <strong>ejecución de bytecode Python</strong>. Cualquier instrucción que el intérprete de Python ejecute directamente está serializada. Esto incluye:</p>
+    <ul>
+      <li>Operaciones aritméticas sobre enteros, floats, strings Python puros</li>
+      <li>Acceso a listas, diccionarios, sets</li>
+      <li>Llamadas a funciones Python</li>
+      <li>Creación y destrucción de objetos Python</li>
+    </ul>
+
+    <h2>Qué NO bloquea el GIL — y por qué threading sí funciona para I/O</h2>
+
+    <p>El GIL se libera automáticamente durante operaciones que no ejecutan bytecode Python. Las más importantes:</p>
+
+    <ul>
+      <li><strong>Llamadas al sistema operativo (syscalls):</strong> cuando un hilo hace <code>socket.recv()</code>, <code>file.read()</code> o cualquier operación bloqueante, el intérprete libera el GIL antes de hacer la llamada al kernel. El hilo queda suspendido esperando la respuesta del SO, y otro hilo puede adquirir el GIL y ejecutar.</li>
+      <li><strong>Extensiones C que lo liberan explícitamente:</strong> NumPy libera el GIL durante operaciones vectoriales. OpenSSL lo libera durante cifrado. La mayoría de librerías C bien escritas lo hacen.</li>
+      <li><strong><code>time.sleep()</code>:</strong> libera el GIL durante el sleep.</li>
+    </ul>
+
+    <div class="diagram-block">
+      <pre>
+GIL durante I/O (por qué threading ayuda en IO-bound)
+
+Tiempo →   0ms      10ms     20ms     30ms     40ms     50ms
+           |--------|--------|--------|--------|--------|--------|
+
+Hilo 1:    [PY ][  espera socket (GIL liberado)  ][PY ]
+Hilo 2:          [PY ][  espera socket (GIL lib)  ][PY ]
+Hilo 3:                [PY ][  espera socket  ][PY ]
+
+GIL:       [H1 ][               rotando entre hilos              ]
+
+↑ Mientras el hilo espera la respuesta de red, el GIL está libre
+  y otros hilos ejecutan su código Python.
+      </pre>
+    </div>
+
+    <div class="diagram-block">
+      <pre>
+GIL durante CPU-bound (por qué threading NO ayuda)
+
+Tiempo →   0ms      10ms     20ms     30ms     40ms     50ms
+           |--------|--------|--------|--------|--------|--------|
+
+Hilo 1:    [===PY bytecode===][===PY bytecode===][===PY ]
+Hilo 2:                      [PY][              esperando GIL              ]
+Hilo 3:                                          [PY][  esperando GIL      ]
+
+GIL:       [====== Hilo 1 lo tiene casi siempre ======][ H2 ][ H3 ]
+
+↑ El hilo activo nunca libera el GIL porque no hace I/O.
+  Los demás hilos esperan, compiten, y el resultado es el mismo
+  tiempo total + overhead de context switch.
+      </pre>
+    </div>
+
+    <h2>Demostración observable: threading en CPU-bound no escala</h2>
+
+    <p>Este script demuestra el efecto del GIL en CPU-bound. Ejecuta la misma función con 1 hilo, 2 hilos y 4 hilos. El tiempo total no mejora con más hilos — de hecho empeora ligeramente por el overhead del context switching.</p>
+
+    <div class="code-block">
+      <div class="code-header">
+        <span class="code-lang">python — efecto del GIL en CPU-bound con threading</span>
+        <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+      </div>
+      <pre><code>import threading
+import time
+
+def cuenta_regresiva(n):
+    """Trabajo puro de CPU: decrementa un contador hasta cero."""
+    while n > 0:
+        n -= 1
+
+N = 50_000_000  # 50 millones de decrementos
+
+# ── 1 hilo: trabajo total = N
+t0 = time.perf_counter()
+t = threading.Thread(target=cuenta_regresiva, args=(N,))
+t.start(); t.join()
+t1_solo = time.perf_counter() - t0
+print(f"1 hilo  (N=50M):    {t1_solo:.2f}s")
+
+# ── 2 hilos: trabajo total = N (N/2 cada uno)
+t0 = time.perf_counter()
+hilos = [threading.Thread(target=cuenta_regresiva, args=(N // 2,)) for _ in range(2)]
+for h in hilos: h.start()
+for h in hilos: h.join()
+t2_hilos = time.perf_counter() - t0
+print(f"2 hilos (N/2 cada): {t2_hilos:.2f}s  (esperado: ~mitad, real: igual o más)")
+
+# ── 4 hilos: trabajo total = N (N/4 cada uno)
+t0 = time.perf_counter()
+hilos = [threading.Thread(target=cuenta_regresiva, args=(N // 4,)) for _ in range(4)]
+for h in hilos: h.start()
+for h in hilos: h.join()
+t4_hilos = time.perf_counter() - t0
+print(f"4 hilos (N/4 cada): {t4_hilos:.2f}s  (esperado: ~cuarto, real: igual o más)")
+
+print(f"\nEficiencia con 2 hilos: {t1_solo / t2_hilos:.2f}x  (ideal: 2.0x)")
+print(f"Eficiencia con 4 hilos: {t1_solo / t4_hilos:.2f}x  (ideal: 4.0x)")</code></pre>
+    </div>
+
+    <h4>Output esperado (en cualquier máquina):</h4>
+    <div class="code-block">
+      <div class="code-header">
+        <span class="code-lang">output — GIL impide que threading mejore CPU-bound</span>
+        <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+      </div>
+      <pre><code>1 hilo  (N=50M):    2.31s
+2 hilos (N/2 cada): 2.45s  (esperado: ~mitad, real: igual o más)
+4 hilos (N/4 cada): 2.67s  (esperado: ~cuarto, real: igual o más)
+
+Eficiencia con 2 hilos: 0.94x  (ideal: 2.0x)
+Eficiencia con 4 hilos: 0.86x  (ideal: 4.0x)</code></pre>
+    </div>
+
+    <div class="info-box danger">
+      <span class="info-box-icon">FAIL</span>
+      <div class="info-box-text"><strong>Fallo observable:</strong> Añadir hilos a trabajo CPU-bound en Python no solo no mejora, sino que empeora el tiempo total. El overhead de context switching entre hilos (el SO sigue cambiando quién ejecuta) añade latencia sin ningún beneficio. Con 4 hilos el trabajo es un 15% más lento que con 1.</div>
+    </div>
+
+    <h2>Cómo multiprocessing evita el GIL</h2>
+
+    <p>Cada proceso Python tiene su propio intérprete y su propio GIL. Dos procesos Python no comparten GIL. Cuando lanzas 4 procesos con <code>multiprocessing.Pool(4)</code>, cada proceso ejecuta de forma completamente independiente en su núcleo de CPU.</p>
+
+    <div class="diagram-block">
+      <pre>
+MULTIPROCESSING: cada proceso tiene su propio GIL
+
+Núcleo 0:  [Proceso 1: GIL propio, ejecutando CPU-bound sin interferencia]
+Núcleo 1:  [Proceso 2: GIL propio, ejecutando CPU-bound sin interferencia]
+Núcleo 2:  [Proceso 3: GIL propio, ejecutando CPU-bound sin interferencia]
+Núcleo 3:  [Proceso 4: GIL propio, ejecutando CPU-bound sin interferencia]
+
+↑ Paralelismo real. Los 4 procesos ejecutan simultáneamente.
+  No comparten memoria (cada uno tiene su heap propio).
+      </pre>
+    </div>
+
+    <div class="code-block">
+      <div class="code-header">
+        <span class="code-lang">python — multiprocessing sí escala en CPU-bound</span>
+        <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+      </div>
+      <pre><code>import multiprocessing
+import time
+
+def cuenta_regresiva(n):
+    while n > 0:
+        n -= 1
+
+N = 50_000_000
+
+# 1 proceso
+t0 = time.perf_counter()
+p = multiprocessing.Process(target=cuenta_regresiva, args=(N,))
+p.start(); p.join()
+print(f"1 proceso  (N=50M):    {time.perf_counter() - t0:.2f}s")
+
+# 4 procesos, cada uno con N/4
+t0 = time.perf_counter()
+with multiprocessing.Pool(4) as pool:
+    pool.map(cuenta_regresiva, [N // 4] * 4)
+print(f"4 procesos (N/4 cada): {time.perf_counter() - t0:.2f}s  ← debería ser ~4x más rápido")</code></pre>
+    </div>
+
+    <h4>Output esperado (en máquina con 4+ núcleos):</h4>
+    <div class="code-block">
+      <div class="code-header">
+        <span class="code-lang">output — multiprocessing sí escala</span>
+        <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+      </div>
+      <pre><code>1 proceso  (N=50M):    2.31s
+4 procesos (N/4 cada): 0.63s  ← debería ser ~4x más rápido</code></pre>
+    </div>
+
+    <h2>El GIL y NumPy: por qué las operaciones vectoriales sí son paralelas</h2>
+
+    <p>NumPy libera el GIL durante las operaciones vectoriales. Esto significa que si tienes código como <code>resultado = np.dot(A, B)</code>, el GIL se libera mientras NumPy ejecuta la multiplicación de matrices en C, y otro hilo Python puede ejecutar en paralelo.</p>
+
+    <div class="code-block">
+      <div class="code-header">
+        <span class="code-lang">python — NumPy libera el GIL: threading sí ayuda con matrices</span>
+        <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+      </div>
+      <pre><code>import threading
+import time
+import numpy as np
+
+def multiplicar_matrices():
+    """NumPy libera el GIL: esta operación sí puede ser paralela con threading."""
+    A = np.random.rand(2000, 2000)
+    B = np.random.rand(2000, 2000)
+    return np.dot(A, B)
+
+# 1 hilo
+t0 = time.perf_counter()
+multiplicar_matrices()
+print(f"1 hilo:   {time.perf_counter() - t0:.2f}s")
+
+# 2 hilos simultáneos
+t0 = time.perf_counter()
+hilos = [threading.Thread(target=multiplicar_matrices) for _ in range(2)]
+for h in hilos: h.start()
+for h in hilos: h.join()
+print(f"2 hilos:  {time.perf_counter() - t0:.2f}s  ← puede ser más rápido que 1 hilo")</code></pre>
+    </div>
+
+    <div class="info-box warning">
+      <span class="info-box-icon">WARN</span>
+      <div class="info-box-text"><strong>Trampa con NumPy:</strong> NumPy ya usa internamente múltiples threads (OpenBLAS o MKL) para sus operaciones. Usar threading por encima puede no mejorar nada si NumPy ya satura los núcleos, o puede incluso empeorar por contención. Comprueba con <code>np.show_config()</code> cuántos threads usa tu instalación.</div>
+    </div>
+
+    <h2>El futuro: el GIL en Python 3.13+</h2>
+
+    <p>Python 3.13 introduce (como opción experimental) la posibilidad de compilar CPython sin GIL. Se activa con <code>python3.13t</code> (la variante "free-threaded"). En esta modalidad, el threading de Python sí ejecuta código Python en paralelo real.</p>
+    <p>Sin embargo, en 2026 esta característica todavía no es estable para producción. La mayor parte de extensiones C populares (NumPy, pandas) todavía requieren ajustes para funcionar correctamente sin GIL. El camino estándar para producción sigue siendo multiprocessing.</p>
+
+    <div class="code-block">
+      <div class="code-header">
+        <span class="code-lang">bash — verificar si tu Python es free-threaded (experimental)</span>
+        <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+      </div>
+      <pre><code># Verificar versión y si es free-threaded
+python3 --version
+python3 -c "import sys; print('free-threaded:', sys._is_gil_enabled() == False)"
+
+# Si usas conda, instalar la variante free-threaded (experimental)
+conda install python=3.13 python-freethreading</code></pre>
+    </div>
+
+    <h2>Resumen: lo que el GIL significa para tus decisiones</h2>
+
+    <table class="timeline-table">
+      <thead>
+        <tr>
+          <th>Situación</th>
+          <th>¿El GIL importa?</th>
+          <th>Herramienta correcta</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Cálculo puro en Python (loops, dicts, listas)</td>
+          <td>SÍ — bloquea el paralelismo</td>
+          <td>multiprocessing</td>
+        </tr>
+        <tr>
+          <td>Peticiones HTTP, lectura de ficheros, sockets</td>
+          <td>NO — el GIL se libera en I/O</td>
+          <td>threading o asyncio</td>
+        </tr>
+        <tr>
+          <td>Operaciones NumPy/pandas vectoriales</td>
+          <td>PARCIALMENTE — NumPy lo libera</td>
+          <td>threading (con precaución) o multiprocessing</td>
+        </tr>
+        <tr>
+          <td>Extensiones C bien escritas (OpenSSL, zlib)</td>
+          <td>NO — liberan el GIL explícitamente</td>
+          <td>threading</td>
+        </tr>
+        <tr>
+          <td>Stress testing HTTP (Locust)</td>
+          <td>NO — Locust usa gevent que parchea el I/O</td>
+          <td>Locust directamente</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="chapter-nav">
+      <a href="m1_cap1_mapa_mental.html">← Cap 1: Mapa mental</a>
+      <a href="m1_cap3_threading.html" class="next">Cap 3: threading →</a>
+    </div>
+
+  </div>
+</main>
+
+<script>
+function copyCode(btn) {
+  const code = btn.closest('.code-block').querySelector('pre code');
+  navigator.clipboard.writeText(code.textContent);
+  btn.textContent = 'Copiado';
+  setTimeout(() => btn.textContent = 'Copiar', 2000);
+}
+</script>
+</body>
+</html>

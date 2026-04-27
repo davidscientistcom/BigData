@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cap 9 — Stress tester propio | Paralelismo Real para Big Data</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<nav class="sidebar">
+  <div class="sidebar-brand"><div class="brand-tag">LucentIA</div><h2>Paralelismo Real<br>para Big Data</h2></div>
+  <div class="sidebar-section">
+    <div class="sidebar-section-title">Módulo 1 — Python</div>
+    <a href="m1_cap1_mapa_mental.html"><span class="cap-num">01</span> Mapa mental</a>
+    <a href="m1_cap2_gil.html"><span class="cap-num">02</span> El GIL</a>
+    <a href="m1_cap3_threading.html"><span class="cap-num">03</span> threading</a>
+    <a href="m1_cap4_multiprocessing.html"><span class="cap-num">04</span> multiprocessing</a>
+    <a href="m1_cap5_concurrent_futures.html"><span class="cap-num">05</span> concurrent.futures</a>
+    <a href="m1_cap6_asyncio.html"><span class="cap-num">06</span> asyncio</a>
+  </div>
+  <div class="sidebar-section">
+    <div class="sidebar-section-title">Módulo 2 — Stress Testing</div>
+    <a href="m2_cap7_locust_basico.html"><span class="cap-num">07</span> Locust básico</a>
+    <a href="m2_cap8_locust_avanzado.html"><span class="cap-num">08</span> Locust avanzado</a>
+    <a href="m2_cap9_stress_propio.html" class="active"><span class="cap-num">09</span> Stress tester propio</a>
+  </div>
+  <div class="sidebar-section">
+    <div class="sidebar-section-title">Módulo 3 — Java/JVM</div>
+    <a href="m3_cap10_java_threads.html"><span class="cap-num">10</span> Threads en Java</a>
+    <a href="m3_cap11_java_concurrent.html"><span class="cap-num">11</span> java.util.concurrent</a>
+    <a href="m3_cap12_gatling.html"><span class="cap-num">12</span> Gatling</a>
+  </div>
+  <div class="sidebar-section">
+    <div class="sidebar-section-title">Apéndice</div>
+    <a href="apendice_resultados.html"><span class="cap-num">A</span> Leer resultados</a>
+  </div>
+</nav>
+
+<main class="main-content">
+  <div class="page-header">
+    <div class="module-tag">Módulo 2 — Capítulo 9</div>
+    <h1>Nuestro propio stress tester en Python puro</h1>
+    <p class="subtitle">Construir desde cero un cliente de carga con asyncio + aiohttp que calcule p50/p95/p99, detecte errores y sirva para protocolos que Locust no cubre directamente.</p>
+  </div>
+
+  <div class="content">
+
+    <h2>Por qué construir el nuestro</h2>
+
+    <p>Locust es excelente para HTTP, pero en Big Data los sistemas no solo exponen APIs REST. Kafka no habla HTTP. Un clúster HDFS tiene su propio protocolo. Un sistema de streaming puede usar WebSockets o gRPC. Locust no cubre estos casos sin plugins específicos. Tener un stress tester propio en Python puro permite:</p>
+
+    <ul>
+      <li>Estresar cualquier protocolo que tenga cliente Python (kafka-python, motor, cassandra-driver)</li>
+      <li>Controlar exactamente qué métricas se calculan y cómo</li>
+      <li>Integrar el test en pipelines propios sin dependencias externas complejas</li>
+      <li>Combinar carga HTTP con carga sobre otros sistemas en el mismo test</li>
+    </ul>
+
+    <h2>Arquitectura del stress tester</h2>
+
+    <div class="diagram-block">
+      <pre>
+STRESS TESTER PROPIO
+
+┌─────────────────────────────────────────────────────────┐
+│  StressTester                                           │
+│                                                         │
+│  ┌──────────┐    ┌────────────────────────────────┐    │
+│  │ Ramp-up  │    │  N corrutinas asyncio          │    │
+│  │ manager  │───►│  cada una ejecuta en bucle:    │    │
+│  │          │    │    1. construir payload          │    │
+│  └──────────┘    │    2. await petición            │    │
+│                  │    3. registrar latencia/error   │    │
+│  ┌──────────┐    └────────────────────────────────┘    │
+│  │ Metrics  │◄── colector thread-safe de resultados     │
+│  │ collector│                                           │
+│  └──────────┘                                           │
+│       │                                                 │
+│       ▼                                                 │
+│  ┌──────────────────────────────┐                       │
+│  │  Reporter: p50, p95, p99,   │                       │
+│  │  RPS, errores, histograma    │                       │
+│  └──────────────────────────────┘                       │
+└─────────────────────────────────────────────────────────┘
+      </pre>
+    </div>
+
+    <h2>Versión mínima: 50 peticiones concurrentes con métricas</h2>
+
+    <div class="code-block">
+      <div class="code-header">
+        <span class="code-lang">python — stress tester mínimo funcional</span>
+        <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+      </div>
+      <pre><code>import asyncio
+import aiohttp
+import time
+import statistics
+
+async def una_peticion(session, url, semaforo, resultados):
+    async with semaforo:
+        t0 = time.perf_counter()
+        try:
+            async with session.get(url) as resp:
+                await resp.read()
+                latencia = (time.perf_counter() - t0) * 1000
+                resultados.append({"ok": True, "status": resp.status, "ms": latencia})
+        except Exception as e:
+            latencia = (time.perf_counter() - t0) * 1000
+            resultados.append({"ok": False, "error": str(e), "ms": latencia})
+
+async def main():
+    URL = "https://httpbin.org/status/200"
+    N = 200
+    CONCURRENCIA = 50
+
+    semaforo = asyncio.Semaphore(CONCURRENCIA)
+    resultados = []
+
+    t0 = time.perf_counter()
+    async with aiohttp.ClientSession() as session:
+        await asyncio.gather(*[
+            una_peticion(session, URL, semaforo, resultados)
+            for _ in range(N)
+        ])
+    elapsed = time.perf_counter() - t0
+
+    # Calcular métricas
+    ok = [r for r in resultados if r["ok"]]
+    errores = [r for r in resultados if not r["ok"]]
+    latencias = sorted(r["ms"] for r in ok)
+
+    def percentil(lst, p):
+        if not lst: return 0
+        i = int(len(lst) * p / 100)
+        return lst[min(i, len(lst)-1)]
+
+    print(f"{'═'*50}")
+    print(f"  RESULTADO DEL TEST")
+    print(f"{'═'*50}")
+    print(f"  Total peticiones: {N}")
+    print(f"  Correctas:        {len(ok)} ({len(ok)/N*100:.1f}%)")
+    print(f"  Errores:          {len(errores)} ({len(errores)/N*100:.1f}%)")
+    print(f"  Duración total:   {elapsed:.2f}s")
+    print(f"  RPS:              {N/elapsed:.1f}")
+    if latencias:
+        print(f"  Latencia p50:     {percentil(latencias,50):.0f}ms")
+        print(f"  Latencia p95:     {percentil(latencias,95):.0f}ms")
+        print(f"  Latencia p99:     {percentil(latencias,99):.0f}ms")
+        print(f"  Latencia máx:     {max(latencias):.0f}ms")
+    print(f"{'═'*50}")
+
+asyncio.run(main())</code></pre>
+    </div>
+
+    <h2>Versión completa: clase reutilizable con ramp-up y reporte continuo</h2>
+
+    <div class="code-block">
+      <div class="code-header">
+        <span class="code-lang">python — StressTester: clase reutilizable para cualquier sistema</span>
+        <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+      </div>
+      <pre><code">import asyncio
+import aiohttp
+import time
+import statistics
+import argparse
+from dataclasses import dataclass, field
+from typing import Callable, Awaitable
+
+@dataclass
+class Resultado:
+    ok: bool
+    latencia_ms: float
+    status_code: int = 0
+    error: str = ""
+
+@dataclass
+class Metricas:
+    resultados: list = field(default_factory=list)
+    inicio: float = field(default_factory=time.perf_counter)
+    lock: asyncio.Lock = field(default_factory=asyncio.Lock)
+
+    async def registrar(self, r: Resultado):
+        async with self.lock:
+            self.resultados.append(r)
+
+    def reporte(self, label=""):
+        ok = [r for r in self.resultados if r.ok]
+        fail = [r for r in self.resultados if not r.ok]
+        elapsed = time.perf_counter() - self.inicio
+        latencias = sorted(r.latencia_ms for r in ok)
+
+        def p(lst, pct):
+            if not lst: return 0
+            return lst[int(len(lst) * pct / 100)]
+
+        print(f"\n{'═'*55}")
+        if label: print(f"  {label}")
+        print(f"{'─'*55}")
+        print(f"  Peticiones OK:   {len(ok):>6} ({len(ok)/max(len(self.resultados),1)*100:.1f}%)")
+        print(f"  Errores:         {len(fail):>6} ({len(fail)/max(len(self.resultados),1)*100:.1f}%)")
+        print(f"  Duración:        {elapsed:>6.2f}s")
+        print(f"  RPS real:        {len(self.resultados)/elapsed:>6.1f}")
+        if latencias:
+            print(f"  p50:             {p(latencias,50):>6.0f}ms")
+            print(f"  p75:             {p(latencias,75):>6.0f}ms")
+            print(f"  p95:             {p(latencias,95):>6.0f}ms")
+            print(f"  p99:             {p(latencias,99):>6.0f}ms")
+            print(f"  Máx:             {max(latencias):>6.0f}ms")
+            print(f"  Media:           {statistics.mean(latencias):>6.0f}ms")
+        print(f"{'═'*55}")
+        return len(fail) / max(len(self.resultados), 1)  # fail ratio
+
+
+class StressTester:
+    """
+    Stress tester genérico basado en asyncio.
+    Acepta cualquier función async como 'tarea' para estresar cualquier sistema.
+    """
+
+    def __init__(self, tarea: Callable[[], Awaitable[Resultado]], concurrencia=50):
+        self.tarea = tarea
+        self.concurrencia = concurrencia
+        self.metricas = Metricas()
+
+    async def _worker(self, semaforo, stop_event):
+        while not stop_event.is_set():
+            async with semaforo:
+                resultado = await self.tarea()
+                await self.metricas.registrar(resultado)
+
+    async def run(self, duracion_s=60, n_workers=50, ramp_up_s=10):
+        """
+        Ejecuta el test durante duracion_s segundos.
+        Añade workers gradualmente durante ramp_up_s segundos.
+        """
+        stop_event = asyncio.Event()
+        semaforo = asyncio.Semaphore(self.concurrencia)
+
+        print(f"Ramp-up: {n_workers} workers en {ramp_up_s}s. Test total: {duracion_s}s")
+
+        tasks = []
+        intervalo = ramp_up_s / n_workers if n_workers > 0 else 0
+
+        for i in range(n_workers):
+            t = asyncio.create_task(self._worker(semaforo, stop_event))
+            tasks.append(t)
+            if intervalo > 0:
+                await asyncio.sleep(intervalo)
+
+        print(f"Todos los workers activos. Corriendo durante {duracion_s - ramp_up_s:.0f}s más...")
+        await asyncio.sleep(max(0, duracion_s - ramp_up_s))
+
+        stop_event.set()
+        await asyncio.gather(*tasks, return_exceptions=True)
+
+        return self.metricas.reporte(f"Test completado ({duracion_s}s, {n_workers} workers)")
+
+
+# ── USO: estresar un API HTTP ─────────────────────────────────────────────────
+
+async def tarea_http():
+    """Tarea concreta: petición HTTP a un endpoint de Big Data."""
+    url = "http://localhost:8000/api/datos?limit=100"
+    t0 = time.perf_counter()
+    try:
+        async with aiohttp.ClientSession() as s:
+            async with s.get(url, timeout=aiohttp.ClientTimeout(total=10)) as r:
+                await r.read()
+                return Resultado(
+                    ok=r.status < 400,
+                    latencia_ms=(time.perf_counter() - t0) * 1000,
+                    status_code=r.status
+                )
+    except Exception as e:
+        return Resultado(
+            ok=False,
+            latencia_ms=(time.perf_counter() - t0) * 1000,
+            error=str(e)
+        )
+
+if __name__ == "__main__":
+    tester = StressTester(tarea=tarea_http, concurrencia=100)
+    asyncio.run(tester.run(duracion_s=60, n_workers=50, ramp_up_s=10))</code></pre>
+    </div>
+
+    <h2>Adaptar el tester para Kafka directamente</h2>
+
+    <p>Locust no puede estresar Kafka de forma nativa (no hay HTTP). Con nuestro tester solo hay que cambiar la función <code>tarea</code>. El resto de la infraestructura de métricas y ramp-up permanece igual.</p>
+
+    <div class="code-block">
+      <div class="code-header">
+        <span class="code-lang">python — tarea Kafka: producir mensajes a máxima velocidad</span>
+        <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+      </div>
+      <pre><code">from aiokafka import AIOKafkaProducer
+import asyncio
+import json
+import time
+import random
+
+# ── SINGLETON: reutilizar el producer entre corrutinas ─────────────────────────
+_producer = None
+
+async def obtener_producer():
+    global _producer
+    if _producer is None:
+        _producer = AIOKafkaProducer(
+            bootstrap_servers="localhost:9092",
+            value_serializer=lambda v: json.dumps(v).encode()
+        )
+        await _producer.start()
+    return _producer
+
+async def tarea_kafka():
+    """Publica un mensaje en el topic de eventos del clúster."""
+    t0 = time.perf_counter()
+    try:
+        producer = await obtener_producer()
+        mensaje = {
+            "sensor_id": random.randint(1, 1000),
+            "timestamp": time.time(),
+            "valor": random.uniform(-50, 150),
+            "unidad": "celsius"
+        }
+        await producer.send_and_wait("topic-sensores", value=mensaje)
+        return Resultado(
+            ok=True,
+            latencia_ms=(time.perf_counter() - t0) * 1000
+        )
+    except Exception as e:
+        return Resultado(
+            ok=False,
+            latencia_ms=(time.perf_counter() - t0) * 1000,
+            error=str(e)
+        )
+
+# Instalar: pip install aiokafka
+# Uso:
+# tester = StressTester(tarea=tarea_kafka, concurrencia=200)
+# asyncio.run(tester.run(duracion_s=120, n_workers=100, ramp_up_s=20))</code></pre>
+    </div>
+
+    <div class="info-box info">
+      <span class="info-box-icon">INFO</span>
+      <div class="info-box-text"><strong>aiokafka:</strong> Producer y Consumer de Kafka totalmente async. A diferencia de kafka-python (síncrono), aiokafka no bloquea el event loop. Un solo proceso puede publicar decenas de miles de mensajes por segundo en Kafka con aiokafka + asyncio.</div>
+    </div>
+
+    <h2>Ramp-up gradual: no estresar de golpe</h2>
+
+    <p>Estresar un sistema de golpe (todos los usuarios a la vez desde el segundo 0) puede enmascarar cómo el sistema se comporta bajo carga creciente. El ramp-up gradual permite ver en qué punto el sistema empieza a degradarse.</p>
+
+    <div class="diagram-block">
+      <pre>
+RAMP-UP GRADUAL vs CARGA DE GOLPE
+
+Carga de golpe:
+RPS │████████████████████████████████ plano pero el sistema puede no arrancar bien
+    └─────────────────────────────── tiempo
+
+Ramp-up gradual:
+RPS │         ╱──────────────────────
+    │       ╱
+    │     ╱
+    │   ╱
+    │ ╱
+    └─────────────────────────────── tiempo
+               ↑
+               El sistema aguanta hasta aquí, luego empieza a fallar
+               (latencia sube, errores aparecen)
+
+El ramp-up permite detectar el punto de ruptura del sistema.
+      </pre>
+    </div>
+
+    <div class="chapter-nav">
+      <a href="m2_cap8_locust_avanzado.html">← Cap 8: Locust avanzado</a>
+      <a href="m3_cap10_java_threads.html" class="next">Cap 10: Threads en Java →</a>
+    </div>
+
+  </div>
+</main>
+<script>
+function copyCode(btn) {
+  const code = btn.closest('.code-block').querySelector('pre code');
+  navigator.clipboard.writeText(code.textContent);
+  btn.textContent = 'Copiado';
+  setTimeout(() => btn.textContent = 'Copiar', 2000);
+}
+</script>
+</body>
+</html>

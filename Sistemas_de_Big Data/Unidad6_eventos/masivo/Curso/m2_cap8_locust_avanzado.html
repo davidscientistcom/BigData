@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cap 8 — Locust avanzado | Paralelismo Real para Big Data</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<nav class="sidebar">
+  <div class="sidebar-brand"><div class="brand-tag">LucentIA</div><h2>Paralelismo Real<br>para Big Data</h2></div>
+  <div class="sidebar-section">
+    <div class="sidebar-section-title">Módulo 1 — Python</div>
+    <a href="m1_cap1_mapa_mental.html"><span class="cap-num">01</span> Mapa mental</a>
+    <a href="m1_cap2_gil.html"><span class="cap-num">02</span> El GIL</a>
+    <a href="m1_cap3_threading.html"><span class="cap-num">03</span> threading</a>
+    <a href="m1_cap4_multiprocessing.html"><span class="cap-num">04</span> multiprocessing</a>
+    <a href="m1_cap5_concurrent_futures.html"><span class="cap-num">05</span> concurrent.futures</a>
+    <a href="m1_cap6_asyncio.html"><span class="cap-num">06</span> asyncio</a>
+  </div>
+  <div class="sidebar-section">
+    <div class="sidebar-section-title">Módulo 2 — Stress Testing</div>
+    <a href="m2_cap7_locust_basico.html"><span class="cap-num">07</span> Locust básico</a>
+    <a href="m2_cap8_locust_avanzado.html" class="active"><span class="cap-num">08</span> Locust avanzado</a>
+    <a href="m2_cap9_stress_propio.html"><span class="cap-num">09</span> Stress tester propio</a>
+  </div>
+  <div class="sidebar-section">
+    <div class="sidebar-section-title">Módulo 3 — Java/JVM</div>
+    <a href="m3_cap10_java_threads.html"><span class="cap-num">10</span> Threads en Java</a>
+    <a href="m3_cap11_java_concurrent.html"><span class="cap-num">11</span> java.util.concurrent</a>
+    <a href="m3_cap12_gatling.html"><span class="cap-num">12</span> Gatling</a>
+  </div>
+  <div class="sidebar-section">
+    <div class="sidebar-section-title">Apéndice</div>
+    <a href="apendice_resultados.html"><span class="cap-num">A</span> Leer resultados</a>
+  </div>
+</nav>
+
+<main class="main-content">
+  <div class="page-header">
+    <div class="module-tag">Módulo 2 — Capítulo 8</div>
+    <h1>Locust avanzado: flujos, watchdog y modo distribuido</h1>
+    <p class="subtitle">SequentialTaskSet para flujos de varios pasos, catch_response para control fino de errores, watchdog que aborta si falla más del 10%, modo headless y master/worker para estresar desde varias máquinas.</p>
+  </div>
+
+  <div class="content">
+
+    <h2>on_start y on_stop: ciclo de vida del usuario</h2>
+
+    <p><code>on_start()</code> se ejecuta una sola vez cuando el usuario virtual arranca, antes de comenzar a ejecutar tareas. <code>on_stop()</code> se ejecuta cuando el usuario termina (al detener el test). Son el lugar correcto para hacer login, crear sesiones, abrir conexiones, y cerrarlas.</p>
+
+    <div class="code-block">
+      <div class="code-header">
+        <span class="code-lang">python — on_start con autenticación JWT</span>
+        <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+      </div>
+      <pre><code>from locust import HttpUser, task, between
+from locust.exception import RescheduleTask
+
+class UsuarioAutenticado(HttpUser):
+    wait_time = between(0.5, 2)
+    host = "http://localhost:8000"
+
+    def on_start(self):
+        """Login al arrancar. Si falla, este usuario no puede operar."""
+        res = self.client.post(
+            "/auth/token",
+            data={"username": "testuser", "password": "testpass"},
+            name="POST /auth/token"
+        )
+        if res.status_code != 200:
+            # RescheduleTask hace que Locust descarte este usuario
+            # y cree uno nuevo en su lugar
+            raise RescheduleTask()
+        self.token = res.json().get("access_token", "")
+        self.headers = {"Authorization": f"Bearer {self.token}"}
+
+    def on_stop(self):
+        """Logout al terminar (opcional)."""
+        self.client.post("/auth/logout", headers=self.headers,
+                         name="POST /auth/logout")
+
+    @task(4)
+    def consultar(self):
+        self.client.get("/api/datos", headers=self.headers,
+                        name="GET /api/datos")
+
+    @task(1)
+    def insertar(self):
+        self.client.post(
+            "/api/datos",
+            json={"valor": 42.0},
+            headers=self.headers,
+            name="POST /api/datos"
+        )</code></pre>
+    </div>
+
+    <h2>catch_response: control fino de éxito y fallo</h2>
+
+    <p>Por defecto, Locust marca una petición como fallida si el código HTTP es 4xx o 5xx. Con <code>catch_response=True</code>, tú decides: puedes marcar un 200 como fallo si el body no contiene lo esperado, o un 404 como éxito si es el comportamiento correcto en tu contexto.</p>
+
+    <div class="code-block">
+      <div class="code-header">
+        <span class="code-lang">python — catch_response para validar el cuerpo de la respuesta</span>
+        <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+      </div>
+      <pre><code>from locust import HttpUser, task, between
+
+class UsuarioConValidacion(HttpUser):
+    wait_time = between(0.5, 1.5)
+    host = "http://localhost:8000"
+
+    @task
+    def bulk_insert(self):
+        N_DOCS = 500
+        docs = [{"id": i, "valor": i * 1.5} for i in range(N_DOCS)]
+
+        with self.client.post(
+            "/api/bulk",
+            json={"documentos": docs},
+            catch_response=True,
+            name="POST /api/bulk-500"
+        ) as res:
+            # Validación 1: código HTTP
+            if res.status_code != 201:
+                res.failure(f"HTTP {res.status_code}: {res.text[:100]}")
+                return
+
+            # Validación 2: integridad del resultado
+            try:
+                data = res.json()
+            except Exception:
+                res.failure("Respuesta no es JSON válido")
+                return
+
+            insertados = data.get("insertados", 0)
+            if insertados < N_DOCS:
+                res.failure(f"Inserción parcial: {insertados}/{N_DOCS}")
+            elif data.get("errores", 0) > 0:
+                res.failure(f"Errores en inserción: {data['errores']}")
+            else:
+                res.success()  # todo OK</code></pre>
+    </div>
+
+    <div class="info-box info">
+      <span class="info-box-icon">INFO</span>
+      <div class="info-box-text"><strong>Por qué validar el body:</strong> Un sistema bajo presión puede devolver HTTP 200 pero con un body vacío, truncado o con datos incorrectos. Si solo validas el código HTTP, el test dice "todo OK" mientras el sistema está silenciosamente fallando en entregar los datos correctos. Esto es especialmente relevante en inserciones masivas.</div>
+    </div>
+
+    <h2>SequentialTaskSet: flujos de varios pasos</h2>
+
+    <p>Un <code>SequentialTaskSet</code> ejecuta las tareas en el orden en que están definidas. Es el patrón correcto para flujos que tienen dependencias: el paso 2 necesita datos producidos en el paso 1.</p>
+
+    <div class="code-block">
+      <div class="code-header">
+        <span class="code-lang">python — SequentialTaskSet: flujo completo de ingesta y verificación</span>
+        <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+      </div>
+      <pre><code>from locust import HttpUser, SequentialTaskSet, task, between
+import random
+
+class FlujoIngesta(SequentialTaskSet):
+    """Simula el ciclo completo: insertar → verificar → consultar → eliminar."""
+
+    @task
+    def paso1_insertar_batch(self):
+        """Inserta un batch de datos y guarda el ID para el siguiente paso."""
+        docs = [{"sensor": i, "temp": random.uniform(20, 35)} for i in range(100)]
+        with self.client.post(
+            "/api/batch",
+            json={"docs": docs},
+            catch_response=True,
+            name="1_POST_batch"
+        ) as res:
+            if res.status_code == 201:
+                self.batch_id = res.json().get("batch_id")
+                res.success()
+            else:
+                res.failure(f"HTTP {res.status_code}")
+                self.batch_id = None
+
+    @task
+    def paso2_verificar_insercion(self):
+        """Verifica que el batch anterior fue persistido correctamente."""
+        if not getattr(self, "batch_id", None):
+            return  # si el paso 1 falló, saltamos
+        with self.client.get(
+            f"/api/batch/{self.batch_id}",
+            catch_response=True,
+            name="2_GET_batch_status"
+        ) as res:
+            if res.status_code == 200:
+                data = res.json()
+                if data.get("status") != "persisted":
+                    res.failure(f"Estado inesperado: {data.get('status')}")
+                else:
+                    res.success()
+            else:
+                res.failure(f"HTTP {res.status_code}")
+
+    @task
+    def paso3_consultar_datos(self):
+        """Consulta los datos insertados por rango de timestamp."""
+        self.client.get(
+            "/api/datos?sensor_id=1&limit=10",
+            name="3_GET_datos"
+        )
+
+    @task
+    def paso4_fin_ciclo(self):
+        """Marca el fin del ciclo. interrupt() vuelve al HttpUser padre."""
+        self.interrupt(reschedule=True)
+
+class UsuarioBigData(HttpUser):
+    wait_time = between(1, 3)
+    host = "http://localhost:8000"
+    tasks = [FlujoIngesta]  # el usuario ejecuta el flujo secuencial</code></pre>
+    </div>
+
+    <h2>Watchdog: abortar el test si los errores superan un umbral</h2>
+
+    <p>Locust no tiene soporte nativo de thresholds (umbrales de error que detienen el test automáticamente), pero el sistema de eventos permite implementarlo. Este watchdog se ejecuta cada 5 segundos y aborta si la tasa de fallos supera el 10%.</p>
+
+    <div class="code-block">
+      <div class="code-header">
+        <span class="code-lang">python — watchdog completo con eventos de Locust</span>
+        <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+      </div>
+      <pre><code">from locust import HttpUser, task, between, events
+import logging
+import gevent
+
+MAX_FAIL_RATIO = 0.10   # 10% de fallos: abortar
+MIN_REQUESTS   = 100    # esperar al menos 100 requests antes de evaluar
+CHECK_INTERVAL = 5      # revisar cada 5 segundos
+
+@events.init.add_listener
+def activar_watchdog(environment, **kwargs):
+    """Se ejecuta cuando Locust arranca. Registra el greenlet watchdog."""
+
+    def loop_watchdog():
+        while True:
+            gevent.sleep(CHECK_INTERVAL)
+            runner = environment.runner
+            if runner is None:
+                continue
+
+            stats = runner.stats.total
+            if stats.num_requests < MIN_REQUESTS:
+                continue  # todavía no hay suficientes datos
+
+            fail_ratio = stats.fail_ratio
+            rps = stats.current_rps
+
+            logging.info(
+                f"[WATCHDOG] Requests: {stats.num_requests} | "
+                f"Fallos: {stats.num_failures} | "
+                f"Fail ratio: {fail_ratio:.1%} | "
+                f"RPS: {rps:.1f}"
+            )
+
+            if fail_ratio > MAX_FAIL_RATIO:
+                logging.error(
+                    f"[WATCHDOG] ABORT: fail_ratio={fail_ratio:.1%} "
+                    f"supera umbral de {MAX_FAIL_RATIO:.0%}. Deteniendo test."
+                )
+                runner.quit()
+
+    gevent.spawn(loop_watchdog)
+
+@events.request.add_listener
+def on_request(request_type, name, response_time, response_length, exception, **kw):
+    """Log de cada petición fallida."""
+    if exception:
+        logging.warning(f"FALLO en {request_type} {name}: {exception} ({response_time:.0f}ms)")
+
+class UsuarioBD(HttpUser):
+    wait_time = between(0.5, 2)
+    host = "http://localhost:8000"
+
+    @task
+    def insertar(self):
+        self.client.post("/api/datos", json={"valor": 1.0}, name="POST /api/datos")</code></pre>
+    </div>
+
+    <h2>Modo headless: ejecutar sin UI para pipelines CI</h2>
+
+    <div class="code-block">
+      <div class="code-header">
+        <span class="code-lang">bash — modo headless con exportación de resultados</span>
+        <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+      </div>
+      <pre><code># Headless básico
+locust -f locustfile.py \
+  --headless \
+  --users 100 \
+  --spawn-rate 10 \
+  --run-time 5m \
+  --host http://localhost:8000
+
+# Con exportación CSV y HTML
+locust -f locustfile.py \
+  --headless \
+  -u 100 -r 10 -t 5m \
+  --csv=resultados/test_$(date +%Y%m%d_%H%M%S) \
+  --html=resultados/informe.html \
+  --host http://localhost:8000
+
+# Verificar código de salida para CI: 0=éxito, 1=hay fallos
+echo "Exit code: $?"
+
+# Ficheros generados en resultados/:
+# test_20260427_100000_stats.csv           → estadísticas agregadas
+# test_20260427_100000_stats_history.csv  → evolución temporal
+# test_20260427_100000_failures.csv       → detalle de errores
+# informe.html                            → informe visual completo</code></pre>
+    </div>
+
+    <h2>Modo distribuido: master + workers para mayor carga</h2>
+
+    <p>Una sola máquina con Locust puede generar varios miles de usuarios virtuales, pero en algún punto la CPU del generador se convierte en el cuello de botella. Para ir más allá, se usa el modo distribuido: un proceso master coordina y agrega estadísticas; varios procesos worker generan la carga.</p>
+
+    <div class="diagram-block">
+      <pre>
+MODO DISTRIBUIDO
+
+Máquina A (master)          Máquina B (worker 1)
+┌──────────────────┐         ┌──────────────────┐
+│  locust --master │◄────────│ locust --worker   │
+│  UI: puerto 8089 │         │ 2000 usuarios     │
+│  agrega stats    │         └──────────────────┘
+└──────────────────┘
+        ▲                    Máquina C (worker 2)
+        │                    ┌──────────────────┐
+        └────────────────────│ locust --worker   │
+                             │ 2000 usuarios     │
+                             └──────────────────┘
+                                      │
+                             Máquina D (worker 3)
+                             ┌──────────────────┐
+                             │ locust --worker   │
+                             │ 2000 usuarios     │
+                             └──────────────────┘
+
+Total: 6000 usuarios virtuales distribuidos en 3 máquinas worker
+El master no genera usuarios, solo coordina y muestra la UI
+      </pre>
+    </div>
+
+    <div class="code-block">
+      <div class="code-header">
+        <span class="code-lang">bash — arrancar master y workers en máquinas distintas</span>
+        <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+      </div>
+      <pre><code"># En la máquina MASTER (192.168.1.10)
+locust -f locustfile.py --master --host http://sistema-bajo-prueba:8000
+
+# En cada máquina WORKER (tienen que tener el mismo locustfile.py)
+# Opción A: locustfile local en cada worker
+locust -f locustfile.py --worker --master-host 192.168.1.10
+
+# Opción B (Locust 2.23+): el master sirve el locustfile, sin copiar nada
+locust -f - --worker --master-host 192.168.1.10
+
+# Verificar en el master que los workers se conectaron:
+# La UI mostrará "X workers connected" en la esquina superior
+# Comandos de la CLI del master (stdin mientras corre):
+# q + Enter: detener todos los workers y el master</code></pre>
+    </div>
+
+    <div class="info-box warning">
+      <span class="info-box-icon">WARN</span>
+      <div class="info-box-text"><strong>El master no genera carga.</strong> Solo coordina, agrega estadísticas y sirve la UI. Los usuarios se distribuyen entre los workers: si configuras 3000 usuarios con 3 workers, cada worker tendrá ~1000. Si un worker se desconecta durante el test, su carga se pierde pero el master sigue corriendo.</div>
+    </div>
+
+    <h2>Locustfile completo para Big Data: todo junto</h2>
+
+    <div class="code-block">
+      <div class="code-header">
+        <span class="code-lang">python — locustfile completo de producción para Big Data</span>
+        <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+      </div>
+      <pre><code>from locust import HttpUser, task, between, events
+from locust.exception import RescheduleTask
+import random
+import logging
+import gevent
+
+# ── CONFIGURACIÓN ─────────────────────────────────────────────────────────────
+DOCS_POR_BATCH = 500
+MAX_FAIL_RATIO = 0.10
+
+# ── WATCHDOG ─────────────────────────────────────────────────────────────────
+@events.init.add_listener
+def setup_watchdog(environment, **kwargs):
+    def check():
+        while True:
+            gevent.sleep(10)
+            runner = environment.runner
+            if not runner: continue
+            stats = runner.stats.total
+            if stats.num_requests < 200: continue
+            if stats.fail_ratio > MAX_FAIL_RATIO:
+                logging.error(f"ABORT: fail_ratio={stats.fail_ratio:.1%}")
+                runner.quit()
+    gevent.spawn(check)
+
+# ── USUARIO ───────────────────────────────────────────────────────────────────
+class BigDataUser(HttpUser):
+    wait_time = between(0.5, 1.5)
+    host = "http://localhost:8000"
+
+    def on_start(self):
+        res = self.client.post(
+            "/auth/token",
+            data={"username": "admin", "password": "secret"},
+            name="POST /auth/token"
+        )
+        if res.status_code != 200:
+            raise RescheduleTask()
+        self.headers = {"Authorization": f"Bearer {res.json()['access_token']}"}
+
+    @task(1)
+    def bulk_insert(self):
+        docs = [{"id": f"d_{i}", "valor": random.random()} for i in range(DOCS_POR_BATCH)]
+        with self.client.post(
+            "/api/bulk",
+            json={"documentos": docs},
+            headers=self.headers,
+            catch_response=True,
+            name="POST /api/bulk-500"
+        ) as res:
+            if res.status_code != 201:
+                res.failure(f"HTTP {res.status_code}")
+                return
+            insertados = res.json().get("insertados", 0)
+            if insertados < DOCS_POR_BATCH:
+                res.failure(f"Parcial: {insertados}/{DOCS_POR_BATCH}")
+            else:
+                res.success()
+
+    @task(3)
+    def consultar(self):
+        self.client.get(
+            "/api/datos?limit=100&sort=-ts",
+            headers=self.headers,
+            name="GET /api/datos"
+        )</code></pre>
+    </div>
+
+    <div class="chapter-nav">
+      <a href="m2_cap7_locust_basico.html">← Cap 7: Locust básico</a>
+      <a href="m2_cap9_stress_propio.html" class="next">Cap 9: Stress tester propio →</a>
+    </div>
+
+  </div>
+</main>
+<script>
+function copyCode(btn) {
+  const code = btn.closest('.code-block').querySelector('pre code');
+  navigator.clipboard.writeText(code.textContent);
+  btn.textContent = 'Copiado';
+  setTimeout(() => btn.textContent = 'Copiar', 2000);
+}
+</script>
+</body>
+</html>

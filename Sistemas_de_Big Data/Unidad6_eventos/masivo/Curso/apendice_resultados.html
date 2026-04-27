@@ -1,0 +1,786 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Apéndice — Interpretar resultados | Paralelismo Real para Big Data</title>
+<link rel="stylesheet" href="styles.css"/>
+<style>
+.checklist-section {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.5rem;
+  margin: 1.5rem 0;
+}
+.checklist-section h4 {
+  color: var(--cyan);
+  font-size: 0.82rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 1rem;
+  font-family: var(--font-mono);
+}
+.checklist-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.9rem;
+  color: var(--text-primary);
+}
+.checklist-item:last-child { border-bottom: none; }
+.check-box {
+  width: 18px;
+  height: 18px;
+  border: 2px solid var(--cyan);
+  border-radius: 3px;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+.checklist-note {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin-top: 0.25rem;
+}
+.bottleneck-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1rem;
+  margin: 1.5rem 0;
+}
+.bottleneck-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.2rem;
+}
+.bottleneck-card h4 {
+  font-size: 0.82rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 0.75rem;
+  font-family: var(--font-mono);
+}
+.bottleneck-card ul {
+  list-style: none;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+.bottleneck-card ul li {
+  padding: 0.2rem 0;
+}
+.bottleneck-card ul li::before {
+  content: "→ ";
+  color: var(--text-muted);
+}
+.bottleneck-red h4   { color: var(--red); border-top: 3px solid var(--red); padding-top: 0.75rem; }
+.bottleneck-orange h4{ color: var(--orange); border-top: 3px solid var(--orange); padding-top: 0.75rem; }
+.bottleneck-cyan h4  { color: var(--cyan); border-top: 3px solid var(--cyan); padding-top: 0.75rem; }
+.bottleneck-purple h4{ color: var(--purple); border-top: 3px solid var(--purple); padding-top: 0.75rem; }
+.compare-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1.5rem 0;
+  font-size: 0.88rem;
+}
+.compare-table th {
+  background: var(--bg-elevated);
+  color: var(--text-secondary);
+  text-align: left;
+  padding: 0.7rem 1rem;
+  border-bottom: 2px solid var(--border);
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 0.78rem;
+  letter-spacing: 0.06em;
+}
+.compare-table td {
+  padding: 0.65rem 1rem;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-primary);
+  vertical-align: top;
+}
+.compare-table tr:hover td { background: var(--bg-elevated); }
+.percentile-bar {
+  height: 28px;
+  background: var(--bg-elevated);
+  border-radius: 4px;
+  overflow: hidden;
+  margin: 0.3rem 0;
+  position: relative;
+}
+.percentile-fill {
+  height: 100%;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  padding-left: 8px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  font-family: var(--font-mono);
+  color: #000;
+}
+</style>
+</head>
+<body>
+
+<nav class="sidebar">
+  <div class="sidebar-logo">LucentIA</div>
+  <div class="sidebar-course">Paralelismo Real<br/>para Big Data</div>
+  <ul class="sidebar-nav">
+    <li class="sidebar-section">Módulo 1 — Python</li>
+    <li><a href="m1_cap1_mapa_mental.html">Cap 1 · Mapa mental</a></li>
+    <li><a href="m1_cap2_gil.html">Cap 2 · El GIL</a></li>
+    <li><a href="m1_cap3_threading.html">Cap 3 · threading</a></li>
+    <li><a href="m1_cap4_multiprocessing.html">Cap 4 · multiprocessing</a></li>
+    <li><a href="m1_cap5_concurrent_futures.html">Cap 5 · concurrent.futures</a></li>
+    <li><a href="m1_cap6_asyncio.html">Cap 6 · asyncio</a></li>
+    <li class="sidebar-section">Módulo 2 — Stress Testing Python</li>
+    <li><a href="m2_cap7_locust_basico.html">Cap 7 · Locust básico</a></li>
+    <li><a href="m2_cap8_locust_avanzado.html">Cap 8 · Locust avanzado</a></li>
+    <li><a href="m2_cap9_stress_propio.html">Cap 9 · Stress tester propio</a></li>
+    <li class="sidebar-section">Módulo 3 — Java/JVM</li>
+    <li><a href="m3_cap10_java_threads.html">Cap 10 · Threads en Java</a></li>
+    <li><a href="m3_cap11_java_concurrent.html">Cap 11 · java.util.concurrent</a></li>
+    <li><a href="m3_cap12_gatling.html">Cap 12 · Gatling</a></li>
+    <li class="sidebar-section">Apéndice</li>
+    <li class="active"><a href="apendice_resultados.html">Interpretar resultados</a></li>
+    <li><a href="index.html">Inicio</a></li>
+  </ul>
+</nav>
+
+<main class="content">
+
+  <div class="page-header">
+    <div class="page-header-module">Apéndice</div>
+    <h1 class="page-header-title">Interpretar resultados de stress</h1>
+    <p class="page-header-sub">p50 · p95 · p99 · localizar cuellos de botella · checklist pre-stress</p>
+  </div>
+
+  <!-- ── PERCENTILES ── -->
+  <section>
+    <h2>1 · Percentiles — qué significan realmente</h2>
+
+    <h3>La aritmética detrás del percentil</h3>
+    <p>
+      Un percentil pN dice: "el N% de las peticiones tardaron <em>menos o igual</em> que este valor".
+      Para calcularlo: ordena todas las latencias de menor a mayor, toma el valor en la posición
+      <code>N/100 × total</code> de la lista.
+    </p>
+
+    <div class="code-block">
+      <div class="code-block-header">
+        <span>Cálculo manual — Python</span>
+        <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+      </div>
+      <pre><code>latencias = sorted([45, 12, 89, 34, 67, 203, 55, 78, 91, 44,
+                    38, 502, 29, 61, 73, 82, 99, 141, 56, 48])
+
+n = len(latencias)   # 20 peticiones
+
+p50 = latencias[int(n * 0.50)]  # posición 10 → 61 ms
+p95 = latencias[int(n * 0.95)]  # posición 19 → 203 ms (casi el peor)
+p99 = latencias[int(n * 0.99)]  # posición 19 → 203 ms (con N=20, redondea igual)
+
+print(f"p50={p50}ms  p95={p95}ms  p99={p99}ms  max={latencias[-1]}ms")
+# p50=61ms  p95=203ms  p99=203ms  max=502ms
+
+# Con N=1000+, p99 y max divergen significativamente:
+# p50=58ms  p95=180ms  p99=420ms  max=3400ms  ← la cola larga es real
+</code></pre>
+    </div>
+
+    <h3>Lo que no te dice la media</h3>
+    <p>
+      Si p50 = 50ms pero p99 = 2000ms, la media puede ser 80ms. Esa media es inútil para
+      dimensionar sistemas. El 1% de usuarios que experimenta 2000ms es el que abre un
+      ticket de soporte. Los SLAs de Big Data siempre se definen en percentiles:
+    </p>
+
+    <table class="compare-table">
+      <thead>
+        <tr><th>Percentil</th><th>Qué describe</th><th>SLA habitual Big Data</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>p50 (mediana)</td>
+          <td>Experiencia del usuario mediano</td>
+          <td>&lt; 100ms para APIs REST, &lt; 10ms para Kafka</td>
+        </tr>
+        <tr>
+          <td>p95</td>
+          <td>Experiencia del 95%</td>
+          <td>El umbral habitual de SLA. &lt; 300ms REST, &lt; 50ms Kafka</td>
+        </tr>
+        <tr>
+          <td>p99</td>
+          <td>Peor caso excluido el 1%</td>
+          <td>&lt; 1s REST, &lt; 200ms Kafka. Si supera esto, investigar.</td>
+        </tr>
+        <tr>
+          <td>p999 (0.1%)</td>
+          <td>Outliers extremos</td>
+          <td>Raramente en SLA, útil para detección de GC pauses en JVM</td>
+        </tr>
+        <tr>
+          <td>max</td>
+          <td>Peor petición absoluta</td>
+          <td>Diagnóstico, no SLA. Puede ser timeout de un reconexión.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3>Visualización — distribución sana vs problemática</h3>
+
+    <div class="diagram-block">
+<pre>
+DISTRIBUCIÓN SANA — cola corta:
+Latencia │
+   50ms  │████████████████████████████████████  ← mayoría aquí (p50)
+  100ms  │████████████
+  150ms  │████
+  200ms  │█                                    ← p95 aquí
+  300ms  │                                     ← p99 aquí es razonable
+  500ms+ │
+
+DISTRIBUCIÓN CON COLA LARGA — problema:
+Latencia │
+   50ms  │████████████████████████████████████  ← p50 se ve bien
+  100ms  │████████████
+  150ms  │████████
+  200ms  │████████                             ← p95 ya preocupa
+  500ms  │████                                 ← p99 muy alejado del p50
+ 1000ms  │██
+ 3000ms+ │█                                    ← max es basura, ignorar
+
+  Señal: diferencia p99 - p50 > 5x → cola larga → posible saturación,
+  GC pauses, timeouts de reconexión, o thread starvation.
+</pre>
+    </div>
+
+    <h3>La trampa del warm-up</h3>
+    <div class="info-box warn">
+      <span class="info-box-label">WARN</span>
+      Las primeras peticiones de cualquier test son anómalas: JVM compilando (JIT), pools de
+      conexión abriéndose, caches frías. Descartar el primer 5-10% de peticiones de las métricas.
+      Locust y Gatling permiten configurar un período de warm-up. En el StressTester propio del
+      Cap 9 y el JucStressTester del Cap 11 hay un contador de warm-up explícito.
+    </div>
+  </section>
+
+  <!-- ── CUELLOS DE BOTELLA ── -->
+  <section>
+    <h2>2 · Identificar el cuello de botella</h2>
+    <p>
+      El cuello de botella puede estar en cuatro lugares distintos. La clave es aislarlos
+      sistemáticamente. Un test de stress que sube latencias sin identificar dónde no sirve
+      para tomar decisiones de ingeniería.
+    </p>
+
+    <div class="bottleneck-grid">
+      <div class="bottleneck-card bottleneck-red">
+        <h4>Red / Conectividad</h4>
+        <ul>
+          <li>Latencia base alta (p50 > 200ms en LAN)</li>
+          <li>Timeouts de conexión TCP</li>
+          <li>Throughput estabilizado muy por debajo del esperado</li>
+          <li>Packet loss en el generador de carga</li>
+        </ul>
+      </div>
+      <div class="bottleneck-card bottleneck-orange">
+        <h4>Generador de carga</h4>
+        <ul>
+          <li>CPU del generador al 100%</li>
+          <li>Throughput no sube aunque el servidor aguante</li>
+          <li>Error rate artificial (no del servicio real)</li>
+          <li>Memoria del generador saturada</li>
+        </ul>
+      </div>
+      <div class="bottleneck-card bottleneck-cyan">
+        <h4>Aplicación / API</h4>
+        <ul>
+          <li>p99 sube con la carga mientras p50 aguanta</li>
+          <li>5xx en errores (no timeouts)</li>
+          <li>CPU de la app al 100%</li>
+          <li>Thread pool exhausto (cola de peticiones esperando)</li>
+        </ul>
+      </div>
+      <div class="bottleneck-card bottleneck-purple">
+        <h4>Base de datos / Kafka</h4>
+        <ul>
+          <li>Latencias de app normales pero Kafka lag crece</li>
+          <li>p99 sube sólo en escrituras, no en lecturas</li>
+          <li>MongoDB / HDFS IO wait alto</li>
+          <li>GC pauses en brokers (picos en p999)</li>
+        </ul>
+      </div>
+    </div>
+
+    <h3>Protocolo de diagnóstico — qué monitorear mientras corre el test</h3>
+
+    <div class="code-block">
+      <div class="code-block-header">
+        <span>Comandos a ejecutar durante el test (terminales separadas)</span>
+        <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+      </div>
+      <pre><code># ── Terminal 1: CPU y memoria del servidor ────────────────────
+htop   # o top -d 1
+
+# ── Terminal 2: CPU del generador de carga ────────────────────
+top -d 1 -p $(pgrep -f locust)    # Locust
+top -d 1 -p $(pgrep -f gatling)   # Gatling
+# Si el generador usa > 80% CPU, los resultados son inválidos
+
+# ── Terminal 3: red ────────────────────────────────────────────
+iftop -i eth0          # tráfico en tiempo real
+netstat -s | grep -E "retransmit|failed"  # pérdida de paquetes
+ss -s                  # estado de sockets TCP
+
+# ── Terminal 4: Kafka lag ─────────────────────────────────────
+# Kafka CLI
+kafka-consumer-groups.sh --bootstrap-server kafka:9092 \
+  --describe --group stress-consumer-group | column -t
+
+# ── Terminal 5: JVM GC (si la app es Java) ───────────────────
+jstat -gcutil $(pgrep -f tu-app.jar) 1000  # cada segundo
+# FGCT (Full GC time) creciendo = GC pressure
+
+# ── Terminal 6: MongoDB (si aplica) ──────────────────────────
+mongotop 1             # colecciones más activas
+mongostat 1            # inserts/queries/updates por segundo
+</code></pre>
+    </div>
+
+    <h3>Árbol de decisión — dónde está el problema</h3>
+
+    <div class="diagram-block">
+<pre>
+  ¿Throughput del generador llega al objetivo?
+  │
+  ├── NO → ¿CPU generador > 80%?
+  │         ├── SÍ → Generador es el cuello. Usar Gatling o modo distribuido.
+  │         └── NO → ¿Errores de conexión TCP?
+  │                   ├── SÍ → Problema de red o límite de sockets del OS
+  │                   └── NO → Investigar logs del generador
+  │
+  └── SÍ → ¿p95 o p99 sube con la carga?
+            │
+            ├── NO → Sistema aguanta. Subir carga hasta encontrar el límite.
+            │
+            └── SÍ → ¿CPU servidor > 80%?
+                      ├── SÍ → Cuello en la aplicación (CPU-bound)
+                      │         Acciones: escalar horizontalmente, optimizar código
+                      └── NO → ¿Kafka lag creciendo?
+                                ├── SÍ → Cuello en Kafka/consumers
+                                │         Acciones: más particiones, más consumers
+                                └── NO → ¿IO wait > 30% en servidor?
+                                          ├── SÍ → Cuello en disco/DB
+                                          └── NO → Thread starvation (revisar pool sizes)
+</pre>
+    </div>
+
+    <h3>El límite del generador — cómo detectarlo</h3>
+
+    <div class="info-box fail">
+      <span class="info-box-label">FAIL</span>
+      El error más frecuente en stress testing: concluir que "el sistema aguanta X req/s" cuando
+      en realidad era el generador el que se saturó antes. Síntoma: p95 del servidor se ve bien
+      pero el throughput no sube aunque aumente los usuarios. Verificación: mira CPU del proceso
+      generador. Si supera 80%, tus resultados son inválidos.
+    </div>
+
+    <div class="code-block">
+      <div class="code-block-header">
+        <span>Verificar si el generador es el cuello — Python</span>
+        <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+      </div>
+      <pre><code">import psutil, os
+
+proc = psutil.Process(os.getpid())
+
+# Durante el test, en un hilo separado:
+def monitor_generador():
+    while True:
+        cpu  = proc.cpu_percent(interval=1)
+        mem  = proc.memory_info().rss / 1024 / 1024  # MB
+        conn = len(proc.connections())
+        print(f"[GEN] CPU={cpu:.1f}%  MEM={mem:.0f}MB  SOCKETS={conn}")
+        if cpu > 80:
+            print("WARN: generador al límite — resultados pueden estar afectados")
+        time.sleep(5)
+</code></pre>
+    </div>
+  </section>
+
+  <!-- ── PATRONES DE DEGRADACION ── -->
+  <section>
+    <h2>3 · Patrones de degradación — cómo se ve cada problema</h2>
+
+    <h3>Patrón 1 — Escalón: el sistema se rompe de golpe</h3>
+    <div class="diagram-block">
+<pre>
+  Latencia (ms)
+  500 │                                              ╭────────────── p99
+  400 │                                        ╭─────╯
+  300 │                                  ╭─────╯               ← punto de quiebre
+  200 │                                  │
+  100 │ ───────────────────────────────────                    p95
+   50 │ ─────────────────────────────────────────────────────  p50
+      └─────────────────────────────────────────────────────────► usuarios
+           50        100       150       200       250
+
+  Causa típica: pool de threads/conexiones tiene un límite fijo.
+  Hasta 150 usuarios → todo ok (pool tiene capacidad).
+  A partir de 150 → cola de espera crece → latencias explotan.
+  Acción: aumentar pool size o escalar instancias.
+</pre>
+    </div>
+
+    <h3>Patrón 2 — Degradación gradual: memory leak o acumulación de recursos</h3>
+    <div class="diagram-block">
+<pre>
+  Latencia (ms) — carga constante en el tiempo
+  400 │                                              ╭─── p99
+  300 │                                        ╭─────╯
+  200 │                                  ╭─────╯
+  100 │                            ╭─────╯
+   80 │ ──────────────────────────────────────────── p95
+   50 │ ──────────────────────────────────────────── p50
+      └─────────────────────────────────────────────────────────► tiempo
+        5min     10min    15min    20min    25min
+
+  Causa típica: memoria creciendo (leak), GC full GC cada vez más frecuente,
+  conexiones no cerradas acumulándose.
+  Acción: heap dump, revisar cierres de conexión, perfilar memoria.
+</pre>
+    </div>
+
+    <h3>Patrón 3 — Picos periódicos: GC pauses o cron jobs</h3>
+    <div class="diagram-block">
+<pre>
+  Latencia (ms)
+  2000│                      ↑                      ↑
+  1500│                      ║                      ║    ← picos p99/p999
+   500│         ↑            ║         ↑            ║
+   300│         ║            ║         ║            ║
+   100│──────────────────────────────────────────────── p95
+    50│──────────────────────────────────────────────── p50
+      └─────────────────────────────────────────────────────────► tiempo
+        0s      30s      60s      90s     120s
+
+  Causa típica: Full GC de JVM (Java app) o cron job en el servidor.
+  En JVM: jstat -gcutil muestra picos en FGCT.
+  Acción: tuning de JVM heap, cambiar GC a G1GC o ZGC.
+</pre>
+    </div>
+  </section>
+
+  <!-- ── CHECKLIST PRE-STRESS ── -->
+  <section>
+    <h2>4 · Checklist antes de estresar un clúster real</h2>
+
+    <div class="info-box warn">
+      <span class="info-box-label">WARN</span>
+      Un test de stress mal ejecutado puede: llenar discos de logs, saturar colas de Kafka
+      y afectar consumidores de producción, agotar connection pools de bases de datos,
+      o provocar reequilibrios de liderazgo en Kafka que afecten al tráfico real.
+      Revisa esta lista antes de disparar cualquier test contra sistemas compartidos.
+    </div>
+
+    <div class="checklist-section">
+      <h4>Entorno y aislamiento</h4>
+      <div class="checklist-item">
+        <div class="check-box"></div>
+        <div>
+          <div>Confirmar que el test apunta a un entorno de staging/testing, no producción</div>
+          <div class="checklist-note">Verificar la URL base en el script. Doble-check con ping/curl antes de escalar.</div>
+        </div>
+      </div>
+      <div class="checklist-item">
+        <div class="check-box"></div>
+        <div>
+          <div>Topics de Kafka exclusivos para el test</div>
+          <div class="checklist-note">Crear topics con prefijo "stress-" separados de los de producción.</div>
+        </div>
+      </div>
+      <div class="checklist-item">
+        <div class="check-box"></div>
+        <div>
+          <div>Consumer groups de test separados</div>
+          <div class="checklist-note">Un consumer group de test que consume el topic de stress, no el de producción.</div>
+        </div>
+      </div>
+      <div class="checklist-item">
+        <div class="check-box"></div>
+        <div>
+          <div>Quotas de Kafka configuradas para el producer de test</div>
+          <div class="checklist-note">producer_byte_rate limitado para no monopolizar el broker compartido.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="checklist-section">
+      <h4>Capacidad del generador de carga</h4>
+      <div class="checklist-item">
+        <div class="check-box"></div>
+        <div>
+          <div>El generador tiene suficientes recursos para el throughput objetivo</div>
+          <div class="checklist-note">Regla general: 1 core de generador → ~10.000 req/s en Gatling, ~1.000 req/s en Locust básico.</div>
+        </div>
+      </div>
+      <div class="checklist-item">
+        <div class="check-box"></div>
+        <div>
+          <div>Límite de file descriptors (ulimit) aumentado</div>
+          <div class="checklist-note"><code>ulimit -n 65535</code> — por defecto 1024 es insuficiente para miles de conexiones.</div>
+        </div>
+      </div>
+      <div class="checklist-item">
+        <div class="check-box"></div>
+        <div>
+          <div>Verificar que el generador y el servidor están en la misma red (latencia de red mínima)</div>
+          <div class="checklist-note">Si el generador está en internet y el servidor en LAN, estás midiendo internet, no el sistema.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="checklist-section">
+      <h4>Monitoreo durante el test</h4>
+      <div class="checklist-item">
+        <div class="check-box"></div>
+        <div>
+          <div>Métricas del servidor abiertas antes de arrancar el test</div>
+          <div class="checklist-note">htop, iftop, y si hay Grafana/Prometheus: abrir el dashboard antes del disparo.</div>
+        </div>
+      </div>
+      <div class="checklist-item">
+        <div class="check-box"></div>
+        <div>
+          <div>Kafka consumer lag monitoring activo</div>
+          <div class="checklist-note"><code>kafka-consumer-groups.sh --describe</code> cada 10s o con Kafka Manager/Cruise Control.</div>
+        </div>
+      </div>
+      <div class="checklist-item">
+        <div class="check-box"></div>
+        <div>
+          <div>CPU del generador de carga monitorizado durante el test</div>
+          <div class="checklist-note">Si supera 80%, los resultados son inválidos. Abortar y escalar el generador.</div>
+        </div>
+      </div>
+      <div class="checklist-item">
+        <div class="check-box"></div>
+        <div>
+          <div>Plan de aborto: saber cómo parar el test inmediatamente</div>
+          <div class="checklist-note">Locust: Ctrl+C. Gatling: Ctrl+C. Tener el comando listo antes de empezar.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="checklist-section">
+      <h4>Después del test</h4>
+      <div class="checklist-item">
+        <div class="check-box"></div>
+        <div>
+          <div>Limpiar datos de prueba generados</div>
+          <div class="checklist-note">Borrar mensajes de topics de test, documentos de MongoDB de test, etc.</div>
+        </div>
+      </div>
+      <div class="checklist-item">
+        <div class="check-box"></div>
+        <div>
+          <div>Verificar que el sistema volvió a su estado normal</div>
+          <div class="checklist-note">Kafka lag a 0, latencias de producción dentro de SLA, no hay alarmas activas.</div>
+        </div>
+      </div>
+      <div class="checklist-item">
+        <div class="check-box"></div>
+        <div>
+          <div>Documentar resultados: throughput máximo sostenido, punto de quiebre, p95 y p99 en ese punto</div>
+          <div class="checklist-note">Sin documentación, el test siguiente no tiene baseline para comparar.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── COMANDOS DE REFERENCIA RAPIDA ── -->
+  <section>
+    <h2>5 · Referencia rápida de comandos de diagnóstico</h2>
+
+    <div class="code-block">
+      <div class="code-block-header">
+        <span>Sistema operativo</span>
+        <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+      </div>
+      <pre><code># CPU por proceso
+top -d 1 -p PID
+pidstat -u 1  # por proceso, cada segundo
+
+# Memoria
+free -h
+cat /proc/meminfo | grep -E "MemFree|Buffers|Cached"
+
+# Conexiones TCP
+ss -s                          # resumen
+ss -tn state ESTABLISHED       # conexiones activas
+ss -tn | wc -l                 # total
+netstat -i                     # errores por interfaz
+
+# File descriptors
+lsof -p PID | wc -l            # FDs del proceso
+cat /proc/sys/fs/file-nr       # sistema total
+
+# Disco / IO
+iostat -x 1                    # IO por dispositivo, cada segundo
+iotop                          # IO por proceso
+
+# Ajustar límites para tests de alta concurrencia
+ulimit -n 65535                # file descriptors (sesión actual)
+echo "* soft nofile 65535" >> /etc/security/limits.conf
+sysctl -w net.core.somaxconn=65535  # backlog de conexiones TCP
+</code></pre>
+    </div>
+
+    <div class="code-block">
+      <div class="code-block-header">
+        <span>Kafka</span>
+        <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+      </div>
+      <pre><code># Lag de consumer group
+kafka-consumer-groups.sh --bootstrap-server localhost:9092 \
+  --describe --group mi-consumer-group
+
+# Throughput de un topic (mensajes/s)
+kafka-consumer-perf-test.sh \
+  --bootstrap-server localhost:9092 \
+  --topic stress-test \
+  --messages 100000 \
+  --threads 4
+
+# Throughput del producer
+kafka-producer-perf-test.sh \
+  --topic stress-test \
+  --num-records 100000 \
+  --record-size 1000 \
+  --throughput 10000 \
+  --producer-props bootstrap.servers=localhost:9092
+
+# Estado de los brokers
+kafka-broker-api-versions.sh --bootstrap-server localhost:9092
+
+# Latencia de red al broker
+kafkacat -b localhost:9092 -L  # listar metadatos (instala kafkacat/kcat)
+</code></pre>
+    </div>
+
+    <div class="code-block">
+      <div class="code-block-header">
+        <span>JVM (Java apps)</span>
+        <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+      </div>
+      <pre><code"># GC en tiempo real
+jstat -gcutil PID 1000          # cada segundo
+# FGCT creciendo = Full GC frecuente = problema de memoria
+
+# Heap dump para análisis posterior
+jmap -dump:format=b,file=heap.hprof PID
+# Analizar con VisualVM o Eclipse MAT
+
+# Thread dump (detectar deadlocks o thread starvation)
+jstack PID > threads.txt
+# Buscar "BLOCKED", "WAITING", "deadlock" en el fichero
+
+# Monitoreo continuo con JVM Flags recomendados para stress
+java -server \
+     -XX:+UseG1GC \
+     -Xms4g -Xmx4g \
+     -XX:+PrintGCDetails \
+     -XX:+PrintGCDateStamps \
+     -Xloggc:/tmp/gc.log \
+     -jar tu-app.jar
+</code></pre>
+    </div>
+  </section>
+
+  <!-- ── GLOSARIO ── -->
+  <section>
+    <h2>6 · Glosario de términos</h2>
+
+    <table class="compare-table">
+      <thead>
+        <tr><th>Término</th><th>Definición</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Throughput</strong></td>
+          <td>Peticiones completadas por segundo. La métrica de capacidad.</td>
+        </tr>
+        <tr>
+          <td><strong>Latencia</strong></td>
+          <td>Tiempo desde que se envía la petición hasta que se recibe la respuesta completa.</td>
+        </tr>
+        <tr>
+          <td><strong>Percentil (pN)</strong></td>
+          <td>N% de las peticiones tuvieron latencia ≤ este valor.</td>
+        </tr>
+        <tr>
+          <td><strong>Saturación</strong></td>
+          <td>Punto donde añadir más carga ya no aumenta el throughput — el sistema está al límite.</td>
+        </tr>
+        <tr>
+          <td><strong>Backpressure</strong></td>
+          <td>Mecanismo por el que un sistema saturado señaliza al productor que reduzca la tasa.</td>
+        </tr>
+        <tr>
+          <td><strong>SLA (Service Level Agreement)</strong></td>
+          <td>Compromiso formal de rendimiento: "p95 &lt; 300ms con 99.9% de disponibilidad".</td>
+        </tr>
+        <tr>
+          <td><strong>Warm-up</strong></td>
+          <td>Período inicial donde la JVM compila, los pools se abren y las caches se llenan. No representa el estado estable.</td>
+        </tr>
+        <tr>
+          <td><strong>Consumer lag</strong></td>
+          <td>En Kafka: diferencia entre el último offset producido y el último leído por el consumer. Si crece, el consumer no da abasto.</td>
+        </tr>
+        <tr>
+          <td><strong>GC pause</strong></td>
+          <td>Parada del proceso Java para recoger basura. Full GC puede durar 100ms-2s y aparece como pico en p999.</td>
+        </tr>
+        <tr>
+          <td><strong>Thread starvation</strong></td>
+          <td>El pool de threads está lleno; nuevas peticiones esperan en cola. Se ve como latencias que suben aunque CPU esté baja.</td>
+        </tr>
+        <tr>
+          <td><strong>Open model</strong></td>
+          <td>Usuarios llegan a tasa fija independientemente de si los anteriores terminaron. Modela tráfico web real.</td>
+        </tr>
+        <tr>
+          <td><strong>Closed model</strong></td>
+          <td>Número constante de usuarios activos. Modela thread pools, sistemas con backpressure.</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- ── NAV ── -->
+  <div class="chapter-nav">
+    <a href="m3_cap12_gatling.html" class="chapter-nav-btn">← Cap 12 · Gatling</a>
+    <a href="index.html" class="chapter-nav-btn">Índice del curso</a>
+  </div>
+
+</main>
+
+<script>
+function copyCode(btn) {
+  const pre = btn.closest('.code-block').querySelector('pre');
+  navigator.clipboard.writeText(pre.innerText).then(() => {
+    btn.textContent = 'Copiado';
+    setTimeout(() => btn.textContent = 'Copiar', 2000);
+  });
+}
+</script>
+
+</body>
+</html>

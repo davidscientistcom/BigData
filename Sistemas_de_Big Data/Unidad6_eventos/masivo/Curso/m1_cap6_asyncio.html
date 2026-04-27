@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cap 6 — asyncio | Paralelismo Real para Big Data</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<nav class="sidebar">
+  <div class="sidebar-brand"><div class="brand-tag">LucentIA</div><h2>Paralelismo Real<br>para Big Data</h2></div>
+  <div class="sidebar-section">
+    <div class="sidebar-section-title">Módulo 1 — Python</div>
+    <a href="m1_cap1_mapa_mental.html"><span class="cap-num">01</span> Mapa mental</a>
+    <a href="m1_cap2_gil.html"><span class="cap-num">02</span> El GIL</a>
+    <a href="m1_cap3_threading.html"><span class="cap-num">03</span> threading</a>
+    <a href="m1_cap4_multiprocessing.html"><span class="cap-num">04</span> multiprocessing</a>
+    <a href="m1_cap5_concurrent_futures.html"><span class="cap-num">05</span> concurrent.futures</a>
+    <a href="m1_cap6_asyncio.html" class="active"><span class="cap-num">06</span> asyncio</a>
+  </div>
+  <div class="sidebar-section">
+    <div class="sidebar-section-title">Módulo 2 — Stress Testing</div>
+    <a href="m2_cap7_locust_basico.html"><span class="cap-num">07</span> Locust básico</a>
+    <a href="m2_cap8_locust_avanzado.html"><span class="cap-num">08</span> Locust avanzado</a>
+    <a href="m2_cap9_stress_propio.html"><span class="cap-num">09</span> Stress tester propio</a>
+  </div>
+  <div class="sidebar-section">
+    <div class="sidebar-section-title">Módulo 3 — Java/JVM</div>
+    <a href="m3_cap10_java_threads.html"><span class="cap-num">10</span> Threads en Java</a>
+    <a href="m3_cap11_java_concurrent.html"><span class="cap-num">11</span> java.util.concurrent</a>
+    <a href="m3_cap12_gatling.html"><span class="cap-num">12</span> Gatling</a>
+  </div>
+  <div class="sidebar-section">
+    <div class="sidebar-section-title">Apéndice</div>
+    <a href="apendice_resultados.html"><span class="cap-num">A</span> Leer resultados</a>
+  </div>
+</nav>
+
+<main class="main-content">
+  <div class="page-header">
+    <div class="module-tag">Módulo 1 — Capítulo 6</div>
+    <h1>asyncio: I/O masivo con un solo hilo</h1>
+    <p class="subtitle">El event loop, corrutinas, gather, create_task y aiohttp. Por qué asyncio puede abrir 10.000 conexiones donde threading colapsa con 500.</p>
+  </div>
+
+  <div class="content">
+
+    <h2>El modelo mental: un solo hilo que nunca bloquea</h2>
+
+    <p>Threading resuelve el problema de I/O concurrente creando un hilo por cada tarea en espera. Funciona, pero tiene un coste: cada hilo del SO consume ~8MB de stack, requiere sincronización entre sí y el scheduler del SO tiene que hacer context switch entre ellos. Con 500 hilos, ese overhead se nota.</p>
+
+    <p>asyncio resuelve el mismo problema con un solo hilo y un bucle de eventos (event loop). El event loop monitoriza todas las operaciones de I/O pendientes usando las primitivas del SO (select/epoll/kqueue). Cuando una operación completa, el event loop despierta la corrutina que la estaba esperando y la ejecuta hasta que vuelve a hacer await sobre algo.</p>
+
+    <div class="diagram-block">
+      <pre>
+EVENT LOOP (un solo hilo, sin GIL contención)
+
+          ┌─────────────────────────────────────────┐
+          │            EVENT LOOP                   │
+          │                                         │
+          │  Corrutina A: await red   (durmiendo)  │
+          │  Corrutina B: await BD    (durmiendo)  │
+          │  Corrutina C: ejecutando  (activa)     │◄── solo una activa a la vez
+          │  Corrutina D: await disco (durmiendo)  │
+          │  ...10.000 corrutinas más...            │
+          │                                         │
+          │  epoll/kqueue: avisa cuando I/O termina │
+          └────────────────┬────────────────────────┘
+                           │
+                     SO notifica:
+                  "red de Corrutina A lista"
+                           │
+                           ▼
+          Corrutina A despierta, ejecuta hasta el próximo await
+      </pre>
+    </div>
+
+    <div class="info-box info">
+      <span class="info-box-icon">INFO</span>
+      <div class="info-box-text"><strong>Por qué escala tanto:</strong> 10.000 corrutinas durmiendo en await cuestan unos pocos KB cada una (solo el estado de la corrutina en heap). 10.000 hilos durmiendo cuestan ~80GB de stack. El event loop nunca tiene que hacer context switch del SO entre corrutinas — el switch lo hace el código Python en cada await.</div>
+    </div>
+
+    <h2>Corrutinas: funciones que saben pausarse</h2>
+
+    <p>Una corrutina es una función definida con <code>async def</code>. Cuando llega a un <code>await</code>, cede el control al event loop. El event loop puede ejecutar otras corrutinas mientras esta espera. Cuando la operación awaited termina, el event loop devuelve el control a esta corrutina desde donde se quedó.</p>
+
+    <div class="code-block">
+      <div class="code-header">
+        <span class="code-lang">python — primera corrutina: async def y await</span>
+        <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+      </div>
+      <pre><code>import asyncio
+import time
+
+async def tarea(nombre, segundos):
+    print(f"[{nombre}] Inicio. Esperará {segundos}s")
+    await asyncio.sleep(segundos)  # cede control; el event loop ejecuta otras corrutinas
+    print(f"[{nombre}] Terminado")
+    return f"resultado_{nombre}"
+
+async def main():
+    t0 = time.perf_counter()
+
+    # Ejecutar las 3 tareas de forma SECUENCIAL (una esperamos antes de llamar a la siguiente)
+    r1 = await tarea("A", 1)
+    r2 = await tarea("B", 1)
+    r3 = await tarea("C", 1)
+    print(f"Secuencial: {time.perf_counter()-t0:.2f}s → {r1}, {r2}, {r3}")
+
+asyncio.run(main())</code></pre>
+    </div>
+
+    <h4>Output (secuencial, cada tarea espera a la anterior):</h4>
+    <div class="code-block">
+      <div class="code-header"><span class="code-lang">output — secuencial</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+      <pre><code>[A] Inicio. Esperará 1s
+[A] Terminado
+[B] Inicio. Esperará 1s
+[B] Terminado
+[C] Inicio. Esperará 1s
+[C] Terminado
+Secuencial: 3.01s → resultado_A, resultado_B, resultado_C</code></pre>
+    </div>
+
+    <div class="info-box warning">
+      <span class="info-box-icon">WARN</span>
+      <div class="info-box-text"><strong>Trampa clásica:</strong> <code>await tarea_A()</code> seguido de <code>await tarea_B()</code> es SECUENCIAL, no concurrente. Para ejecutar en paralelo hay que usar <code>gather()</code> o <code>create_task()</code>.</div>
+    </div>
+
+    <h2>gather(): lanzar múltiples corrutinas en paralelo</h2>
+
+    <p><code>asyncio.gather(*corrutinas)</code> lanza todas las corrutinas al mismo tiempo y espera a que todas terminen. Devuelve una lista de resultados en el mismo orden que las corrutinas pasadas.</p>
+
+    <div class="code-block">
+      <div class="code-header">
+        <span class="code-lang">python — gather: 3 tareas en paralelo</span>
+        <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+      </div>
+      <pre><code>import asyncio
+import time
+
+async def tarea(nombre, segundos):
+    print(f"[{nombre}] Inicio")
+    await asyncio.sleep(segundos)
+    print(f"[{nombre}] Terminado")
+    return f"resultado_{nombre}"
+
+async def main():
+    t0 = time.perf_counter()
+
+    # Ejecutar las 3 tareas CONCURRENTEMENTE
+    resultados = await asyncio.gather(
+        tarea("A", 1),
+        tarea("B", 1),
+        tarea("C", 1),
+    )
+    print(f"gather: {time.perf_counter()-t0:.2f}s → {resultados}")
+
+asyncio.run(main())</code></pre>
+    </div>
+
+    <h4>Output (concurrente: las 3 arrancan a la vez):</h4>
+    <div class="code-block">
+      <div class="code-header"><span class="code-lang">output — concurrent con gather</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+      <pre><code>[A] Inicio
+[B] Inicio
+[C] Inicio
+[A] Terminado
+[B] Terminado
+[C] Terminado
+gather: 1.01s → ['resultado_A', 'resultado_B', 'resultado_C']</code></pre>
+    </div>
+
+    <h2>create_task(): control fino sobre tareas individuales</h2>
+
+    <p><code>asyncio.create_task(corrutina)</code> programa la corrutina para ejecutarse en el event loop y devuelve un <code>Task</code> inmediatamente. El Task comienza a ejecutarse en el background en cuanto hay un <code>await</code> en el código actual que cede el control.</p>
+
+    <div class="code-block">
+      <div class="code-header">
+        <span class="code-lang">python — create_task: procesar resultados según llegan</span>
+        <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+      </div>
+      <pre><code">import asyncio
+import time
+import random
+
+async def fetch_dato(id):
+    latencia = random.uniform(0.1, 1.5)
+    await asyncio.sleep(latencia)
+    return {"id": id, "latencia_ms": latencia * 1000}
+
+async def main():
+    t0 = time.perf_counter()
+
+    # Crear 20 tasks de golpe
+    tasks = [asyncio.create_task(fetch_dato(i)) for i in range(20)]
+
+    # asyncio.as_completed: procesar según van terminando
+    for coro in asyncio.as_completed(tasks):
+        resultado = await coro
+        elapsed = time.perf_counter() - t0
+        print(f"t+{elapsed:.2f}s: dato {resultado['id']} → {resultado['latencia_ms']:.0f}ms")
+
+    print(f"\nTotal: {time.perf_counter()-t0:.2f}s (secuencial hubiera tardado ~{sum(random.uniform(0.1,1.5) for _ in range(20)):.1f}s)")
+
+asyncio.run(main())</code></pre>
+    </div>
+
+    <h2>aiohttp: peticiones HTTP con asyncio</h2>
+
+    <p><code>aiohttp</code> es la librería HTTP asíncrona estándar para asyncio. Su <code>ClientSession</code> gestiona el pool de conexiones. Es la base del stress tester que construiremos en el Capítulo 9.</p>
+
+    <div class="code-block">
+      <div class="code-header">
+        <span class="code-lang">bash — instalar aiohttp</span>
+        <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+      </div>
+      <pre><code>pip install aiohttp
+# o con conda:
+conda install -c conda-forge aiohttp</code></pre>
+    </div>
+
+    <div class="code-block">
+      <div class="code-header">
+        <span class="code-lang">python — aiohttp: 100 peticiones HTTP en paralelo</span>
+        <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+      </div>
+      <pre><code">import asyncio
+import aiohttp
+import time
+
+async def fetch(session, url, semaforo):
+    async with semaforo:  # limita concurrencia máxima
+        t0 = time.perf_counter()
+        async with session.get(url) as resp:
+            await resp.read()
+            return {
+                "url": url,
+                "status": resp.status,
+                "latencia_ms": (time.perf_counter() - t0) * 1000
+            }
+
+async def main():
+    N = 100
+    MAX_CONCURRENT = 50  # no más de 50 conexiones simultáneas al servidor
+    URL = "https://httpbin.org/status/200"
+
+    semaforo = asyncio.Semaphore(MAX_CONCURRENT)
+
+    t0 = time.perf_counter()
+    async with aiohttp.ClientSession() as session:
+        tasks = [fetch(session, URL, semaforo) for _ in range(N)]
+        resultados = await asyncio.gather(*tasks, return_exceptions=True)
+
+    elapsed = time.perf_counter() - t0
+    ok = [r for r in resultados if isinstance(r, dict) and r["status"] == 200]
+    errores = [r for r in resultados if isinstance(r, Exception)]
+    latencias = [r["latencia_ms"] for r in ok]
+
+    print(f"N={N} peticiones en {elapsed:.2f}s → {N/elapsed:.1f} req/s")
+    print(f"OK: {len(ok)} | Errores: {len(errores)}")
+    if latencias:
+        latencias.sort()
+        print(f"Latencia — p50: {latencias[len(latencias)//2]:.0f}ms | p95: {latencias[int(len(latencias)*0.95)]:.0f}ms")
+
+asyncio.run(main())</code></pre>
+    </div>
+
+    <div class="info-box info">
+      <span class="info-box-icon">INFO</span>
+      <div class="info-box-text"><strong>Semaphore en asyncio:</strong> <code>asyncio.Semaphore(N)</code> limita cuántas corrutinas pueden estar en la sección crítica a la vez. Esencial para no saturar al servidor destino con más conexiones de las que puede manejar. Sin él, las 100 peticiones intentan conectar exactamente al mismo instante.</div>
+    </div>
+
+    <h2>Comparativa observable: threading vs asyncio a escala</h2>
+
+    <div class="code-block">
+      <div class="code-header">
+        <span class="code-lang">python — threading vs asyncio con 500 peticiones</span>
+        <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+      </div>
+      <pre><code>import asyncio
+import aiohttp
+import threading
+import urllib.request
+import time
+
+URL = "https://httpbin.org/status/200"
+N = 200  # ajusta según tu conexión
+
+# ── THREADING ────────────────────────────────────────────────────────────────
+def fetch_sync(url):
+    try:
+        with urllib.request.urlopen(url, timeout=10): pass
+    except: pass
+
+t0 = time.perf_counter()
+hilos = [threading.Thread(target=fetch_sync, args=(URL,)) for _ in range(N)]
+for h in hilos: h.start()
+for h in hilos: h.join()
+t_threading = time.perf_counter() - t0
+print(f"Threading ({N} hilos):  {t_threading:.2f}s → {N/t_threading:.1f} req/s")
+
+# ── ASYNCIO ───────────────────────────────────────────────────────────────────
+async def fetch_async(session, sem):
+    async with sem:
+        async with session.get(URL) as r:
+            await r.read()
+
+async def benchmark_asyncio():
+    sem = asyncio.Semaphore(N)  # sin límite adicional: los N a la vez
+    async with aiohttp.ClientSession() as s:
+        await asyncio.gather(*[fetch_async(s, sem) for _ in range(N)])
+
+t0 = time.perf_counter()
+asyncio.run(benchmark_asyncio())
+t_asyncio = time.perf_counter() - t0
+print(f"asyncio  ({N} corrutinas): {t_asyncio:.2f}s → {N/t_asyncio:.1f} req/s")</code></pre>
+    </div>
+
+    <h4>Output típico (la diferencia se amplía con N mayor):</h4>
+    <div class="code-block">
+      <div class="code-header"><span class="code-lang">output</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+      <pre><code>Threading (200 hilos):    8.3s → 24.1 req/s
+asyncio  (200 corrutinas): 3.1s → 64.5 req/s</code></pre>
+    </div>
+
+    <h2>Bloqueo accidental: la trampa más común</h2>
+
+    <p>Si llamas a una función bloqueante (que no es async) desde dentro de una corrutina, bloqueas el event loop entero. Mientras esa función no retorna, ninguna otra corrutina puede ejecutar.</p>
+
+    <div class="code-block">
+      <div class="code-header">
+        <span class="code-lang">python — bloqueo accidental vs solución correcta</span>
+        <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+      </div>
+      <pre><code>import asyncio
+import time
+import urllib.request
+import aiohttp
+
+# MAL: urllib es bloqueante. Bloquea el event loop entero durante la petición
+async def fetch_mal(url):
+    with urllib.request.urlopen(url) as r:  # BLOQUEA el event loop
+        return r.read()
+
+# BIEN: usar aiohttp (no bloqueante)
+async def fetch_bien(session, url):
+    async with session.get(url) as r:  # cede el control mientras espera
+        return await r.read()
+
+# ALTERNATIVA: ejecutar código bloqueante en un thread pool para no bloquear el loop
+async def fetch_con_executor(url):
+    loop = asyncio.get_event_loop()
+    # run_in_executor envía la función bloqueante a un ThreadPoolExecutor
+    return await loop.run_in_executor(None, urllib.request.urlopen, url)</code></pre>
+    </div>
+
+    <div class="info-box danger">
+      <span class="info-box-icon">FAIL</span>
+      <div class="info-box-text"><strong>Síntoma de bloqueo accidental:</strong> El event loop tiene 1000 corrutinas pero solo procesa ~1 petición por vez. El throughput es idéntico al secuencial. Esto pasa cuando código bloqueante (requests, psycopg2, time.sleep, fichero síncrono) se llama sin await desde dentro de una corrutina.</div>
+    </div>
+
+    <h2>asyncio y Big Data: cuándo aplicarlo</h2>
+
+    <table class="timeline-table">
+      <thead>
+        <tr><th>Caso de uso</th><th>Librería async</th><th>Notas</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Peticiones HTTP masivas</td>
+          <td>aiohttp</td>
+          <td>La base del stress tester del Cap 9</td>
+        </tr>
+        <tr>
+          <td>PostgreSQL</td>
+          <td>asyncpg</td>
+          <td>10-15x más rápido que psycopg2 en benchmarks de alta concurrencia</td>
+        </tr>
+        <tr>
+          <td>MongoDB</td>
+          <td>motor</td>
+          <td>Wrapper async oficial de PyMongo</td>
+        </tr>
+        <tr>
+          <td>Redis</td>
+          <td>redis-py (asyncio mode)</td>
+          <td><code>redis.asyncio.Redis</code> desde redis-py 4.2</td>
+        </tr>
+        <tr>
+          <td>Kafka (consumidor/productor)</td>
+          <td>aiokafka</td>
+          <td>Productor y consumidor async para Kafka</td>
+        </tr>
+        <tr>
+          <td>Ficheros en disco</td>
+          <td>aiofiles</td>
+          <td>Envuelve operaciones de fichero en el thread pool</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="chapter-nav">
+      <a href="m1_cap5_concurrent_futures.html">← Cap 5: concurrent.futures</a>
+      <a href="m2_cap7_locust_basico.html" class="next">Cap 7: Locust básico →</a>
+    </div>
+
+  </div>
+</main>
+<script>
+function copyCode(btn) {
+  const code = btn.closest('.code-block').querySelector('pre code');
+  navigator.clipboard.writeText(code.textContent);
+  btn.textContent = 'Copiado';
+  setTimeout(() => btn.textContent = 'Copiar', 2000);
+}
+</script>
+</body>
+</html>

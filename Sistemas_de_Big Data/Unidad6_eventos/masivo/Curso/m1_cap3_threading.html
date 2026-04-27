@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cap 3 — threading | Paralelismo Real para Big Data</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<nav class="sidebar">
+  <div class="sidebar-brand"><div class="brand-tag">LucentIA</div><h2>Paralelismo Real<br>para Big Data</h2></div>
+  <div class="sidebar-section">
+    <div class="sidebar-section-title">Módulo 1 — Python</div>
+    <a href="m1_cap1_mapa_mental.html"><span class="cap-num">01</span> Mapa mental</a>
+    <a href="m1_cap2_gil.html"><span class="cap-num">02</span> El GIL</a>
+    <a href="m1_cap3_threading.html" class="active"><span class="cap-num">03</span> threading</a>
+    <a href="m1_cap4_multiprocessing.html"><span class="cap-num">04</span> multiprocessing</a>
+    <a href="m1_cap5_concurrent_futures.html"><span class="cap-num">05</span> concurrent.futures</a>
+    <a href="m1_cap6_asyncio.html"><span class="cap-num">06</span> asyncio</a>
+  </div>
+  <div class="sidebar-section">
+    <div class="sidebar-section-title">Módulo 2 — Stress Testing</div>
+    <a href="m2_cap7_locust_basico.html"><span class="cap-num">07</span> Locust básico</a>
+    <a href="m2_cap8_locust_avanzado.html"><span class="cap-num">08</span> Locust avanzado</a>
+    <a href="m2_cap9_stress_propio.html"><span class="cap-num">09</span> Stress tester propio</a>
+  </div>
+  <div class="sidebar-section">
+    <div class="sidebar-section-title">Módulo 3 — Java/JVM</div>
+    <a href="m3_cap10_java_threads.html"><span class="cap-num">10</span> Threads en Java</a>
+    <a href="m3_cap11_java_concurrent.html"><span class="cap-num">11</span> java.util.concurrent</a>
+    <a href="m3_cap12_gatling.html"><span class="cap-num">12</span> Gatling</a>
+  </div>
+  <div class="sidebar-section">
+    <div class="sidebar-section-title">Apéndice</div>
+    <a href="apendice_resultados.html"><span class="cap-num">A</span> Leer resultados</a>
+  </div>
+</nav>
+
+<main class="main-content">
+  <div class="page-header">
+    <div class="module-tag">Módulo 1 — Capítulo 3</div>
+    <h1>threading: hilos, sincronización y race conditions</h1>
+    <p class="subtitle">Cómo crear hilos en Python, cuándo se rompen sin sincronización, y cómo protegerlos correctamente con Lock, Semaphore y Event.</p>
+  </div>
+
+  <div class="content">
+
+    <h2>El modelo de hilo en Python</h2>
+    <p>Un hilo (thread) es una unidad de ejecución dentro de un proceso. Todos los hilos de un proceso comparten el mismo espacio de memoria: mismas variables globales, mismos objetos, mismo heap. Esta es tanto su ventaja (comunicación trivial) como su riesgo (cualquier hilo puede corromper el estado de otro).</p>
+    <p>El módulo <code>threading</code> de Python envuelve los threads del sistema operativo. Cuando creas un <code>threading.Thread</code>, el SO crea un thread real con su propia pila de llamadas, pero comparte el heap del proceso padre.</p>
+
+    <div class="diagram-block">
+      <pre>
+PROCESO PYTHON
+┌────────────────────────────────────────────────────┐
+│  Heap compartido                                   │
+│  ┌──────────┐  ┌──────────┐  ┌──────────┐         │
+│  │ objeto A │  │ lista B  │  │ dict C   │   ...   │
+│  └──────────┘  └──────────┘  └──────────┘         │
+│                                                    │
+│  Hilo 1         Hilo 2         Hilo 3              │
+│  ┌──────────┐  ┌──────────┐  ┌──────────┐         │
+│  │ stack    │  │ stack    │  │ stack    │         │
+│  │ propio   │  │ propio   │  │ propio   │         │
+│  └──────────┘  └──────────┘  └──────────┘         │
+│   ↑ puede leer/escribir objeto A, lista B, dict C  │
+└────────────────────────────────────────────────────┘
+      </pre>
+    </div>
+
+    <h2>Crear y lanzar hilos</h2>
+
+    <h3>Forma básica: pasar una función</h3>
+    <div class="code-block">
+      <div class="code-header">
+        <span class="code-lang">python — crear y arrancar un hilo</span>
+        <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+      </div>
+      <pre><code>import threading
+import time
+
+def trabajador(nombre, segundos):
+    print(f"[{nombre}] Arrancando, dormirá {segundos}s")
+    time.sleep(segundos)  # simula espera de I/O
+    print(f"[{nombre}] Terminado")
+
+# Crear el hilo (no arranca todavía)
+t = threading.Thread(target=trabajador, args=("Hilo-1", 2))
+
+# Arrancar el hilo (ahora ejecuta en paralelo con el hilo principal)
+t.start()
+
+print("Hilo principal continúa mientras Hilo-1 duerme")
+
+# Esperar a que el hilo termine antes de continuar
+t.join()
+print("Todo terminado")</code></pre>
+    </div>
+
+    <h4>Output:</h4>
+    <div class="code-block">
+      <div class="code-header"><span class="code-lang">output</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+      <pre><code>[Hilo-1] Arrancando, dormirá 2s
+Hilo principal continúa mientras Hilo-1 duerme
+[Hilo-1] Terminado
+Todo terminado</code></pre>
+    </div>
+
+    <div class="info-box info">
+      <span class="info-box-icon">INFO</span>
+      <div class="info-box-text"><strong>join() es obligatorio si necesitas el resultado.</strong> Sin <code>join()</code>, el programa principal puede terminar antes que los hilos. Los hilos daemon (<code>daemon=True</code>) se matan automáticamente cuando el proceso principal termina; los no-daemon mantienen el proceso vivo hasta que terminan.</div>
+    </div>
+
+    <h3>Lanzar múltiples hilos para peticiones concurrentes</h3>
+
+    <div class="code-block">
+      <div class="code-header">
+        <span class="code-lang">python — 8 hilos descargando URLs en paralelo</span>
+        <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+      </div>
+      <pre><code>import threading
+import urllib.request
+import time
+
+URLS = [
+    "https://httpbin.org/delay/1",
+    "https://httpbin.org/delay/1",
+    "https://httpbin.org/delay/1",
+    "https://httpbin.org/delay/1",
+]
+
+resultados = {}
+lock = threading.Lock()
+
+def descargar(url, indice):
+    try:
+        with urllib.request.urlopen(url, timeout=10) as r:
+            datos = r.read()
+        with lock:
+            resultados[indice] = len(datos)
+            print(f"URL {indice}: {len(datos)} bytes")
+    except Exception as e:
+        with lock:
+            resultados[indice] = f"ERROR: {e}"
+
+# Secuencial: ~4 segundos
+t0 = time.perf_counter()
+hilos = [threading.Thread(target=descargar, args=(url, i)) for i, url in enumerate(URLS)]
+for h in hilos: h.start()
+for h in hilos: h.join()
+print(f"Total con threading: {time.perf_counter() - t0:.2f}s  (secuencial sería ~4s)")</code></pre>
+    </div>
+
+    <h2>El problema sin sincronización: race conditions</h2>
+
+    <p>Una race condition ocurre cuando dos hilos acceden y modifican el mismo dato al mismo tiempo, y el resultado final depende del orden de ejecución (que el SO decide de forma no determinista). El resultado puede ser correcto a veces y erróneo otras, lo que hace estos bugs extremadamente difíciles de reproducir.</p>
+
+    <h3>Ejemplo de race condition: contador compartido</h3>
+
+    <div class="code-block">
+      <div class="code-header">
+        <span class="code-lang">python — race condition: resultado incorrecto sin lock</span>
+        <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+      </div>
+      <pre><code>import threading
+
+contador = 0  # variable compartida entre todos los hilos
+
+def incrementar(n):
+    global contador
+    for _ in range(n):
+        # Esta operación NO es atómica. Son 3 instrucciones:
+        # 1. leer contador
+        # 2. sumar 1
+        # 3. escribir el nuevo valor
+        # Entre el paso 1 y el 3 otro hilo puede leer el valor antiguo
+        contador += 1
+
+N = 100_000
+hilos = [threading.Thread(target=incrementar, args=(N,)) for _ in range(5)]
+for h in hilos: h.start()
+for h in hilos: h.join()
+
+print(f"Esperado: {5 * N:,}")
+print(f"Obtenido: {contador:,}")
+print(f"Perdidos: {5 * N - contador:,}  ← incrementos perdidos por race condition")</code></pre>
+    </div>
+
+    <h4>Output típico (varía en cada ejecución):</h4>
+    <div class="code-block">
+      <div class="code-header"><span class="code-lang">output — resultado no determinista</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+      <pre><code>Esperado: 500,000
+Obtenido: 423,817
+Perdidos:  76,183  ← incrementos perdidos por race condition</code></pre>
+    </div>
+
+    <div class="diagram-block">
+      <pre>
+POR QUÉ SE PIERDEN INCREMENTOS
+
+Hilo 1: lee  contador = 5
+Hilo 2: lee  contador = 5   ← lee el mismo valor antes de que Hilo 1 escriba
+Hilo 1:               escribe contador = 6
+Hilo 2:               escribe contador = 6  ← sobreescribe el incremento de Hilo 1
+
+Resultado: contador = 6, pero debería ser 7. Se perdió un incremento.
+      </pre>
+    </div>
+
+    <div class="info-box danger">
+      <span class="info-box-icon">FAIL</span>
+      <div class="info-box-text"><strong>Fallo observable:</strong> El resultado cambia en cada ejecución. A veces la diferencia es pequeña (unos cientos de unidades), a veces grande (decenas de miles). El bug es no determinista: puede pasar en producción con poca frecuencia y ser imposible de reproducir en tests.</div>
+    </div>
+
+    <h2>Lock: exclusión mutua</h2>
+
+    <p>Un Lock garantiza que solo un hilo ejecuta una sección de código a la vez. El primer hilo que llama a <code>lock.acquire()</code> lo obtiene. Los demás se bloquean en <code>acquire()</code> hasta que el hilo activo llama a <code>lock.release()</code>. La sección entre acquire y release se llama sección crítica.</p>
+
+    <div class="code-block">
+      <div class="code-header">
+        <span class="code-lang">python — Lock corrige la race condition</span>
+        <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+      </div>
+      <pre><code>import threading
+
+contador = 0
+lock = threading.Lock()
+
+def incrementar(n):
+    global contador
+    for _ in range(n):
+        with lock:          # adquiere el lock, ejecuta, libera automáticamente
+            contador += 1   # sección crítica: solo un hilo a la vez
+
+N = 100_000
+hilos = [threading.Thread(target=incrementar, args=(N,)) for _ in range(5)]
+for h in hilos: h.start()
+for h in hilos: h.join()
+
+print(f"Esperado: {5 * N:,}")
+print(f"Obtenido: {contador:,}")
+# Siempre: Esperado = Obtenido</code></pre>
+    </div>
+
+    <div class="info-box warning">
+      <span class="info-box-icon">WARN</span>
+      <div class="info-box-text"><strong>Coste del Lock:</strong> Proteger cada incremento con un lock serializa completamente esa parte del código. 5 hilos compitiendo por el mismo lock no son más rápidos que 1 hilo solo. Para contadores de alta frecuencia, usa <code>threading.local()</code> para acumular por hilo y sumar al final.</div>
+    </div>
+
+    <h3>RLock: lock reentrante</h3>
+    <p>Un <code>RLock</code> (Reentrant Lock) puede ser adquirido múltiples veces por el mismo hilo sin bloquearse. Es necesario cuando una función con lock llama a otra función que también intenta adquirir el mismo lock.</p>
+
+    <div class="code-block">
+      <div class="code-header">
+        <span class="code-lang">python — deadlock con Lock vs solución con RLock</span>
+        <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+      </div>
+      <pre><code>import threading
+
+# ── Con Lock: deadlock si la misma función llama a otra que intenta adquirirlo
+lock_simple = threading.Lock()
+
+def funcion_externa():
+    with lock_simple:
+        print("externa: tengo el lock")
+        funcion_interna()  # ERROR: intenta adquirir lock_simple de nuevo → deadlock
+
+def funcion_interna():
+    with lock_simple:     # ← se bloquea aquí para siempre (Lock ya adquirido por el mismo hilo)
+        print("interna: tengo el lock")
+
+# ── Con RLock: el mismo hilo puede adquirirlo varias veces
+rlock = threading.RLock()
+
+def funcion_externa_r():
+    with rlock:
+        print("externa: tengo el rlock")
+        funcion_interna_r()  # OK: el mismo hilo ya tiene el rlock
+
+def funcion_interna_r():
+    with rlock:              # OK: reentrante, el mismo hilo puede adquirirlo de nuevo
+        print("interna: tengo el rlock")
+
+t = threading.Thread(target=funcion_externa_r)
+t.start(); t.join()
+print("Completado sin deadlock")</code></pre>
+    </div>
+
+    <h2>Semaphore: limitar concurrencia</h2>
+
+    <p>Un Semaphore mantiene un contador interno. Cada <code>acquire()</code> decrementa el contador; cada <code>release()</code> lo incrementa. Cuando llega a cero, los hilos que intentan <code>acquire()</code> se bloquean. Es útil para limitar el número de accesos simultáneos a un recurso (por ejemplo, una base de datos que solo aguanta 10 conexiones simultáneas).</p>
+
+    <div class="code-block">
+      <div class="code-header">
+        <span class="code-lang">python — Semaphore: máximo 3 conexiones simultáneas a la BD</span>
+        <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+      </div>
+      <pre><code>import threading
+import time
+import random
+
+# Máximo 3 hilos pueden "conectarse a la BD" al mismo tiempo
+sem_bd = threading.Semaphore(3)
+activos = threading.local()
+
+def consultar_bd(hilo_id):
+    print(f"Hilo {hilo_id}: esperando conexión...")
+    with sem_bd:
+        print(f"Hilo {hilo_id}: CONECTADO a BD (hay semaphore libre)")
+        time.sleep(random.uniform(0.5, 1.5))  # simula la consulta
+        print(f"Hilo {hilo_id}: DESCONECTADO de BD")
+
+# 10 hilos intentan conectar, pero solo 3 lo harán a la vez
+hilos = [threading.Thread(target=consultar_bd, args=(i,)) for i in range(10)]
+for h in hilos: h.start()
+for h in hilos: h.join()</code></pre>
+    </div>
+
+    <h2>Event: señalización entre hilos</h2>
+
+    <p>Un <code>threading.Event</code> es una bandera que puede estar en estado "set" o "clear". Un hilo puede esperar (<code>event.wait()</code>) hasta que otro hilo lo active (<code>event.set()</code>). Es el mecanismo de señalización más simple entre hilos.</p>
+
+    <div class="code-block">
+      <div class="code-header">
+        <span class="code-lang">python — Event: un hilo espera la señal de otro</span>
+        <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+      </div>
+      <pre><code>import threading
+import time
+
+listo = threading.Event()
+
+def productor():
+    print("Productor: preparando datos...")
+    time.sleep(2)
+    print("Productor: datos listos, señalando consumidores")
+    listo.set()  # activa el evento
+
+def consumidor(nombre):
+    print(f"Consumidor {nombre}: esperando datos...")
+    listo.wait()  # bloquea hasta que listo.set() sea llamado
+    print(f"Consumidor {nombre}: procesando datos")
+
+t_prod = threading.Thread(target=productor)
+t_cons = [threading.Thread(target=consumidor, args=(i,)) for i in range(3)]
+
+for t in t_cons: t.start()
+t_prod.start()
+
+t_prod.join()
+for t in t_cons: t.join()</code></pre>
+    </div>
+
+    <h2>Deadlock: cuando los hilos se bloquean mutuamente</h2>
+
+    <p>Un deadlock ocurre cuando dos o más hilos esperan mutuamente recursos que el otro tiene. Ninguno puede continuar. El programa se cuelga indefinidamente sin error visible.</p>
+
+    <div class="code-block">
+      <div class="code-header">
+        <span class="code-lang">python — ejemplo clásico de deadlock</span>
+        <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+      </div>
+      <pre><code>import threading
+import time
+
+lock_A = threading.Lock()
+lock_B = threading.Lock()
+
+def hilo_1():
+    with lock_A:
+        print("Hilo 1: tiene lock_A, espera lock_B...")
+        time.sleep(0.1)  # fuerza al SO a cambiar de hilo
+        with lock_B:     # ← DEADLOCK: Hilo 2 ya tiene lock_B
+            print("Hilo 1: tiene ambos locks")
+
+def hilo_2():
+    with lock_B:
+        print("Hilo 2: tiene lock_B, espera lock_A...")
+        time.sleep(0.1)
+        with lock_A:     # ← DEADLOCK: Hilo 1 ya tiene lock_A
+            print("Hilo 2: tiene ambos locks")
+
+# Este programa se cuelga
+t1 = threading.Thread(target=hilo_1)
+t2 = threading.Thread(target=hilo_2)
+t1.start(); t2.start()
+
+# Ctrl+C para interrumpir — los hilos esperarán indefinidamente</code></pre>
+    </div>
+
+    <h4>Solución: adquirir siempre los locks en el mismo orden</h4>
+
+    <div class="code-block">
+      <div class="code-header">
+        <span class="code-lang">python — solución: orden consistente de adquisición</span>
+        <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+      </div>
+      <pre><code>import threading
+import time
+
+lock_A = threading.Lock()
+lock_B = threading.Lock()
+
+def hilo_1():
+    # Siempre: lock_A primero, luego lock_B
+    with lock_A:
+        with lock_B:
+            print("Hilo 1: tiene ambos locks")
+
+def hilo_2():
+    # Mismo orden que Hilo 1: lock_A primero, luego lock_B
+    with lock_A:
+        with lock_B:
+            print("Hilo 2: tiene ambos locks")
+
+t1 = threading.Thread(target=hilo_1)
+t2 = threading.Thread(target=hilo_2)
+t1.start(); t2.start()
+t1.join(); t2.join()
+print("Sin deadlock")</code></pre>
+    </div>
+
+    <div class="info-box danger">
+      <span class="info-box-icon">FAIL</span>
+      <div class="info-box-text"><strong>Diagnosticar un deadlock:</strong> El programa se cuelga sin mensaje de error. En Python, ejecuta <code>python -m faulthandler</code> y envía la señal SIGUSR1 al proceso (<code>kill -SIGUSR1 &lt;pid&gt;</code>) para obtener el stack trace de todos los hilos y ver dónde están bloqueados.</div>
+    </div>
+
+    <h2>Patrón productor-consumidor con Queue</h2>
+
+    <p><code>queue.Queue</code> es una cola thread-safe incluida en la librería estándar. Internamente usa un Lock para proteger todas sus operaciones. Es el patrón más limpio para comunicar hilos sin gestionar locks manualmente.</p>
+
+    <div class="code-block">
+      <div class="code-header">
+        <span class="code-lang">python — productor-consumidor con Queue: base del stress tester</span>
+        <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+      </div>
+      <pre><code>import threading
+import queue
+import time
+import random
+
+cola = queue.Queue(maxsize=50)  # buffer máximo de 50 items
+resultados = []
+lock_res = threading.Lock()
+
+def productor(n_items):
+    """Genera n_items URLs para procesar."""
+    for i in range(n_items):
+        url = f"https://api.ejemplo.com/items/{i}"
+        cola.put(url)           # bloquea si la cola está llena
+        print(f"Producido: {url}")
+    # Señal de fin para cada consumidor
+    for _ in range(3):
+        cola.put(None)
+
+def consumidor(nombre):
+    """Procesa URLs de la cola hasta recibir None."""
+    while True:
+        url = cola.get()        # bloquea si la cola está vacía
+        if url is None:
+            cola.task_done()
+            break
+        # Simula procesamiento (en producción: petición HTTP real)
+        time.sleep(random.uniform(0.1, 0.5))
+        latencia = random.uniform(50, 300)
+        with lock_res:
+            resultados.append({"url": url, "latencia_ms": latencia})
+        cola.task_done()
+        print(f"[{nombre}] Procesado {url}: {latencia:.0f}ms")
+
+# 1 productor, 3 consumidores
+t_prod = threading.Thread(target=productor, args=(15,))
+t_cons = [threading.Thread(target=consumidor, args=(f"C{i}",)) for i in range(3)]
+
+t_prod.start()
+for t in t_cons: t.start()
+t_prod.join()
+for t in t_cons: t.join()
+
+latencias = [r["latencia_ms"] for r in resultados]
+print(f"\nTotal procesados: {len(resultados)}")
+print(f"Latencia media:  {sum(latencias)/len(latencias):.0f}ms")</code></pre>
+    </div>
+
+    <div class="info-box info">
+      <span class="info-box-icon">INFO</span>
+      <div class="info-box-text"><strong>Por qué Queue es preferible a Lock manual:</strong> Queue gestiona internamente la sincronización. No puedes olvidarte de adquirir el lock. No puedes tener una race condition sobre la cola. El patrón productor-consumidor con Queue es el bloque fundamental de cualquier sistema de procesamiento concurrente en Python.</div>
+    </div>
+
+    <h2>threading.local(): estado por hilo sin sincronización</h2>
+
+    <p><code>threading.local()</code> crea un objeto cuyas propiedades son privadas por hilo. Cada hilo ve sus propias copias de los atributos. Es el patrón correcto para conexiones de base de datos, sesiones HTTP, o cualquier recurso que no debe compartirse entre hilos.</p>
+
+    <div class="code-block">
+      <div class="code-header">
+        <span class="code-lang">python — threading.local para sesiones por hilo</span>
+        <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+      </div>
+      <pre><code>import threading
+import urllib.request
+
+# Cada hilo tiene su propia sesión HTTP: no hay contención, no hay lock necesario
+datos_hilo = threading.local()
+
+def obtener_sesion():
+    """Devuelve el opener HTTP del hilo actual. Lo crea si no existe."""
+    if not hasattr(datos_hilo, 'opener'):
+        datos_hilo.opener = urllib.request.build_opener()
+        print(f"[{threading.current_thread().name}] Sesión HTTP creada")
+    return datos_hilo.opener
+
+def descargar(url):
+    opener = obtener_sesion()
+    # Cada hilo usa su propio opener sin lock
+    with opener.open(url, timeout=5) as r:
+        return len(r.read())
+
+hilos = [threading.Thread(target=descargar, args=("https://httpbin.org/get",), name=f"H{i}") for i in range(4)]
+for h in hilos: h.start()
+for h in hilos: h.join()</code></pre>
+    </div>
+
+    <h2>Cuándo usar threading y cuándo no</h2>
+
+    <div class="two-col">
+      <div class="mini-card">
+        <h5>Usar threading cuando...</h5>
+        <ul>
+          <li>El programa espera red, disco o BD la mayor parte del tiempo</li>
+          <li>Necesitas hasta ~500 conexiones simultáneas</li>
+          <li>El código usa librerías que liberan el GIL (requests, psycopg2)</li>
+          <li>Quieres comunicación simple entre hilos vía Queue o Event</li>
+        </ul>
+      </div>
+      <div class="mini-card">
+        <h5>No usar threading cuando...</h5>
+        <ul>
+          <li>El cuello de botella es CPU pura (loops, parsing, cálculo)</li>
+          <li>Necesitas más de 1000 "conexiones" simultáneas (usa asyncio)</li>
+          <li>El estado compartido es complejo (propenso a race conditions)</li>
+          <li>Necesitas aislamiento real entre tareas (usa multiprocessing)</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="chapter-nav">
+      <a href="m1_cap2_gil.html">← Cap 2: El GIL</a>
+      <a href="m1_cap4_multiprocessing.html" class="next">Cap 4: multiprocessing →</a>
+    </div>
+
+  </div>
+</main>
+<script>
+function copyCode(btn) {
+  const code = btn.closest('.code-block').querySelector('pre code');
+  navigator.clipboard.writeText(code.textContent);
+  btn.textContent = 'Copiado';
+  setTimeout(() => btn.textContent = 'Copiar', 2000);
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cap 1 — Mapa Mental | Paralelismo Real para Big Data</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<nav class="sidebar">
+  <div class="sidebar-brand">
+    <div class="brand-tag">LucentIA</div>
+    <h2>Paralelismo Real<br>para Big Data</h2>
+  </div>
+  <div class="sidebar-section">
+    <div class="sidebar-section-title">Módulo 1 — Python</div>
+    <a href="m1_cap1_mapa_mental.html" class="active"><span class="cap-num">01</span> Mapa mental</a>
+    <a href="m1_cap2_gil.html"><span class="cap-num">02</span> El GIL</a>
+    <a href="m1_cap3_threading.html"><span class="cap-num">03</span> threading</a>
+    <a href="m1_cap4_multiprocessing.html"><span class="cap-num">04</span> multiprocessing</a>
+    <a href="m1_cap5_concurrent_futures.html"><span class="cap-num">05</span> concurrent.futures</a>
+    <a href="m1_cap6_asyncio.html"><span class="cap-num">06</span> asyncio</a>
+  </div>
+  <div class="sidebar-section">
+    <div class="sidebar-section-title">Módulo 2 — Stress Testing</div>
+    <a href="m2_cap7_locust_basico.html"><span class="cap-num">07</span> Locust básico</a>
+    <a href="m2_cap8_locust_avanzado.html"><span class="cap-num">08</span> Locust avanzado</a>
+    <a href="m2_cap9_stress_propio.html"><span class="cap-num">09</span> Stress tester propio</a>
+  </div>
+  <div class="sidebar-section">
+    <div class="sidebar-section-title">Módulo 3 — Java/JVM</div>
+    <a href="m3_cap10_java_threads.html"><span class="cap-num">10</span> Threads en Java</a>
+    <a href="m3_cap11_java_concurrent.html"><span class="cap-num">11</span> java.util.concurrent</a>
+    <a href="m3_cap12_gatling.html"><span class="cap-num">12</span> Gatling</a>
+  </div>
+  <div class="sidebar-section">
+    <div class="sidebar-section-title">Apéndice</div>
+    <a href="apendice_resultados.html"><span class="cap-num">A</span> Leer resultados</a>
+  </div>
+</nav>
+
+<main class="main-content">
+  <div class="page-header">
+    <div class="module-tag">Módulo 1 — Capítulo 1</div>
+    <h1>El mapa mental: concurrencia, paralelismo y asincronía</h1>
+    <p class="subtitle">El diagnóstico previo que decide qué herramienta usar. Elegir mal aquí hace que el código sea más lento que la versión secuencial.</p>
+  </div>
+
+  <div class="content">
+
+    <h2>Por qué este capítulo es el más importante</h2>
+    <p>El error más frecuente al trabajar con sistemas de alto rendimiento es elegir la herramienta de paralelismo sin entender primero qué tipo de trabajo ejecuta el programa. Un programa que hace miles de peticiones HTTP mejora dramáticamente con <strong>asyncio</strong>. Ese mismo código con <strong>multiprocessing</strong> puede ser un 30% más lento que la versión secuencial, por el overhead de crear procesos.</p>
+    <p>Antes de escribir una sola línea de código paralelo, hay que responder una pregunta: ¿mi programa está esperando la CPU o está esperando algo externo?</p>
+
+    <div class="info-box info">
+      <span class="info-box-icon">INFO</span>
+      <div class="info-box-text"><strong>Regla de diagnóstico:</strong> Si el programa consume CPU al 100% mientras trabaja, es CPU-bound. Si el proceso duerme esperando red, disco o base de datos, es IO-bound. Esta distinción define completamente qué herramienta funciona.</div>
+    </div>
+
+    <h2>Los tres conceptos que se confunden siempre</h2>
+
+    <div class="concept-grid">
+      <div class="concept-card cyan">
+        <span class="concept-icon">CONCURRENCIA</span>
+        <h3>Concurrencia</h3>
+        <p>Varias tareas en progreso al mismo tiempo, pero no necesariamente ejecutándose en el mismo instante. Una sola CPU puede ser concurrente alternando entre tareas (context switch).</p>
+      </div>
+      <div class="concept-card orange">
+        <span class="concept-icon">PARALELISMO</span>
+        <h3>Paralelismo</h3>
+        <p>Varias tareas ejecutándose literalmente al mismo tiempo en múltiples núcleos de CPU. Requiere múltiples unidades de ejecución físicas.</p>
+      </div>
+      <div class="concept-card green">
+        <span class="concept-icon">ASINCRONÍA</span>
+        <h3>Asincronía</h3>
+        <p>Una tarea lanza una operación y no se bloquea esperando el resultado. Continúa con otra tarea. Cuando llega el resultado, retoma. No implica múltiples hilos ni procesos.</p>
+      </div>
+    </div>
+
+    <p>La confusión habitual: pensar que asincronía = paralelismo. No lo es. <code>asyncio</code> en Python es concurrente pero no paralelo: hay un solo hilo de ejecución. Lo que gana es no desperdiciar tiempo de CPU bloqueado esperando I/O.</p>
+
+    <h2>El modelo de ejecución interno: qué ocurre en la CPU</h2>
+
+    <p>Un proceso de Python tiene, por defecto, un único hilo de ejecución. Ese hilo corre en un núcleo de CPU. Cuando el hilo llega a una instrucción de red o disco (una llamada al sistema operativo), ocurre esto:</p>
+
+    <div class="diagram-block">
+      <pre>
+MODO SECUENCIAL (sin concurrencia)
+
+Tiempo →    0ms     50ms    100ms   150ms   200ms   250ms   300ms
+            |-------|-------|-------|-------|-------|-------|-------|
+
+Tarea A:    [CPU ]  [WAIT network 80ms         ] [CPU ]
+Tarea B:                                          (esperando que A termine)
+Tarea C:                                                    (esperando que B termine)
+
+CPU ocupada:  ▓▓░░░░░░░░░░░░░░░░░░░▓▓░░░░░░░░░░░░░░░░░░░░
+              ↑                    ↑
+             trabajo              trabajo   (80% del tiempo: idle)
+      </pre>
+    </div>
+
+    <div class="diagram-block">
+      <pre>
+MODO CONCURRENTE (asyncio / threading con I/O)
+
+Tiempo →    0ms     50ms    100ms   150ms   200ms   250ms   300ms
+            |-------|-------|-------|-------|-------|-------|-------|
+
+Tarea A:    [CPU ]  [WAIT                  ]     [CPU ]
+Tarea B:            [CPU ]  [WAIT          ]           [CPU ]
+Tarea C:                    [CPU ]  [WAIT  ]                 [CPU ]
+
+CPU ocupada:  ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓
+              ↑ mientras A espera red, B y C avanzan
+      </pre>
+    </div>
+
+    <div class="diagram-block">
+      <pre>
+MODO PARALELO (multiprocessing con múltiples núcleos)
+
+Tiempo →    0ms     50ms    100ms   150ms
+            |-------|-------|-------|-------|
+
+Núcleo 0:   [=== Proceso A: cálculo pesado ===]
+Núcleo 1:   [=== Proceso B: cálculo pesado ===]
+Núcleo 2:   [=== Proceso C: cálculo pesado ===]
+Núcleo 3:   [=== Proceso D: cálculo pesado ===]
+
+Resultado:  4 cálculos en el tiempo que tomaría 1 (ideal)
+      </pre>
+    </div>
+
+    <div class="info-box info">
+      <span class="info-box-icon">INFO</span>
+      <div class="info-box-text"><strong>Conclusión del diagrama:</strong> La concurrencia gana cuando el tiempo de espera (I/O) domina. El paralelismo gana cuando el tiempo de CPU domina. Si mezclas los casos, obtienes el peor resultado de ambos mundos.</div>
+    </div>
+
+    <h2>CPU-bound vs IO-bound: el diagnóstico real</h2>
+
+    <h3>CPU-bound: el programa trabaja</h3>
+    <p>Un programa CPU-bound consume ciclos de procesador sin detenerse. Ejemplos reales en Big Data:</p>
+    <ul>
+      <li>Calcular una transformación sobre 50 millones de registros (map/reduce manual)</li>
+      <li>Entrenar un modelo de ML en CPU</li>
+      <li>Serializar/deserializar JSON de alto volumen (sí, parsear JSON es CPU-bound)</li>
+      <li>Comprimir o descomprimir un fichero grande con gzip/zstd</li>
+      <li>Calcular hashes criptográficos sobre un dataset</li>
+    </ul>
+
+    <p>Para este tipo de trabajo, la solución es <strong>multiprocessing</strong>: múltiples procesos Python, cada uno con su intérprete y su GIL propio, corriendo en núcleos distintos. Threading no ayuda aquí por culpa del GIL (ver Capítulo 2).</p>
+
+    <h3>IO-bound: el programa espera</h3>
+    <p>Un programa IO-bound pasa la mayor parte del tiempo bloqueado esperando una respuesta externa. Ejemplos en Big Data:</p>
+    <ul>
+      <li>Hacer 10.000 peticiones HTTP a un API REST para insertar datos</li>
+      <li>Leer 500 ficheros de S3 o HDFS de forma secuencial</li>
+      <li>Consultar MongoDB con 1000 queries distintas</li>
+      <li>Publicar mensajes en Kafka esperando el ACK de cada uno</li>
+      <li>Abrir conexiones TCP a múltiples nodos de un clúster</li>
+    </ul>
+
+    <p>Para este trabajo, tanto <strong>threading</strong> como <strong>asyncio</strong> funcionan. La diferencia entre ellos está en la escala: threading aguanta cientos de conexiones simultáneas; asyncio aguanta decenas de miles.</p>
+
+    <h2>Cómo medir si tu programa es CPU-bound o IO-bound</h2>
+
+    <p>Antes de escribir código paralelo, mide. Hay dos formas rápidas:</p>
+
+    <h3>Opción 1: observar el monitor de sistema</h3>
+
+    <div class="code-block">
+      <div class="code-header">
+        <span class="code-lang">bash — observar uso de CPU durante ejecución</span>
+        <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+      </div>
+      <pre><code># En una terminal, lanza el programa
+python mi_script.py &
+
+# En otra terminal, observa en tiempo real
+# Si el % CPU se mantiene cerca de 100% durante toda la ejecución: CPU-bound
+# Si el % CPU oscila cerca de 0-10%: IO-bound
+top -pid $(pgrep -f mi_script)
+
+# Alternativa con htop (más visual)
+htop</code></pre>
+    </div>
+
+    <h3>Opción 2: usar cProfile para ver dónde pasa el tiempo</h3>
+
+    <div class="code-block">
+      <div class="code-header">
+        <span class="code-lang">bash — profiling de un script</span>
+        <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+      </div>
+      <pre><code>python -m cProfile -s cumulative mi_script.py | head -30
+
+# Busca en la salida:
+# - Funciones como select(), recv(), send(), sleep() con mucho tiempo acumulado → IO-bound
+# - Funciones de cálculo propio con mucho tiempo acumulado → CPU-bound</code></pre>
+    </div>
+
+    <div class="info-box warning">
+      <span class="info-box-icon">WARN</span>
+      <div class="info-box-text"><strong>Trampa frecuente:</strong> Un programa que hace muchas peticiones HTTP de forma secuencial aparece como CPU-bound en top porque el proceso nunca duerme más de un instante — siempre está lanzando la siguiente petición. El síntoma real es que el tiempo de ejecución baja drásticamente al paralelizarlo, lo que confirma que el cuello de botella era la espera, no la CPU.</div>
+    </div>
+
+    <h2>El mapa de decisión: qué herramienta usar</h2>
+
+    <div class="diagram-block">
+      <pre>
+¿Qué tipo de trabajo hace mi programa?
+│
+├── IO-bound (espera red, disco, DB, APIs)
+│   │
+│   ├── ¿Menos de 500 tareas simultáneas y el código ya usa threads?
+│   │   └── threading  →  ThreadPoolExecutor (Cap 3 y 5)
+│   │
+│   ├── ¿Más de 500 tareas o necesito máxima eficiencia de I/O?
+│   │   └── asyncio + aiohttp/asyncpg/aiokafka  (Cap 6)
+│   │
+│   └── ¿Quiero hacer stress testing HTTP?
+│       └── Locust (usa gevent internamente)  (Cap 7 y 8)
+│
+└── CPU-bound (cálculo, compresión, serialización, ML)
+    │
+    ├── ¿Quiero usar Python?
+    │   └── multiprocessing  →  Pool, ProcessPoolExecutor  (Cap 4 y 5)
+    │
+    └── ¿Necesito máxima potencia o integración JVM?
+        └── Java  →  Fork/Join, CompletableFuture  (Cap 10 y 11)
+      </pre>
+    </div>
+
+    <h2>Un experimento para ver la diferencia en números reales</h2>
+
+    <p>El siguiente script ejecuta la misma carga de trabajo de tres formas distintas y mide el tiempo. Cópialo, ejecútalo y observa los resultados. El objetivo es ver empíricamente que la elección de herramienta importa más que cualquier optimización de código.</p>
+
+    <div class="code-block">
+      <div class="code-header">
+        <span class="code-lang">python — comparativa secuencial vs threading vs multiprocessing</span>
+        <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+      </div>
+      <pre><code>import time
+import threading
+import multiprocessing
+import urllib.request
+
+# ── TAREA CPU-BOUND ──────────────────────────────────────────────────────────
+def tarea_cpu(n):
+    """Calcula la suma de cuadrados hasta n: puro trabajo de CPU."""
+    return sum(i * i for i in range(n))
+
+# ── TAREA IO-BOUND ───────────────────────────────────────────────────────────
+def tarea_io(url):
+    """Descarga una URL: trabajo de red, el proceso duerme esperando."""
+    try:
+        with urllib.request.urlopen(url, timeout=5) as r:
+            return len(r.read())
+    except Exception:
+        return 0
+
+# ── BENCHMARK CPU-BOUND ──────────────────────────────────────────────────────
+N = 5_000_000
+WORKERS = 4
+
+print("=" * 60)
+print("BENCHMARK CPU-BOUND (suma de cuadrados hasta 5M)")
+print("=" * 60)
+
+# Secuencial
+t0 = time.perf_counter()
+for _ in range(WORKERS):
+    tarea_cpu(N)
+print(f"Secuencial:      {time.perf_counter() - t0:.2f}s")
+
+# Threading (el GIL lo limita — verás que no mejora)
+t0 = time.perf_counter()
+hilos = [threading.Thread(target=tarea_cpu, args=(N,)) for _ in range(WORKERS)]
+for h in hilos: h.start()
+for h in hilos: h.join()
+print(f"Threading:       {time.perf_counter() - t0:.2f}s  ← igual o peor (GIL)")
+
+# Multiprocessing (procesos reales, sin GIL compartido)
+t0 = time.perf_counter()
+with multiprocessing.Pool(WORKERS) as pool:
+    pool.map(tarea_cpu, [N] * WORKERS)
+print(f"Multiprocessing: {time.perf_counter() - t0:.2f}s  ← debería ser ~{1/WORKERS:.1f}x más rápido")
+
+# ── BENCHMARK IO-BOUND ───────────────────────────────────────────────────────
+URLS = ["http://httpbin.org/delay/1"] * 8  # 8 URLs, cada una tarda ~1s
+
+print()
+print("=" * 60)
+print("BENCHMARK IO-BOUND (8 peticiones HTTP con 1s de delay cada una)")
+print("=" * 60)
+
+# Secuencial (esperamos cada respuesta antes de pedir la siguiente)
+t0 = time.perf_counter()
+for url in URLS:
+    tarea_io(url)
+print(f"Secuencial: {time.perf_counter() - t0:.1f}s  ← ~8 segundos (1s × 8)")
+
+# Threading (mientras una espera, otra trabaja)
+t0 = time.perf_counter()
+hilos = [threading.Thread(target=tarea_io, args=(url,)) for url in URLS]
+for h in hilos: h.start()
+for h in hilos: h.join()
+print(f"Threading:  {time.perf_counter() - t0:.1f}s  ← ~1 segundo (todas en paralelo)")</code></pre>
+    </div>
+
+    <h4>Output esperado (en una máquina con 4 núcleos):</h4>
+    <div class="code-block">
+      <div class="code-header">
+        <span class="code-lang">output — resultado del benchmark</span>
+        <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+      </div>
+      <pre><code>============================================================
+BENCHMARK CPU-BOUND (suma de cuadrados hasta 5M)
+============================================================
+Secuencial:      4.12s
+Threading:       4.18s  ← igual o peor (GIL)
+Multiprocessing: 1.09s  ← debería ser ~0.2x más rápido
+
+============================================================
+BENCHMARK IO-BOUND (8 peticiones HTTP con 1s de delay cada una)
+============================================================
+Secuencial: 8.3s  ← ~8 segundos (1s × 8)
+Threading:  1.1s  ← ~1 segundo (todas en paralelo)</code></pre>
+    </div>
+
+    <div class="info-box success">
+      <span class="info-box-icon">INFO</span>
+      <div class="info-box-text"><strong>Qué confirma este experimento:</strong> Para trabajo CPU-bound, threading no ayuda (incluso perjudica ligeramente por el overhead). Multiprocessing sí escala. Para trabajo IO-bound, threading sí escala porque el GIL se libera durante las llamadas al sistema operativo. Este comportamiento se explica en detalle en el Capítulo 2.</div>
+    </div>
+
+    <h2>El caso especial del stress testing</h2>
+
+    <p>Cuando el objetivo es generar carga sobre un sistema externo (un API REST, un topic Kafka, un endpoint de MongoDB), el programa generador de carga es por definición <strong>IO-bound</strong>: lanza peticiones y espera respuestas.</p>
+    <p>Esto tiene una implicación directa: una sola máquina puede generar una cantidad enorme de carga si usa las herramientas correctas. Con threading puro, una máquina puede sostener ~500-1000 conexiones simultáneas sin problemas. Con asyncio (o con Locust, que usa gevent internamente), la misma máquina puede sostener 10.000-50.000 "usuarios virtuales".</p>
+    <p>Cuando ni una máquina alcanza, se distribuye la carga: varios procesos Locust en varias máquinas apuntando al mismo sistema objetivo. Esto lo vemos en el Capítulo 8.</p>
+
+    <div class="info-box warning">
+      <span class="info-box-icon">WARN</span>
+      <div class="info-box-text"><strong>Límite real de la máquina generadora:</strong> Si el generador de carga es el cuello de botella (CPU al 100%, o memoria agotada), los resultados del test no reflejan la capacidad del sistema bajo prueba, sino la capacidad del generador. Siempre monitoriza la máquina generadora durante el test.</div>
+    </div>
+
+    <h2>Resumen del capítulo</h2>
+
+    <table class="timeline-table">
+      <thead>
+        <tr>
+          <th>Herramienta</th>
+          <th>Tipo de problema</th>
+          <th>Escala típica</th>
+          <th>Cuándo NO usar</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>threading</strong></td>
+          <td>IO-bound</td>
+          <td>Hasta ~500 hilos</td>
+          <td>CPU-bound (GIL bloquea)</td>
+        </tr>
+        <tr>
+          <td><strong>multiprocessing</strong></td>
+          <td>CPU-bound</td>
+          <td>Tantos como núcleos físicos</td>
+          <td>IO-bound (overhead de procesos)</td>
+        </tr>
+        <tr>
+          <td><strong>asyncio</strong></td>
+          <td>IO-bound masivo</td>
+          <td>10.000+ corrutinas</td>
+          <td>CPU-bound (un solo hilo)</td>
+        </tr>
+        <tr>
+          <td><strong>Locust</strong></td>
+          <td>Stress testing HTTP</td>
+          <td>Miles de usuarios virtuales</td>
+          <td>Protocolos no HTTP sin plugins</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="chapter-nav">
+      <a href="index.html">← Índice</a>
+      <a href="m1_cap2_gil.html" class="next">Cap 2: El GIL →</a>
+    </div>
+
+  </div>
+</main>
+
+<script>
+function copyCode(btn) {
+  const code = btn.closest('.code-block').querySelector('pre code');
+  navigator.clipboard.writeText(code.textContent);
+  btn.textContent = 'Copiado';
+  setTimeout(() => btn.textContent = 'Copiar', 2000);
+}
+</script>
+</body>
+</html>

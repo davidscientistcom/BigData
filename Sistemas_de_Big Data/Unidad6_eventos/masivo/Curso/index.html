@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Paralelismo Real para Big Data | LucentIA</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<nav class="sidebar">
+  <div class="sidebar-brand">
+    <div class="brand-tag">LucentIA</div>
+    <h2>Paralelismo Real<br>para Big Data</h2>
+  </div>
+  <div class="sidebar-section">
+    <div class="sidebar-section-title">Módulo 1 — Python</div>
+    <a href="m1_cap1_mapa_mental.html"><span class="cap-num">01</span> Mapa mental</a>
+    <a href="m1_cap2_gil.html"><span class="cap-num">02</span> El GIL</a>
+    <a href="m1_cap3_threading.html"><span class="cap-num">03</span> threading</a>
+    <a href="m1_cap4_multiprocessing.html"><span class="cap-num">04</span> multiprocessing</a>
+    <a href="m1_cap5_concurrent_futures.html"><span class="cap-num">05</span> concurrent.futures</a>
+    <a href="m1_cap6_asyncio.html"><span class="cap-num">06</span> asyncio</a>
+  </div>
+  <div class="sidebar-section">
+    <div class="sidebar-section-title">Módulo 2 — Stress Testing</div>
+    <a href="m2_cap7_locust_basico.html"><span class="cap-num">07</span> Locust básico</a>
+    <a href="m2_cap8_locust_avanzado.html"><span class="cap-num">08</span> Locust avanzado</a>
+    <a href="m2_cap9_stress_propio.html"><span class="cap-num">09</span> Stress tester propio</a>
+  </div>
+  <div class="sidebar-section">
+    <div class="sidebar-section-title">Módulo 3 — Java/JVM</div>
+    <a href="m3_cap10_java_threads.html"><span class="cap-num">10</span> Threads en Java</a>
+    <a href="m3_cap11_java_concurrent.html"><span class="cap-num">11</span> java.util.concurrent</a>
+    <a href="m3_cap12_gatling.html"><span class="cap-num">12</span> Gatling</a>
+  </div>
+  <div class="sidebar-section">
+    <div class="sidebar-section-title">Apéndice</div>
+    <a href="apendice_resultados.html"><span class="cap-num">A</span> Leer resultados</a>
+  </div>
+</nav>
+
+<main class="main-content">
+  <div class="index-hero">
+    <div class="hero-tag">LucentIA — Curso Técnico</div>
+    <h1>Paralelismo Real<br>para Big Data</h1>
+    <p class="hero-sub">Procesos, hilos, asyncio y stress testing para sistemas distribuidos. De los fundamentos del GIL a Gatling estrellando un clúster Kafka.</p>
+    <div style="margin-top:24px; display:flex; gap:12px; flex-wrap:wrap;">
+      <span class="pill cyan">Python 3.12+</span>
+      <span class="pill orange">Locust</span>
+      <span class="pill green">asyncio</span>
+      <span class="pill orange">Java 21</span>
+      <span class="pill cyan">Gatling</span>
+    </div>
+  </div>
+
+  <div class="module-section">
+    <h2 class="m1">Módulo 1 — Fundamentos del paralelismo en Python</h2>
+    <p style="color:var(--text-secondary);margin-bottom:24px;font-size:14px;">Antes de generar carga, hay que entender cómo Python ejecuta código en paralelo y cuándo realmente lo hace. El GIL, los hilos, los procesos y el event loop no son intercambiables.</p>
+    <div class="chapter-grid">
+      <a class="chapter-card" href="m1_cap1_mapa_mental.html">
+        <div class="cap-label">Capítulo 01</div>
+        <h3>El mapa mental</h3>
+        <p>Concurrencia vs Paralelismo vs Asincronía. CPU-bound vs IO-bound. El diagnóstico que decide qué herramienta usar.</p>
+      </a>
+      <a class="chapter-card" href="m1_cap2_gil.html">
+        <div class="cap-label">Capítulo 02</div>
+        <h3>El GIL</h3>
+        <p>Qué es el Global Interpreter Lock, qué bloquea exactamente, qué no bloquea, y cuándo te destroza el rendimiento.</p>
+      </a>
+      <a class="chapter-card" href="m1_cap3_threading.html">
+        <div class="cap-label">Capítulo 03</div>
+        <h3>threading</h3>
+        <p>Hilos, Lock, RLock, Semaphore, Event, Barrier. Race conditions con ejemplo real que falla. Deadlocks y cómo diagnosticarlos.</p>
+      </a>
+      <a class="chapter-card" href="m1_cap4_multiprocessing.html">
+        <div class="cap-label">Capítulo 04</div>
+        <h3>multiprocessing</h3>
+        <p>Procesos que esquivan el GIL. Pool, Process, Queue, Pipe, memoria compartida. Cuándo Pool.map vs Pool.apply_async.</p>
+      </a>
+      <a class="chapter-card" href="m1_cap5_concurrent_futures.html">
+        <div class="cap-label">Capítulo 05</div>
+        <h3>concurrent.futures</h3>
+        <p>La API moderna. ThreadPoolExecutor vs ProcessPoolExecutor. submit, map, as_completed. Cancelación y manejo de errores.</p>
+      </a>
+      <a class="chapter-card" href="m1_cap6_asyncio.html">
+        <div class="cap-label">Capítulo 06</div>
+        <h3>asyncio</h3>
+        <p>Event loop, corrutinas, gather, create_task. aiohttp para 10.000 conexiones donde threading muere con 500.</p>
+      </a>
+    </div>
+  </div>
+
+  <div class="module-section">
+    <h2 class="m2">Módulo 2 — Stress Testing con Python</h2>
+    <p style="color:var(--text-secondary);margin-bottom:24px;font-size:14px;">De qué sirve un clúster si no lo puedes estresar. Locust desde el laboratorio real del workspace, y nuestro propio cliente de carga para protocolos que Locust no cubre.</p>
+    <div class="chapter-grid">
+      <a class="chapter-card" href="m2_cap7_locust_basico.html">
+        <div class="cap-label">Capítulo 07</div>
+        <h3>Locust desde el laboratorio</h3>
+        <p>El locustfile.py del workspace diseccionado línea a línea. HttpUser, @task, wait_time. Qué leer en la UI: RPS, p95, p99, fail_ratio.</p>
+      </a>
+      <a class="chapter-card" href="m2_cap8_locust_avanzado.html">
+        <div class="cap-label">Capítulo 08</div>
+        <h3>Locust avanzado</h3>
+        <p>SequentialTaskSet, catch_response, watchdog de fallos, modo distribuido master/worker, exportar CSV y HTML.</p>
+      </a>
+      <a class="chapter-card" href="m2_cap9_stress_propio.html">
+        <div class="cap-label">Capítulo 09</div>
+        <h3>Nuestro propio stress tester</h3>
+        <p>Cliente de carga con asyncio + aiohttp. Métricas propias p50/p95/p99. Herramienta reutilizable para Kafka, gRPC, sockets TCP.</p>
+      </a>
+    </div>
+  </div>
+
+  <div class="module-section">
+    <h2 class="m3">Módulo 3 — Java/JVM: cuando Python no llega</h2>
+    <p style="color:var(--text-secondary);margin-bottom:24px;font-size:14px;">Java no tiene GIL. Sus primitivas de concurrencia son más expresivas y su JVM aguanta más carga por proceso. Gatling puede simular 100.000 usuarios desde una sola máquina.</p>
+    <div class="chapter-grid">
+      <a class="chapter-card" href="m3_cap10_java_threads.html">
+        <div class="cap-label">Capítulo 10</div>
+        <h3>Threads en Java</h3>
+        <p>Thread, Runnable, ExecutorService. synchronized, volatile, AtomicInteger. Productor-consumidor con BlockingQueue.</p>
+      </a>
+      <a class="chapter-card" href="m3_cap11_java_concurrent.html">
+        <div class="cap-label">Capítulo 11</div>
+        <h3>java.util.concurrent</h3>
+        <p>CountDownLatch, CyclicBarrier, Semaphore. CompletableFuture encadenado. Fork/Join Framework para CPU-bound masivo.</p>
+      </a>
+      <a class="chapter-card" href="m3_cap12_gatling.html">
+        <div class="cap-label">Capítulo 12</div>
+        <h3>Gatling</h3>
+        <p>DSL declarativo, scenarios, feeders, throttle. HTTP y Kafka. Informe HTML profesional. 100k usuarios desde una máquina.</p>
+      </a>
+    </div>
+  </div>
+
+  <div class="module-section">
+    <h2 class="ap">Apéndice</h2>
+    <div class="chapter-grid">
+      <a class="chapter-card" href="apendice_resultados.html">
+        <div class="cap-label">Apéndice A</div>
+        <h3>Leer resultados y tomar decisiones</h3>
+        <p>Interpretar p95 y p99. Localizar el cuello de botella: red, app, base de datos o generador. Checklist antes de estresar un clúster real.</p>
+      </a>
+    </div>
+  </div>
+</main>
+
+</body>
+</html>

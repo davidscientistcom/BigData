@@ -1,0 +1,1245 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Cap 11 — java.util.concurrent | Paralelismo Real para Big Data</title>
+<link rel="stylesheet" href="styles.css"/>
+<style>
+.concurrent-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1rem;
+  margin: 1.5rem 0;
+}
+.concurrent-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.2rem;
+  border-top: 3px solid var(--purple);
+}
+.concurrent-card h4 {
+  color: var(--purple);
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 0.5rem;
+}
+.concurrent-card p {
+  color: var(--text-secondary);
+  font-size: 0.88rem;
+  line-height: 1.5;
+}
+.compare-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1.5rem 0;
+  font-size: 0.88rem;
+}
+.compare-table th {
+  background: var(--bg-elevated);
+  color: var(--text-secondary);
+  text-align: left;
+  padding: 0.7rem 1rem;
+  border-bottom: 2px solid var(--border);
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 0.78rem;
+  letter-spacing: 0.06em;
+}
+.compare-table td {
+  padding: 0.65rem 1rem;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-primary);
+  vertical-align: top;
+}
+.compare-table tr:hover td { background: var(--bg-elevated); }
+.tag {
+  display: inline-block;
+  padding: 0.15rem 0.55rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  font-family: var(--font-mono);
+}
+.tag-purple { background: var(--purple-dim); color: var(--purple); }
+.tag-cyan   { background: var(--cyan-dim);   color: var(--cyan); }
+.tag-orange { background: var(--orange-dim); color: var(--orange); }
+.tag-green  { background: var(--green-dim);  color: var(--green); }
+.tag-red    { background: var(--red-dim);    color: var(--red); }
+.flow-chain {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: 1rem 0;
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+}
+.flow-box {
+  background: var(--bg-card);
+  border: 1px solid var(--purple);
+  border-radius: 6px;
+  padding: 0.35rem 0.75rem;
+  color: var(--purple);
+}
+.flow-arrow { color: var(--text-muted); font-size: 1rem; }
+</style>
+</head>
+<body>
+
+<nav class="sidebar">
+  <div class="sidebar-logo">LucentIA</div>
+  <div class="sidebar-course">Paralelismo Real<br/>para Big Data</div>
+  <ul class="sidebar-nav">
+    <li class="sidebar-section">Módulo 1 — Python</li>
+    <li><a href="m1_cap1_mapa_mental.html">Cap 1 · Mapa mental</a></li>
+    <li><a href="m1_cap2_gil.html">Cap 2 · El GIL</a></li>
+    <li><a href="m1_cap3_threading.html">Cap 3 · threading</a></li>
+    <li><a href="m1_cap4_multiprocessing.html">Cap 4 · multiprocessing</a></li>
+    <li><a href="m1_cap5_concurrent_futures.html">Cap 5 · concurrent.futures</a></li>
+    <li><a href="m1_cap6_asyncio.html">Cap 6 · asyncio</a></li>
+    <li class="sidebar-section">Módulo 2 — Stress Testing Python</li>
+    <li><a href="m2_cap7_locust_basico.html">Cap 7 · Locust básico</a></li>
+    <li><a href="m2_cap8_locust_avanzado.html">Cap 8 · Locust avanzado</a></li>
+    <li><a href="m2_cap9_stress_propio.html">Cap 9 · Stress tester propio</a></li>
+    <li class="sidebar-section">Módulo 3 — Java/JVM</li>
+    <li><a href="m3_cap10_java_threads.html">Cap 10 · Threads en Java</a></li>
+    <li class="active"><a href="m3_cap11_java_concurrent.html">Cap 11 · java.util.concurrent</a></li>
+    <li><a href="m3_cap12_gatling.html">Cap 12 · Gatling</a></li>
+    <li class="sidebar-section">Apéndice</li>
+    <li><a href="apendice_resultados.html">Interpretar resultados</a></li>
+    <li><a href="index.html">Inicio</a></li>
+  </ul>
+</nav>
+
+<main class="content">
+
+  <div class="page-header">
+    <div class="page-header-module">Módulo 3 — Java/JVM · Capítulo 11</div>
+    <h1 class="page-header-title">java.util.concurrent</h1>
+    <p class="page-header-sub">CountDownLatch · CyclicBarrier · Semaphore · CompletableFuture · Fork/Join</p>
+  </div>
+
+  <!-- ── INTRO ── -->
+  <section>
+    <h2>El arsenal real de concurrencia en Java</h2>
+    <p>
+      El paquete <code>java.util.concurrent</code> (JUC) fue introducido en Java 5 y es la razón
+      por la que Java sigue siendo el lenguaje de referencia para Big Data distribuido. Spark,
+      Kafka, Flink, HBase: todos construyen sobre estas primitivas. En el capítulo anterior cubrimos
+      los bloques base: <code>Thread</code>, <code>ExecutorService</code>, <code>synchronized</code>,
+      <code>AtomicInteger</code>, <code>BlockingQueue</code>. Aquí subimos un peldaño.
+    </p>
+    <p>
+      Este capítulo cubre las herramientas de <em>coordinación</em> entre hilos (no sólo ejecución),
+      la programación reactiva con <code>CompletableFuture</code>, y el modelo Fork/Join para
+      dividir trabajo CPU-bound masivo. Todo orientado a construir herramientas de stress testing
+      que puedan saturar un clúster Kafka o Spark sin que el generador sea el cuello de botella.
+    </p>
+
+    <div class="concurrent-grid">
+      <div class="concurrent-card">
+        <h4>CountDownLatch</h4>
+        <p>Barrera de cuenta regresiva. N hilos decrementan; el que espera avanza cuando llega a 0. Un disparo, no recargable.</p>
+      </div>
+      <div class="concurrent-card">
+        <h4>CyclicBarrier</h4>
+        <p>Punto de encuentro: todos esperan hasta que el último llega. Recargable: puede usarse en bucle para fases.</p>
+      </div>
+      <div class="concurrent-card">
+        <h4>Semaphore</h4>
+        <p>Control de acceso concurrente. Limita cuántos hilos pueden estar en una sección al mismo tiempo.</p>
+      </div>
+      <div class="concurrent-card">
+        <h4>CompletableFuture</h4>
+        <p>Pipeline reactivo asíncrono. Encadena operaciones sin bloquear: thenApply, thenCompose, allOf, exceptionally.</p>
+      </div>
+      <div class="concurrent-card">
+        <h4>Fork/Join Framework</h4>
+        <p>Divide y vencerás a escala JVM. Work-stealing para procesar grandes volúmenes de datos con todos los cores.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── COUNTDOWNLATCH ── -->
+  <section>
+    <h2>1 · CountDownLatch — arranque coordinado</h2>
+
+    <h3>Mecanismo</h3>
+    <p>
+      <code>CountDownLatch</code> se inicializa con un contador entero N. Cualquier hilo puede
+      llamar a <code>countDown()</code> para decrementarlo. El hilo que llama a <code>await()</code>
+      se bloquea hasta que el contador llega a cero. Una vez a cero, <strong>todos los hilos
+      bloqueados en await() se liberan simultáneamente</strong>. El latch no se puede reiniciar
+      (a diferencia de CyclicBarrier).
+    </p>
+
+    <div class="diagram-block">
+<pre>
+  Hilo principal
+       │
+       │  new CountDownLatch(3)
+       │         │
+       │    ┌────┴────────────────────────┐
+       │    │ Worker-1                    │  countDown()  →  latch = 2
+       │    │ Worker-2                    │  countDown()  →  latch = 1
+       │    │ Worker-3                    │  countDown()  →  latch = 0
+       │    └────────────────────────────┘
+       │
+   await()  ←  desbloquea cuando latch = 0
+       │
+  [continúa el trabajo post-inicio]
+</pre>
+    </div>
+
+    <div class="info-box warn">
+      <span class="info-box-label">WARN</span>
+      CountDownLatch no se puede reutilizar. Si necesitas barreras en bucle para múltiples fases
+      usa <strong>CyclicBarrier</strong> o crea un nuevo latch cada vez.
+    </div>
+
+    <h3>Ejemplo base — señal de inicio</h3>
+    <p>
+      Caso clásico: 100 trabajadores se preparan. El coordinador da la señal de inicio; todos
+      arrancan exactamente al mismo tiempo. Esto simula un burst de carga coordinado — el patrón
+      exacto que usamos en stress testing.
+    </p>
+
+    <div class="code-block">
+      <div class="code-block-header">
+        <span>CoordStart.java</span>
+        <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+      </div>
+      <pre><code>import java.util.concurrent.*;
+
+public class CoordStart {
+
+    public static void main(String[] args) throws InterruptedException {
+        int WORKERS = 10;
+
+        // Un latch para "todos listos" (workers decrementan)
+        CountDownLatch listos = new CountDownLatch(WORKERS);
+        // Un latch para "arrancar" (el principal lo abre)
+        CountDownLatch arranque = new CountDownLatch(1);
+
+        ExecutorService pool = Executors.newFixedThreadPool(WORKERS);
+
+        for (int i = 0; i < WORKERS; i++) {
+            final int id = i;
+            pool.submit(() -> {
+                System.out.printf("[W%02d] Preparado%n", id);
+                listos.countDown();         // notifica que está listo
+                try {
+                    arranque.await();       // espera la señal
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    return;
+                }
+                System.out.printf("[W%02d] DISPARANDO peticiones%n", id);
+                // Aquí irían las peticiones HTTP/Kafka
+            });
+        }
+
+        listos.await();             // espera a que todos estén listos
+        System.out.println(">>> TODOS LISTOS — ARRANCANDO");
+        arranque.countDown();       // señal de disparo simultáneo
+
+        pool.shutdown();
+        pool.awaitTermination(10, TimeUnit.SECONDS);
+    }
+}
+</code></pre>
+    </div>
+
+    <h3>Salida esperada</h3>
+    <div class="diagram-block">
+<pre>
+[W03] Preparado
+[W07] Preparado
+[W01] Preparado
+...
+>>> TODOS LISTOS — ARRANCANDO
+[W03] DISPARANDO peticiones
+[W07] DISPARANDO peticiones
+[W01] DISPARANDO peticiones
+</pre>
+    </div>
+
+    <h3>Ejemplo real — medir tiempo de arranque de Kafka</h3>
+    <p>
+      Variante útil para stress: medir cuánto tarda el sistema en responder al primer burst.
+      Todos los productores Kafka arrancan en el mismo instante; registramos el tiempo de la
+      primera respuesta.
+    </p>
+
+    <div class="code-block">
+      <div class="code-block-header">
+        <span>KafkaBurstTimer.java</span>
+        <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+      </div>
+      <pre><code>import java.util.concurrent.*;
+import java.util.concurrent.atomic.*;
+
+public class KafkaBurstTimer {
+
+    static final int PRODUCERS = 50;
+    static final AtomicLong primeraRespuesta = new AtomicLong(Long.MAX_VALUE);
+
+    public static void main(String[] args) throws InterruptedException {
+        CountDownLatch listos  = new CountDownLatch(PRODUCERS);
+        CountDownLatch disparo = new CountDownLatch(1);
+
+        ExecutorService pool = Executors.newFixedThreadPool(PRODUCERS);
+        long[] tiempoInicio = new long[1];
+
+        for (int i = 0; i < PRODUCERS; i++) {
+            pool.submit(() -> {
+                listos.countDown();
+                try { disparo.await(); } catch (InterruptedException e) { return; }
+
+                long t0 = System.nanoTime();
+                // simulamos latencia de envío Kafka
+                try { Thread.sleep((long)(Math.random() * 20)); }
+                catch (InterruptedException ignored) {}
+                long latencia = System.nanoTime() - t0;
+
+                // guardamos la latencia más baja (primera respuesta)
+                primeraRespuesta.updateAndGet(v -> Math.min(v, latencia));
+            });
+        }
+
+        listos.await();
+        tiempoInicio[0] = System.nanoTime();
+        disparo.countDown();  // disparo simultáneo
+
+        pool.shutdown();
+        pool.awaitTermination(30, TimeUnit.SECONDS);
+
+        System.out.printf("Primera respuesta (de %d productores simultáneos): %.2f ms%n",
+            PRODUCERS, primeraRespuesta.get() / 1_000_000.0);
+        System.out.printf("Tiempo total burst: %.2f ms%n",
+            (System.nanoTime() - tiempoInicio[0]) / 1_000_000.0);
+    }
+}
+</code></pre>
+    </div>
+
+    <div class="info-box info">
+      <span class="info-box-label">INFO</span>
+      El doble-latch (listos + disparo) es el patrón estándar de stress testing para simular
+      carga simultánea real. Sin el latch de disparo, los workers arrancan escalonados según
+      son creados por el thread pool — no hay burst real.
+    </div>
+  </section>
+
+  <!-- ── CYCLICBARRIER ── -->
+  <section>
+    <h2>2 · CyclicBarrier — fases sincronizadas</h2>
+
+    <h3>Mecanismo</h3>
+    <p>
+      <code>CyclicBarrier</code> funciona como un punto de encuentro: todos los hilos que llaman
+      a <code>await()</code> se bloquean hasta que el <em>último</em> llega. En ese momento, todos
+      avanzan juntos. La diferencia clave con <code>CountDownLatch</code>: la barrera se
+      <strong>reinicia automáticamente</strong> después de cada ciclo, lo que permite múltiples fases.
+    </p>
+    <p>
+      Adicionalmente, acepta una acción de barrera (<code>Runnable</code>) que se ejecuta una vez,
+      por el último hilo en llegar, antes de liberar a todos los demás.
+    </p>
+
+    <div class="diagram-block">
+<pre>
+  Fase 1                     Fase 2                     Fase 3
+  ─────────────────────────  ─────────────────────────  ──────
+  W1 ──────────┐             W1 ──────────┐             W1 ──►
+  W2 ──────────┤  [barrera]  W2 ──────────┤  [barrera]  W2 ──►
+  W3 ──────────┤  ─────────► W3 ──────────┤  ─────────► W3 ──►
+  W4 ──────────┘             W4 ──────────┘             W4 ──►
+                 ↑ acción de barrera (resumen de fase)
+</pre>
+    </div>
+
+    <h3>Ejemplo base — pipeline de carga por fases</h3>
+    <p>
+      En stress testing masivo útil para simular: fase WARM-UP → fase RAMP-UP → fase PICO → fase
+      COOL-DOWN. Cada hilo completa su trabajo en la fase actual y espera al resto antes de pasar
+      a la siguiente.
+    </p>
+
+    <div class="code-block">
+      <div class="code-block-header">
+        <span>FasesStress.java</span>
+        <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+      </div>
+      <pre><code>import java.util.concurrent.*;
+import java.util.concurrent.atomic.*;
+
+public class FasesStress {
+
+    static final String[] FASES = {"WARM-UP", "RAMP-UP", "PICO", "COOL-DOWN"};
+    static final AtomicInteger faseActual = new AtomicInteger(0);
+    static final AtomicLong totalPeticiones = new AtomicLong(0);
+
+    public static void main(String[] args) throws InterruptedException {
+        int WORKERS = 8;
+        int PETICIONES_POR_FASE = 100;
+
+        // Acción de barrera: se ejecuta cuando todos los workers terminan la fase
+        Runnable accionBarrera = () -> {
+            int fase = faseActual.getAndIncrement();
+            System.out.printf("%n═══ FIN %s — total acumulado: %d peticiones ═══%n",
+                FASES[fase], totalPeticiones.get());
+        };
+
+        CyclicBarrier barrera = new CyclicBarrier(WORKERS, accionBarrera);
+        ExecutorService pool   = Executors.newFixedThreadPool(WORKERS);
+
+        for (int w = 0; w < WORKERS; w++) {
+            final int wid = w;
+            pool.submit(() -> {
+                try {
+                    for (String fase : FASES) {
+                        // trabajo de esta fase
+                        int peticiones = 0;
+                        for (int p = 0; p < PETICIONES_POR_FASE; p++) {
+                            Thread.sleep(1);  // simula latencia
+                            peticiones++;
+                        }
+                        totalPeticiones.addAndGet(peticiones);
+                        System.out.printf("  [W%02d] %s completada (%d pet.)%n",
+                            wid, fase, peticiones);
+
+                        barrera.await();  // espera al resto antes de pasar de fase
+                    }
+                } catch (InterruptedException | BrokenBarrierException e) {
+                    System.err.println("Worker " + wid + " interrumpido: " + e.getMessage());
+                }
+            });
+        }
+
+        pool.shutdown();
+        pool.awaitTermination(60, TimeUnit.SECONDS);
+    }
+}
+</code></pre>
+    </div>
+
+    <h3>Caso de fallo — BrokenBarrierException</h3>
+    <div class="info-box fail">
+      <span class="info-box-label">FAIL</span>
+      Si cualquier hilo que está esperando en la barrera es interrumpido o lanza excepción,
+      la barrera queda "rota" (<code>BrokenBarrierException</code>) y todos los hilos que
+      estén o lleguen a <code>await()</code> reciben la excepción. Hay que manejarla para no
+      dejar hilos colgados indefinidamente.
+    </div>
+
+    <div class="code-block">
+      <div class="code-block-header">
+        <span>BrokenBarrierDemo.java (patrón defensivo)</span>
+        <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+      </div>
+      <pre><code>try {
+    barrera.await(5, TimeUnit.SECONDS);  // timeout: no esperar para siempre
+} catch (TimeoutException e) {
+    System.err.println("Timeout en barrera — algún worker colgado");
+    barrera.reset();  // reinicia para recuperación
+} catch (BrokenBarrierException e) {
+    System.err.println("Barrera rota — otro worker falló");
+    // abortar o reintentar según la lógica del test
+}
+</code></pre>
+    </div>
+  </section>
+
+  <!-- ── SEMAPHORE ── -->
+  <section>
+    <h2>3 · Semaphore — control de concurrencia</h2>
+
+    <h3>Mecanismo</h3>
+    <p>
+      Un <code>Semaphore</code> mantiene un conjunto de <em>permisos</em>. <code>acquire()</code>
+      obtiene un permiso (bloqueando si no hay ninguno disponible). <code>release()</code> devuelve
+      un permiso. Si el semáforo tiene N permisos, como máximo N hilos pueden estar en la sección
+      protegida simultáneamente.
+    </p>
+    <p>
+      En Big Data / stress testing la aplicación es directa: limitar la tasa de peticiones
+      concurrentes. Si envías 1000 hilos contra Kafka sin límite, puedes matar al broker antes
+      de poder medir nada útil. Con <code>Semaphore(50)</code> mantienes exactamente 50 peticiones
+      en vuelo en todo momento.
+    </p>
+
+    <div class="diagram-block">
+<pre>
+Semaphore(3):  [permiso][permiso][permiso]
+
+  T1 acquire() ─► [■][permiso][permiso]   T1 dentro
+  T2 acquire() ─► [■][■][permiso]          T2 dentro
+  T3 acquire() ─► [■][■][■]               T3 dentro
+
+  T4 acquire() ─► BLOQUEADO (0 permisos)
+  T5 acquire() ─► BLOQUEADO
+
+  T1 release() ─► [permiso][■][■]         T4 entra
+  T3 release() ─► [permiso][permiso][■]   T5 entra
+</pre>
+    </div>
+
+    <h3>Ejemplo — throttling de peticiones a Kafka</h3>
+
+    <div class="code-block">
+      <div class="code-block-header">
+        <span>KafkaThrottle.java</span>
+        <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+      </div>
+      <pre><code>import java.util.concurrent.*;
+import java.util.concurrent.atomic.*;
+
+public class KafkaThrottle {
+
+    static final int TOTAL_MSGS  = 10_000;
+    static final int MAX_INFLY   = 100;    // máximo concurrente
+    static final AtomicLong enviados  = new AtomicLong(0);
+    static final AtomicLong errores   = new AtomicLong(0);
+
+    public static void main(String[] args) throws InterruptedException {
+        Semaphore inFlight = new Semaphore(MAX_INFLY);
+        ExecutorService pool = Executors.newFixedThreadPool(MAX_INFLY * 2);
+
+        long t0 = System.currentTimeMillis();
+
+        for (int i = 0; i < TOTAL_MSGS; i++) {
+            inFlight.acquire();  // bloquea si ya hay MAX_INFLY en vuelo
+            final int msgId = i;
+
+            pool.submit(() -> {
+                try {
+                    // Simula envío a Kafka (latencia variable)
+                    long latencia = (long)(Math.random() * 10 + 1);
+                    Thread.sleep(latencia);
+
+                    if (Math.random() < 0.01) {  // 1% de error
+                        errores.incrementAndGet();
+                    } else {
+                        enviados.incrementAndGet();
+                    }
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                } finally {
+                    inFlight.release();  // siempre liberar el permiso
+                }
+            });
+        }
+
+        pool.shutdown();
+        pool.awaitTermination(60, TimeUnit.SECONDS);
+
+        long elapsed = System.currentTimeMillis() - t0;
+        System.out.printf("Enviados: %d | Errores: %d | Throughput: %.0f msg/s%n",
+            enviados.get(), errores.get(),
+            TOTAL_MSGS / (elapsed / 1000.0));
+    }
+}
+</code></pre>
+    </div>
+
+    <div class="info-box warn">
+      <span class="info-box-label">WARN</span>
+      <strong>Siempre</strong> pon <code>inFlight.release()</code> en un bloque <code>finally</code>.
+      Si el permiso no se devuelve por una excepción, el semáforo se agota progresivamente
+      hasta que no hay permisos y el sistema se congela — un deadlock silencioso muy difícil
+      de diagnosticar bajo carga.
+    </div>
+
+    <h3>Semaphore vs BlockingQueue — cuándo usar cuál</h3>
+
+    <table class="compare-table">
+      <thead>
+        <tr>
+          <th>Criterio</th>
+          <th>Semaphore</th>
+          <th>BlockingQueue</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>¿Qué controla?</td>
+          <td>Número de hilos en sección</td>
+          <td>Cola de elementos con capacidad</td>
+        </tr>
+        <tr>
+          <td>Backpressure</td>
+          <td>No (bloquea al productor)</td>
+          <td>Sí (productor espera si llena)</td>
+        </tr>
+        <tr>
+          <td>Caso de uso</td>
+          <td>Limitar concurrencia de operaciones</td>
+          <td>Comunicar datos entre hilos</td>
+        </tr>
+        <tr>
+          <td>Stress testing</td>
+          <td>Throttling de conexiones</td>
+          <td>Buffer de mensajes entre productores/consumidores</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- ── COMPLETABLEFUTURE ── -->
+  <section>
+    <h2>4 · CompletableFuture — pipelines reactivos asíncronos</h2>
+
+    <h3>Qué es y por qué importa</h3>
+    <p>
+      <code>CompletableFuture&lt;T&gt;</code> (Java 8+) es la respuesta de Java a la programación
+      reactiva. Un <code>Future</code> tradicional sólo tiene <code>get()</code>, que bloquea.
+      <code>CompletableFuture</code> permite encadenar operaciones asíncronas sin bloquear ningún
+      hilo: cuando el resultado esté disponible, se ejecuta la siguiente etapa del pipeline
+      automáticamente en un pool de hilos (por defecto <code>ForkJoinPool.commonPool()</code>).
+    </p>
+
+    <div class="flow-chain">
+      <div class="flow-box">supplyAsync()</div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-box">thenApply()</div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-box">thenCompose()</div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-box">thenAccept()</div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-box">exceptionally()</div>
+    </div>
+
+    <table class="compare-table">
+      <thead>
+        <tr><th>Método</th><th>Entrada</th><th>Salida</th><th>Uso</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code>supplyAsync(Supplier)</code></td><td>—</td><td>T</td><td>Inicio del pipeline (valor async)</td></tr>
+        <tr><td><code>thenApply(Function)</code></td><td>T</td><td>U</td><td>Transformar el resultado (map)</td></tr>
+        <tr><td><code>thenCompose(Function)</code></td><td>T</td><td>CF&lt;U&gt;</td><td>Encadenar otro CF (flatMap)</td></tr>
+        <tr><td><code>thenAccept(Consumer)</code></td><td>T</td><td>void</td><td>Consumir sin transformar</td></tr>
+        <tr><td><code>thenRun(Runnable)</code></td><td>—</td><td>void</td><td>Acción final sin acceso al resultado</td></tr>
+        <tr><td><code>exceptionally(Function)</code></td><td>Throwable</td><td>T</td><td>Recuperación de errores</td></tr>
+        <tr><td><code>allOf(CF...)</code></td><td>CF[]</td><td>CF&lt;Void&gt;</td><td>Esperar a que todos terminen</td></tr>
+        <tr><td><code>anyOf(CF...)</code></td><td>CF[]</td><td>CF&lt;Object&gt;</td><td>Continuar con el más rápido</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Ejemplo base — pipeline de petición HTTP async</h3>
+
+    <div class="code-block">
+      <div class="code-block-header">
+        <span>PipelineHTTP.java</span>
+        <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+      </div>
+      <pre><code>import java.net.URI;
+import java.net.http.*;
+import java.time.Duration;
+import java.util.concurrent.*;
+
+public class PipelineHTTP {
+
+    static final HttpClient http = HttpClient.newBuilder()
+        .connectTimeout(Duration.ofSeconds(5))
+        .build();
+
+    public static CompletableFuture&lt;String&gt; fetchAsync(String url) {
+        HttpRequest request = HttpRequest.newBuilder()
+            .uri(URI.create(url))
+            .timeout(Duration.ofSeconds(10))
+            .GET()
+            .build();
+
+        return http.sendAsync(request, HttpResponse.BodyHandlers.ofString())
+            .thenApply(response -> {
+                if (response.statusCode() != 200) {
+                    throw new RuntimeException("HTTP " + response.statusCode());
+                }
+                return response.body();
+            })
+            .thenApply(body -> {
+                // Transformar: extraer longitud como métrica
+                return "OK len=" + body.length();
+            })
+            .exceptionally(ex -> "ERROR: " + ex.getMessage());
+    }
+
+    public static void main(String[] args) throws Exception {
+        // 5 peticiones paralelas sin bloquear ningún hilo
+        CompletableFuture&lt;String&gt;[] futures = new CompletableFuture[5];
+        String[] urls = {
+            "https://httpbin.org/get",
+            "https://httpbin.org/delay/1",
+            "https://httpbin.org/status/500",
+            "https://httpbin.org/get?q=test",
+            "https://httpbin.org/headers"
+        };
+
+        for (int i = 0; i &lt; urls.length; i++) {
+            futures[i] = fetchAsync(urls[i]);
+        }
+
+        // allOf espera a todos sin bloquear un hilo dedicado
+        CompletableFuture.allOf(futures)
+            .thenRun(() -> {
+                for (int i = 0; i &lt; futures.length; i++) {
+                    System.out.printf("[%d] %s%n", i, futures[i].join());
+                }
+            })
+            .get();  // único get() bloqueante, al final del main
+    }
+}
+</code></pre>
+    </div>
+
+    <h3>Ejemplo real — medición de latencias en paralelo para stress report</h3>
+
+    <div class="code-block">
+      <div class="code-block-header">
+        <span>LatencyCollector.java</span>
+        <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+      </div>
+      <pre><code>import java.util.*;
+import java.util.concurrent.*;
+import java.util.stream.*;
+
+public class LatencyCollector {
+
+    static long simulatePeticion() throws InterruptedException {
+        long t0 = System.nanoTime();
+        Thread.sleep((long)(Math.random() * 100 + 5));  // 5-105 ms
+        return (System.nanoTime() - t0) / 1_000_000L;   // en ms
+    }
+
+    public static void main(String[] args) throws Exception {
+        int N = 200;
+        ExecutorService pool = Executors.newFixedThreadPool(50);
+
+        List&lt;CompletableFuture&lt;Long&gt;&gt; futures = IntStream.range(0, N)
+            .mapToObj(i -> CompletableFuture.supplyAsync(() -> {
+                try {
+                    return simulatePeticion();
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    return -1L;
+                }
+            }, pool))
+            .collect(Collectors.toList());
+
+        // Esperar a todos y recoger latencias
+        CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
+
+        List&lt;Long&gt; latencias = futures.stream()
+            .map(CompletableFuture::join)
+            .filter(l -> l >= 0)
+            .sorted()
+            .collect(Collectors.toList());
+
+        // Calcular percentiles
+        int n = latencias.size();
+        System.out.printf("N=%d peticiones%n", n);
+        System.out.printf("p50 = %d ms%n", latencias.get((int)(n * 0.50)));
+        System.out.printf("p95 = %d ms%n", latencias.get((int)(n * 0.95)));
+        System.out.printf("p99 = %d ms%n", latencias.get((int)(n * 0.99)));
+        System.out.printf("max = %d ms%n", latencias.get(n - 1));
+
+        pool.shutdown();
+    }
+}
+</code></pre>
+    </div>
+
+    <div class="info-box info">
+      <span class="info-box-label">INFO</span>
+      <code>supplyAsync(supplier, pool)</code> usa tu pool propio. Sin el segundo argumento
+      usa <code>ForkJoinPool.commonPool()</code>, que tiene tantos hilos como cores. Para
+      trabajo IO-bound (peticiones HTTP, Kafka) necesitas un pool dedicado más grande.
+    </div>
+
+    <h3>thenCompose — encadenar futuros dependientes</h3>
+    <p>
+      <code>thenApply</code> transforma el valor. <code>thenCompose</code> lo usa para
+      <em>iniciar otra operación asíncrona</em>. La diferencia es la misma que entre
+      <code>map</code> y <code>flatMap</code> en streams.
+    </p>
+
+    <div class="code-block">
+      <div class="code-block-header">
+        <span>Compose — autenticación + petición</span>
+        <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+      </div>
+      <pre><code>CompletableFuture&lt;String&gt; flujo =
+    CompletableFuture.supplyAsync(() -> obtenerToken())       // devuelve String
+        .thenCompose(token ->                                  // usa ese String para
+            CompletableFuture.supplyAsync(() ->               // otro CF
+                hacerPeticionConToken(token)))
+        .thenApply(respuesta -> parsearJSON(respuesta))
+        .exceptionally(ex -> {
+            System.err.println("Error en flujo: " + ex.getMessage());
+            return null;
+        });
+
+String resultado = flujo.get(10, TimeUnit.SECONDS);
+</code></pre>
+    </div>
+  </section>
+
+  <!-- ── FORK/JOIN ── -->
+  <section>
+    <h2>5 · Fork/Join Framework — divide y vencerás a escala JVM</h2>
+
+    <h3>Arquitectura</h3>
+    <p>
+      El <code>ForkJoinPool</code> (Java 7+) implementa <em>work-stealing</em>: cada hilo tiene
+      su propia cola de tareas. Cuando un hilo se queda sin trabajo, roba tareas de la cola
+      de otro hilo. Esto maximiza la utilización de los cores sin contención en una cola central.
+    </p>
+    <p>
+      El modelo de programación es recursivo: <code>ForkJoinTask</code> se divide en subtareas
+      más pequeñas (<code>fork()</code>) y espera sus resultados (<code>join()</code>). Hay dos
+      sabores:
+    </p>
+
+    <div class="concurrent-grid">
+      <div class="concurrent-card">
+        <h4>RecursiveTask&lt;T&gt;</h4>
+        <p>Computa un resultado. Equivalente a Callable en el mundo Fork/Join. Úsalo cuando necesitas un valor de retorno.</p>
+      </div>
+      <div class="concurrent-card">
+        <h4>RecursiveAction</h4>
+        <p>No devuelve resultado. Equivalente a Runnable. Úsalo para mutaciones en colecciones o arrays compartidos.</p>
+      </div>
+    </div>
+
+    <div class="diagram-block">
+<pre>
+  ForkJoinPool (N hilos = cores disponibles)
+  │
+  └─► tarea(0..1M)
+       │
+       ├─► fork: tarea(0..500K)           ├─► fork: tarea(500K..1M)
+       │    ├─► fork: tarea(0..250K)      │    ├─► fork: tarea(500K..750K)
+       │    │    [resultado: 125K]         │    │    [resultado: 125K]
+       │    └─► fork: tarea(250K..500K)   │    └─► fork: tarea(750K..1M)
+       │         [resultado: 125K]         │         [resultado: 125K]
+       │    join() → 250K                  │    join() → 250K
+       └─────────────────── join() ────────┘
+                                 ↓
+                          [resultado: 500K]
+</pre>
+    </div>
+
+    <h3>Ejemplo base — suma paralela de array grande</h3>
+
+    <div class="code-block">
+      <div class="code-block-header">
+        <span>SumaParalela.java</span>
+        <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+      </div>
+      <pre><code>import java.util.concurrent.*;
+
+public class SumaParalela extends RecursiveTask&lt;Long&gt; {
+
+    static final int UMBRAL = 10_000;  // procesar secuencialmente por debajo de este tamaño
+
+    private final long[] datos;
+    private final int desde;
+    private final int hasta;
+
+    public SumaParalela(long[] datos, int desde, int hasta) {
+        this.datos = datos;
+        this.desde = desde;
+        this.hasta = hasta;
+    }
+
+    @Override
+    protected Long compute() {
+        int longitud = hasta - desde;
+
+        // Caso base: lo suficientemente pequeño para procesar directamente
+        if (longitud &lt;= UMBRAL) {
+            long suma = 0;
+            for (int i = desde; i &lt; hasta; i++) {
+                suma += datos[i];
+            }
+            return suma;
+        }
+
+        // Caso recursivo: dividir
+        int medio = desde + longitud / 2;
+        SumaParalela izq = new SumaParalela(datos, desde, medio);
+        SumaParalela der = new SumaParalela(datos, medio, hasta);
+
+        izq.fork();              // lanza izq en otro hilo
+        long sumaDer = der.compute();  // computa der en este hilo
+        long sumaIzq = izq.join();    // espera el resultado de izq
+
+        return sumaIzq + sumaDer;
+    }
+
+    public static void main(String[] args) {
+        int N = 10_000_000;
+        long[] datos = new long[N];
+        for (int i = 0; i &lt; N; i++) datos[i] = i + 1L;
+        long esperado = (long)N * (N + 1) / 2;
+
+        ForkJoinPool pool = new ForkJoinPool();
+
+        long t0 = System.currentTimeMillis();
+        long resultado = pool.invoke(new SumaParalela(datos, 0, N));
+        long elapsed = System.currentTimeMillis() - t0;
+
+        System.out.printf("Resultado: %d (esperado: %d) — %s%n",
+            resultado, esperado, resultado == esperado ? "CORRECTO" : "ERROR");
+        System.out.printf("Tiempo: %d ms con %d cores%n",
+            elapsed, Runtime.getRuntime().availableProcessors());
+
+        pool.shutdown();
+    }
+}
+</code></pre>
+    </div>
+
+    <h3>Ejemplo real — procesamiento paralelo masivo de logs de Kafka</h3>
+    <p>
+      Escenario: tienes 50 millones de eventos de log de un clúster Kafka exportados a un array
+      (o lista). Necesitas calcular la tasa de error por servicio. Fork/Join divide el array
+      en bloques y cada bloque construye su propio mapa parcial. La reducción final combina los mapas.
+    </p>
+
+    <div class="code-block">
+      <div class="code-block-header">
+        <span>LogAnalyzer.java</span>
+        <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+      </div>
+      <pre><code>import java.util.*;
+import java.util.concurrent.*;
+
+// Evento de log simplificado
+record LogEvento(String servicio, boolean esError) {}
+
+public class LogAnalyzer extends RecursiveTask&lt;Map&lt;String, long[]&gt;&gt; {
+
+    static final int UMBRAL = 50_000;
+    private final List&lt;LogEvento&gt; eventos;
+    private final int desde;
+    private final int hasta;
+
+    public LogAnalyzer(List&lt;LogEvento&gt; eventos, int desde, int hasta) {
+        this.eventos = eventos;
+        this.desde   = desde;
+        this.hasta   = hasta;
+    }
+
+    @Override
+    protected Map&lt;String, long[]&gt; compute() {
+        if (hasta - desde &lt;= UMBRAL) {
+            return procesarSegmento();
+        }
+
+        int medio = desde + (hasta - desde) / 2;
+        LogAnalyzer izq = new LogAnalyzer(eventos, desde, medio);
+        LogAnalyzer der = new LogAnalyzer(eventos, medio, hasta);
+
+        izq.fork();
+        Map&lt;String, long[]&gt; mapaDer = der.compute();
+        Map&lt;String, long[]&gt; mapaIzq = izq.join();
+
+        return combinar(mapaIzq, mapaDer);
+    }
+
+    // [total, errores] por servicio
+    private Map&lt;String, long[]&gt; procesarSegmento() {
+        Map&lt;String, long[]&gt; mapa = new HashMap&lt;&gt;();
+        for (int i = desde; i &lt; hasta; i++) {
+            LogEvento e = eventos.get(i);
+            long[] contadores = mapa.computeIfAbsent(e.servicio(), k -> new long[]{0, 0});
+            contadores[0]++;
+            if (e.esError()) contadores[1]++;
+        }
+        return mapa;
+    }
+
+    private Map&lt;String, long[]&gt; combinar(Map&lt;String, long[]&gt; a, Map&lt;String, long[]&gt; b) {
+        Map&lt;String, long[]&gt; resultado = new HashMap&lt;&gt;(a);
+        b.forEach((k, v) -> resultado.merge(k, v,
+            (va, vb) -> new long[]{va[0] + vb[0], va[1] + vb[1]}));
+        return resultado;
+    }
+
+    public static void main(String[] args) {
+        String[] servicios = {"api-gateway", "kafka-consumer", "spark-job", "hdfs-writer"};
+        int N = 5_000_000;
+        List&lt;LogEvento&gt; eventos = new ArrayList&lt;&gt;(N);
+        Random rand = new Random();
+        for (int i = 0; i &lt; N; i++) {
+            eventos.add(new LogEvento(
+                servicios[rand.nextInt(servicios.length)],
+                rand.nextDouble() &lt; 0.05  // 5% error rate
+            ));
+        }
+
+        ForkJoinPool pool = ForkJoinPool.commonPool();
+        long t0 = System.currentTimeMillis();
+        Map&lt;String, long[]&gt; resultado = pool.invoke(new LogAnalyzer(eventos, 0, N));
+        System.out.printf("Análisis de %dM eventos en %d ms%n", N / 1_000_000,
+            System.currentTimeMillis() - t0);
+
+        resultado.forEach((svc, c) ->
+            System.out.printf("%-20s  total=%7d  errores=%6d  tasa=%.1f%%%n",
+                svc, c[0], c[1], 100.0 * c[1] / c[0]));
+    }
+}
+</code></pre>
+    </div>
+
+    <h3>Caso de fallo — umbral demasiado pequeño</h3>
+
+    <div class="info-box fail">
+      <span class="info-box-label">FAIL</span>
+      Si el umbral de recursión es demasiado pequeño (ej: 10 en lugar de 10.000), el overhead
+      de crear tareas Fork/Join supera el beneficio del paralelismo. Con N=10M y umbral=10 se crean
+      1 millón de tareas — el scheduler se satura. La regla general: umbral entre 1.000 y 100.000
+      según el coste de la operación por elemento. Mide siempre.
+    </div>
+
+    <div class="code-block">
+      <div class="code-block-header">
+        <span>Benchmark — umbral óptimo</span>
+        <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+      </div>
+      <pre><code>// Ejecuta con diferentes umbrales para encontrar el óptimo
+int[] umbrales = {100, 1_000, 10_000, 50_000, 100_000};
+for (int umbral : umbrales) {
+    long t0 = System.currentTimeMillis();
+    // Ajustar UMBRAL como variable de instancia y ejecutar
+    pool.invoke(new SumaParalela(datos, 0, N));
+    System.out.printf("Umbral %7d → %d ms%n", umbral, System.currentTimeMillis() - t0);
+}
+// Output típico en 8 cores:
+// Umbral     100 → 412 ms  (demasiado overhead)
+// Umbral   1.000 → 87 ms
+// Umbral  10.000 → 31 ms   ← óptimo típico
+// Umbral  50.000 → 38 ms
+// Umbral 100.000 → 55 ms   (poca división, cores infrautilizados)
+</code></pre>
+    </div>
+  </section>
+
+  <!-- ── INTEGRACION ── -->
+  <section>
+    <h2>6 · Integración — stress tester completo con todo el arsenal JUC</h2>
+    <p>
+      Combinamos todo lo visto (CountDownLatch + Semaphore + CompletableFuture) en un stress
+      tester reutilizable. Este es el patrón base sobre el que construir herramientas específicas
+      para Kafka, Spark REST, HDFS, etc.
+    </p>
+
+    <div class="code-block">
+      <div class="code-block-header">
+        <span>JucStressTester.java</span>
+        <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+      </div>
+      <pre><code>import java.util.*;
+import java.util.concurrent.*;
+import java.util.concurrent.atomic.*;
+import java.util.stream.*;
+
+public class JucStressTester {
+
+    // ── Configuración ──────────────────────────────────────────
+    static final int WORKERS       = 200;   // hilos totales
+    static final int MAX_INFLIGHT  = 50;    // Semaphore: concurrencia máxima
+    static final int TOTAL_OPS     = 5_000; // operaciones totales
+    static final int WARMUP_OPS    = 500;   // descartar métricas de calentamiento
+
+    // ── Métricas ───────────────────────────────────────────────
+    static final List&lt;Long&gt; latencias = Collections.synchronizedList(new ArrayList&lt;&gt;());
+    static final AtomicLong exitos  = new AtomicLong(0);
+    static final AtomicLong fallos  = new AtomicLong(0);
+
+    // ── Operación a estresar (sustituir por Kafka/HTTP/Spark) ──
+    static long operacion(int id) throws InterruptedException {
+        long t0 = System.nanoTime();
+        Thread.sleep((long)(Math.random() * 80 + 10));  // 10-90 ms
+        if (Math.random() &lt; 0.02) throw new RuntimeException("Error simulado #" + id);
+        return (System.nanoTime() - t0) / 1_000_000L;
+    }
+
+    public static void main(String[] args) throws Exception {
+        ExecutorService pool   = Executors.newFixedThreadPool(WORKERS);
+        Semaphore inFlight     = new Semaphore(MAX_INFLIGHT);
+        CountDownLatch listos  = new CountDownLatch(WORKERS > TOTAL_OPS ? TOTAL_OPS : WORKERS);
+        CountDownLatch disparo = new CountDownLatch(1);
+
+        System.out.printf("Stress tester: %d ops, max %d concurrentes%n",
+            TOTAL_OPS, MAX_INFLIGHT);
+
+        List&lt;CompletableFuture&lt;Void&gt;&gt; futures = new ArrayList&lt;&gt;();
+        final AtomicInteger warmupRestante = new AtomicInteger(WARMUP_OPS);
+
+        for (int i = 0; i &lt; TOTAL_OPS; i++) {
+            final int opId = i;
+            CompletableFuture&lt;Void&gt; f = CompletableFuture.runAsync(() -> {
+                try {
+                    if (opId &lt; listos.getCount()) listos.countDown();
+                    disparo.await();          // espera señal de disparo
+                    inFlight.acquire();       // limita concurrencia
+
+                    long lat = operacion(opId);
+
+                    // descartar warmup
+                    if (warmupRestante.decrementAndGet() &lt; 0) {
+                        latencias.add(lat);
+                        exitos.incrementAndGet();
+                    }
+                } catch (Exception e) {
+                    fallos.incrementAndGet();
+                } finally {
+                    inFlight.release();
+                }
+            }, pool);
+            futures.add(f);
+        }
+
+        listos.await();  // esperar arranque de workers iniciales
+        System.out.println("DISPARO");
+        long t0 = System.currentTimeMillis();
+        disparo.countDown();
+
+        CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).get();
+        long elapsed = System.currentTimeMillis() - t0;
+
+        // ── Reporte ────────────────────────────────────────────
+        List&lt;Long&gt; sorted = latencias.stream().sorted().collect(Collectors.toList());
+        int n = sorted.size();
+
+        System.out.println("\n══════════════ REPORTE ══════════════");
+        System.out.printf("Duración total : %.2f s%n", elapsed / 1000.0);
+        System.out.printf("Throughput     : %.0f ops/s%n", TOTAL_OPS / (elapsed / 1000.0));
+        System.out.printf("Exitos         : %d%n", exitos.get());
+        System.out.printf("Fallos         : %d (%.1f%%)%n", fallos.get(),
+            100.0 * fallos.get() / TOTAL_OPS);
+        if (n > 0) {
+            System.out.printf("p50            : %d ms%n", sorted.get((int)(n * 0.50)));
+            System.out.printf("p95            : %d ms%n", sorted.get((int)(n * 0.95)));
+            System.out.printf("p99            : %d ms%n", sorted.get((int)(n * 0.99)));
+            System.out.printf("max            : %d ms%n", sorted.get(n - 1));
+        }
+        System.out.println("═════════════════════════════════════");
+
+        pool.shutdown();
+    }
+}
+</code></pre>
+    </div>
+
+    <div class="info-box success">
+      <span class="info-box-label">SUCCESS</span>
+      Este es el esqueleto que usaremos en Cap 12 (Gatling) para comparar. Con Java puro y JUC
+      podemos generar 5.000+ ops/s desde un solo proceso, sin dependencias externas, con métricas
+      de percentil exactas. Sustituye <code>operacion()</code> por tu cliente Kafka, HTTP, o gRPC.
+    </div>
+
+    <h3>Verificación observable</h3>
+    <div class="code-block">
+      <div class="code-block-header">
+        <span>Compilar y ejecutar</span>
+        <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+      </div>
+      <pre><code># Java 17+ (record requiere 16+)
+javac JucStressTester.java
+java JucStressTester
+
+# Salida esperada:
+# Stress tester: 5000 ops, max 50 concurrentes
+# DISPARO
+#
+# ══════════════ REPORTE ══════════════
+# Duración total : 8.43 s
+# Throughput     : 593 ops/s
+# Exitos         : 4404
+# Fallos         : 96 (1.9%)
+# p50            : 45 ms
+# p95            : 82 ms
+# p99            : 88 ms
+# max            : 91 ms
+# ═════════════════════════════════════
+</code></pre>
+    </div>
+  </section>
+
+  <!-- ── RESUMEN ── -->
+  <section>
+    <h2>Resumen — cuándo usar cada primitiva JUC</h2>
+
+    <table class="compare-table">
+      <thead>
+        <tr>
+          <th>Primitiva</th>
+          <th>Patrón</th>
+          <th>En stress testing</th>
+          <th>Limitación</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>CountDownLatch</code></td>
+          <td>Esperar a N eventos; señal de arranque</td>
+          <td>Disparo simultáneo de workers</td>
+          <td>No reutilizable</td>
+        </tr>
+        <tr>
+          <td><code>CyclicBarrier</code></td>
+          <td>Sincronización por fases</td>
+          <td>Warm-up → Ramp → Pico → Cool</td>
+          <td>BrokenBarrierException si un hilo falla</td>
+        </tr>
+        <tr>
+          <td><code>Semaphore</code></td>
+          <td>Limitar concurrencia</td>
+          <td>Throttling de peticiones en vuelo</td>
+          <td>No FIFO por defecto</td>
+        </tr>
+        <tr>
+          <td><code>CompletableFuture</code></td>
+          <td>Pipeline reactivo sin bloqueos</td>
+          <td>Recolección de métricas async</td>
+          <td>Requiere pool IO separado para trabajo pesado</td>
+        </tr>
+        <tr>
+          <td><code>ForkJoinPool</code></td>
+          <td>Divide y vencerás CPU-bound</td>
+          <td>Análisis post-test de resultados masivos</td>
+          <td>No eficiente para IO-bound (hilos bloqueados)</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- ── NAV ── -->
+  <div class="chapter-nav">
+    <a href="m3_cap10_java_threads.html" class="chapter-nav-btn">← Cap 10 · Threads en Java</a>
+    <a href="index.html" class="chapter-nav-btn">Índice</a>
+    <a href="m3_cap12_gatling.html" class="chapter-nav-btn">Cap 12 · Gatling →</a>
+  </div>
+
+</main>
+
+<script>
+function copyCode(btn) {
+  const pre = btn.closest('.code-block').querySelector('pre');
+  navigator.clipboard.writeText(pre.innerText).then(() => {
+    btn.textContent = 'Copiado';
+    setTimeout(() => btn.textContent = 'Copiar', 2000);
+  });
+}
+</script>
+
+</body>
+</html>
