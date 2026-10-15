@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nivel 4: Declaración Topológica — Docker Bootcamp</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+
+    <nav class="navbar" id="navbar">
+        <div class="nav-inner">
+            <div class="nav-brand"><span class="brand-text">Docker Bootcamp</span></div>
+            <ul class="nav-links">
+                <li><a href="index.html">Inicio</a></li>
+                <li><a href="nivel_1_arquitectura.html">1. Arquitectura</a></li>
+                <li><a href="nivel_2_dockerfiles.html">2. Dockerfiles</a></li>
+                <li><a href="nivel_3_volumenes_redes.html">3. Volúmenes</a></li>
+                <li><a href="nivel_4_compose_basico.html" class="active">4. Compose Base</a></li>
+                <li><a href="nivel_5_compose_avanzado.html">5. Compose Pro</a></li>
+            </ul>
+            <button class="nav-mobile-btn" id="navToggle">MENU</button>
+        </div>
+    </nav>
+
+    <div class="breadcrumb">
+        <div class="breadcrumb-inner">
+            <a href="index.html">Inicio</a><span class="breadcrumb-sep">›</span><span>Nivel 4: Docker Compose</span>
+        </div>
+    </div>
+
+    <div class="page-hero">
+        <h1>Manifiestos <span class="gradient-text">Declarativos</span> (Compose Básico)</h1>
+        <p>Evolución desde comandos interactivos, efímeros e imperativos (Shell) hacia documentos de infraestructura inmutables y versionables mediante especificaciones YAML.</p>
+    </div>
+
+    <div class="content">
+
+        <h2>1. El Riesgo Operativo de Comandos Interactivos (CLI)</h2>
+        <p>El flujo estándar de un administrador antiguo consiste en ejecutar cadenas masivas de parámetros bajo la interfaz `docker run`. Mantener estas líneas de ejecución con dieciséis variables de entorno mapeadas, siete montajes de red y directivas DNS, ocasiona la pérdida inmediata del conocimiento de infraestructura tras el reinicio del servidor.</p>
+        
+        <p><strong>Docker Compose</strong> es la primitiva resolutoria: es una máquina traductora estática que consolida la configuración subyacente de múltiples módulos aislados, traduciéndolas a peticiones RPC hacia la API directa del Demonio.</p>
+
+        <div class="two-col">
+            <div class="mini-card">
+                <h5>El Caos Imperativo</h5>
+                <ul>
+                    <li><code>docker run --name auth_db -e PASS=test -p 50:50 \ </code></li>
+                    <li><code>-v misdatos:/var/lib/xyz --network netx db_image:1</code></li>
+                    <li>Dependiente exclusivamente de la memoria y la pericia temporal del administrador.</li>
+                </ul>
+            </div>
+            <div class="mini-card">
+                <h5>El Flujo Topológico y Declarativo</h5>
+                <ul>
+                    <li>Un <code>docker-compose.yml</code> codifica la semántica en el repositorio Git.</li>
+                    <li>El equipo completo sincroniza el entorno mediante un comando unificado y reproducible <code>docker-compose up</code>.</li>
+                </ul>
+            </div>
+        </div>
+
+        <h2>2. Resolución de Direccionamiento Base (DNS Estático Virtual)</h2>
+        <p>Cuando un manifiesto levanta un entorno (por lo general atado semánticamente al directorio raíz), <strong>Compose forja automáticamente una red de área local simulada</strong>. El avance tecnológico no radica únicamente en conectar instancias de bajo grado, sino en proveer un servidor perimetral de <em>Name Resolving</em>.</p>
+        
+        <p>Todo bloque de servicio anidado bajo el mapeo general <code>services:</code> queda registrado en dicho servidor DNS bajo su clave unívoca.</p>
+
+        <div class="code-block">
+            <div class="code-header">
+                <span class="code-lang">yaml — docker-compose.yml (Traducción DNS Interna)</span>
+                <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+            </div>
+            <pre><code>version: "3.9"
+services:
+  # El nombre clave del nodo (cache_inferior) ejerce como dominio de Hostname resoluble A-Record:
+  cache_inferior:
+    image: redis:alpine
+    # NO se publica puerto al host exterior.
+
+  servidor_web_core:
+    image: nginx_application:latest
+    ports:
+      - "8080:8000"
+    environment:
+      # Petición intra-cluster: el código web pingeará internamente el pseudo-hostname "cache_inferior"
+      - REDIS_END_NODE_URL=cache_inferior 
+</code></pre>
+        </div>
+
+        <h2>3. Construcciones Atómicas con Cache Determinante</h2>
+        <p>Docker Compose asume la labor de orquestar construcciones de <code>Dockerfiles</code> acoplados geográficamente. No obstante, una trampa letal muy habitual entre ingenieros de datos recae en el sistema de Caché. Un <code>docker-compose up -d</code> <strong>no reescribirá ni compilará el Dockerfile</strong> si este detecta que dicha imagen en la partición ya existe localmente rotulada bajo la firma del directorio base. </p>
+
+        <div class="info-box warning">
+            <div class="info-box-text">
+                <strong>Consideración Evolutiva:</strong> Exigimos usar el comando <code>docker-compose up --build -d</code> asiduamente cada vez que se agregue una dependencia (<code>npm install</code>, <code>pip install</code>), garantizando el purgado o re-lectura de capas físicas en todos los subsistemas inmutables declarados en el bloque <code>build:</code>.
+            </div>
+        </div>
+
+        <div class="code-block">
+            <div class="code-header">
+                <span class="code-lang">yaml — Inyección de Capas de Fuego (Build Context)</span>
+                <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+            </div>
+            <pre><code>version: "3.9"
+services:
+  backend-fastapi:
+    build: 
+      context: ./microservicio-base  # Define el entorno local de trabajo en el pipeline de build.
+      dockerfile: Dockerfile.Produccion # Puntero específico sobreescribiendo el nombre genérico.
+      args:
+        - ENTORNO=PROD
+    image: corporativo/imagen-optimizada:2.0 # Si no indicamos "build --no-cache", reusará ésta.
+    ports:
+      - "80:80"
+</code></pre>
+        </div>
+
+        <h2>4. Lógica Temporal Cruda (depends_on)</h2>
+        <p>Los tiempos de inicio fríos entre servicios (Ej: Un API REST y su Memcached) varían abrumadoramente debido a configuraciones de disco u origen. La carga del fichero completo inicializará cada hilo al unísono, causando habitualmente terminaciones en falla transitoria y cierres 127 de contenedor dependiente, debido al intento de lectura antes de que la memoria se estabilice.</p>
+
+        <p>La cláusula <code>depends_on</code> establece el árbol genético dictaminando qué módulos actúan como ancestros absolutos de qué descendientes en la jerarquía inicial. <strong>No avala el estado saludable de la aplicación; garantiza exclusivamente que el proceso de control del Kernel (dockerd) forjó correctamente los namespaces previos.</strong></p>
+
+        <div class="code-block">
+            <div class="code-header">
+                <span class="code-lang">yaml — Topología Jerárquica de Árbol</span>
+                <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+            </div>
+            <pre><code>version: "3.9"
+services:
+  maquina_persistente:
+    image: postgres:15
+    volumes:
+      - particion-sql:/var/lib/postgresql/data
+  
+  interfaz_api_graphql:
+    image: express-graphql-core:latest
+    depends_on:
+      - maquina_persistente
+
+# Bloque universal para declarar volúmenes protegidos fuera del alcance destructivo (docker-compose down)
+volumes:
+  particion-sql:
+</code></pre>
+        </div>
+
+        <div style="display:flex; gap:1rem; flex-wrap:wrap; margin-top:2rem">
+            <a href="nivel_5_compose_avanzado.html" class="btn btn-primary">Siguiente Capítulo: Orquestación Pro con Healthchecks</a>
+            <a href="nivel_3_volumenes_redes.html" class="btn btn-outline">Volver a Volúmenes</a>
+        </div>
+    </div>
+
+    <footer class="footer">
+        <div class="footer-inner">
+            <div class="footer-brand">
+                <div class="brand-logo">Docker Bootcamp</div>
+                <p>Entendiendo infraestructuras desde cero a experto.</p>
+            </div>
+            <div class="footer-links">
+                <h5>Secciones Avanzadas</h5>
+                <ul>
+                    <li><a href="index.html">Inicio</a></li>
+                    <li><a href="nivel_1_arquitectura.html">1. Arquitectura</a></li>
+                    <li><a href="nivel_2_dockerfiles.html">2. Dockerfiles</a></li>
+                    <li><a href="nivel_3_volumenes_redes.html">3. Volúmenes y Red</a></li>
+                    <li><a href="nivel_4_compose_basico.html">4. Orquestación Base</a></li>
+                    <li><a href="nivel_5_compose_avanzado.html">5. Orquestación Avanzada</a></li>
+                </ul>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p>Laboratorio Formativo Docker</p>
+        </div>
+    </footer>
+
+    <script>
+        const navbar = document.getElementById('navbar');
+        window.addEventListener('scroll', () => { navbar.classList.toggle('scrolled', window.scrollY > 50); });
+        document.getElementById('navToggle').addEventListener('click', () => { document.querySelector('.nav-links').classList.toggle('open'); });
+        function copyCode(btn) {
+            const pre = btn.closest('.code-block').querySelector('pre');
+            navigator.clipboard.writeText(pre.innerText).then(() => {
+                btn.textContent = 'Copiado'; btn.classList.add('copied');
+                setTimeout(() => { btn.textContent = 'Copiar'; btn.classList.remove('copied'); }, 2000);
+            });
+        }
+    </script>
+</body>
+
+</html>

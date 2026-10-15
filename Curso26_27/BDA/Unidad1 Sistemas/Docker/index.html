@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Docker Bootcamp Principal</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+
+    <nav class="navbar" id="navbar">
+        <div class="nav-inner">
+            <div class="nav-brand"><span class="brand-text">Docker Bootcamp</span></div>
+            <ul class="nav-links">
+                <li><a href="index.html" class="active">Inicio</a></li>
+                <li><a href="nivel_1_arquitectura.html">1. Arquitectura</a></li>
+                <li><a href="nivel_2_dockerfiles.html">2. Dockerfiles</a></li>
+                <li><a href="nivel_3_volumenes_redes.html">3. Volúmenes</a></li>
+                <li><a href="nivel_4_compose_basico.html">4. Compose Base</a></li>
+                <li><a href="nivel_5_compose_avanzado.html">5. Compose Pro</a></li>
+            </ul>
+            <button class="nav-mobile-btn" id="navToggle">MENU</button>
+        </div>
+    </nav>
+
+    <div class="breadcrumb">
+        <div class="breadcrumb-inner">
+            <a href="index.html">Inicio</a>
+        </div>
+    </div>
+
+    <div class="page-hero">
+        <h1>Laboratorio <span class="gradient-text">Infraestructura Constante</span></h1>
+        <p>Estudio progresivo de la virtualización a nivel sistema operativo. Comprensión profunda de inmutabilidad perimetral para despliegues profesionales sin tiempo de inactividad.</p>
+    </div>
+
+    <div class="content">
+
+        <h2>Filosofía Docker Cero-Conocimientos</h2>
+        <p>El Bootcamp destila diez años de experiencia orquestando servicios distribuidos en producción. Abandona el enfoque de las Máquinas Virtuales (Hypervisors) abrazando técnicas rudimentarias de Kernel de Linux empacadas por el Demonio principal de Docker: Control Groups (CPU/RAM limit) y Namespaces (Isolating Trees).</p>
+
+        <div class="two-col">
+            <div class="mini-card">
+                <h5>Módulo Constante e Inmutable</h5>
+                <ul>
+                    <li>Garantía de ejecución iterativa en servidores vacíos.</li>
+                    <li>UnionFS dictamina inmutabilidad forense en imágenes precompiladas locales.</li>
+                    <li>Sistemas operativos huéspedes mitigados eliminando sobrecarga (Zero-Overhead).</li>
+                </ul>
+            </div>
+            <div class="mini-card">
+                <h5>Escalabilidad Dinámica Efímera</h5>
+                <ul>
+                    <li>El estado reside excluido en discos persistentes (Volumes).</li>
+                    <li>Replica en segundos contenedores paralelos en modo Swarm o unificado puro horizontal.</li>
+                </ul>
+            </div>
+        </div>
+
+        <h2>Ruta Estructural (Curriculum)</h2>
+
+        <div class="concept-grid">
+            <div class="concept-card blue">
+                <h3><a href="nivel_1_arquitectura.html" style="color: inherit; text-decoration: none;">1. Arquitectura Nuclear</a></h3>
+                <p>Identifica la virtualización contra la contención aislada y las interyecciones TTY a través de capas Kernel.</p>
+            </div>
+            <div class="concept-card green">
+                <h3><a href="nivel_2_dockerfiles.html" style="color: inherit; text-decoration: none;">2. Modelado Dockerfiles</a></h3>
+                <p>Ensamblaje Union File System. Anula el vector Root por subusuarios. Compilación en modo Multi-Stage destructivo.</p>
+            </div>
+            <div class="concept-card purple">
+                <h3><a href="nivel_3_volumenes_redes.html" style="color: inherit; text-decoration: none;">3. Red y Persistencia</a></h3>
+                <p>Elude la pérdida total de datos temporales (tmpfs) mediante volúmenes nativos absolutos. Enlaza contenedores en DNS aislado.</p>
+            </div>
+            <div class="concept-card orange">
+                <h3><a href="nivel_4_compose_basico.html" style="color: inherit; text-decoration: none;">4. Manifiestos Declarativos</a></h3>
+                <p>Traducción de interactividad (CLI Run) hacia control de versiones (Git-Ops) a través de orquestación en estructuras de sintaxis YAML.</p>
+            </div>
+            <div class="concept-card cyan">
+                <h3><a href="nivel_5_compose_avanzado.html" style="color: inherit; text-decoration: none;">5. Resiliencia Topológica</a></h3>
+                <p>Integración de healthchecks latentes, balanceo in-situ interdependiente (depends_on lógicos) y mutación algorítmica por Profile Arrays.</p>
+            </div>
+        </div>
+
+    </div>
+
+    <footer class="footer">
+        <div class="footer-inner">
+            <div class="footer-brand">
+                <div class="brand-logo">Docker Bootcamp</div>
+                <p>Entendiendo infraestructuras desde cero a experto.</p>
+            </div>
+            <div class="footer-links">
+                <h5>Secciones Avanzadas</h5>
+                <ul>
+                    <li><a href="index.html">Inicio</a></li>
+                    <li><a href="nivel_1_arquitectura.html">1. Arquitectura</a></li>
+                    <li><a href="nivel_2_dockerfiles.html">2. Dockerfiles</a></li>
+                    <li><a href="nivel_3_volumenes_redes.html">3. Volúmenes y Red</a></li>
+                    <li><a href="nivel_4_compose_basico.html">4. Orquestación Base</a></li>
+                    <li><a href="nivel_5_compose_avanzado.html">5. Orquestación Avanzada</a></li>
+                </ul>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p>Laboratorio Formativo Docker</p>
+        </div>
+    </footer>
+
+    <script>
+        const navbar = document.getElementById('navbar');
+        window.addEventListener('scroll', () => { navbar.classList.toggle('scrolled', window.scrollY > 50); });
+        document.getElementById('navToggle').addEventListener('click', () => { document.querySelector('.nav-links').classList.toggle('open'); });
+    </script>
+</body>
+
+</html>

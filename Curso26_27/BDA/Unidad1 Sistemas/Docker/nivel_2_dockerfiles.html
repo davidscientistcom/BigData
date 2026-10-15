@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nivel 2: Empaquetado de Capas — Docker Bootcamp</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+
+    <nav class="navbar" id="navbar">
+        <div class="nav-inner">
+            <div class="nav-brand"><span class="brand-text">Docker Bootcamp</span></div>
+            <ul class="nav-links">
+                <li><a href="index.html">Inicio</a></li>
+                <li><a href="nivel_1_arquitectura.html">1. Arquitectura</a></li>
+                <li><a href="nivel_2_dockerfiles.html" class="active">2. Dockerfiles</a></li>
+                <li><a href="nivel_3_volumenes_redes.html">3. Volúmenes</a></li>
+                <li><a href="nivel_4_compose_basico.html">4. Compose Base</a></li>
+                <li><a href="nivel_5_compose_avanzado.html">5. Compose Pro</a></li>
+            </ul>
+            <button class="nav-mobile-btn" id="navToggle">MENU</button>
+        </div>
+    </nav>
+
+    <div class="breadcrumb">
+        <div class="breadcrumb-inner">
+            <a href="index.html">Inicio</a><span class="breadcrumb-sep">›</span><span>Nivel 2: Dockerfiles</span>
+        </div>
+    </div>
+
+    <div class="page-hero">
+        <h1>Construcción y <span class="gradient-text">UnionFS</span></h1>
+        <p>Una Imagen de Docker no es un monolito rígido. Es una estructura apilada de capas de sistema de archivos inmutables unidas por el Kernel de Linux.</p>
+    </div>
+
+    <div class="content">
+
+        <h2>1. El Sistema de Ficheros Unificado (UnionFS)</h2>
+        <p>El poder de Docker reside en cómo almacena las imágenes en disco local. En vez de guardar un disco virtual inmenso de 1GB, el demonio subdivide el almacenamiento usando una técnica denominada <strong>Union File System</strong>. Cada comando instruido (como un <code>RUN</code> o un <code>COPY</code>) construye y memoriza un estrato diferencial e inmutable.</p>
+        
+        <p>El beneficio arquitectónico es doble: reducción drástica de tiempos entre redespuntes de subidas de registro a Azure CR o Docker Hub, y un uso óptimo del caché durante el ciclo en C.I.</p>
+
+        <div class="diagram-demo">
+            <span class="diagram-demo-label">Capas Inmutables en Docker UnionFS</span>
+            <svg viewBox="0 0 700 220" style="height:220px">
+                <!-- Base Layer -->
+                <rect x="250" y="160" width="200" height="30" rx="4" fill="#334155" />
+                <text x="350" y="179" text-anchor="middle" fill="#f8fafc" font-size="11" font-weight="700" font-family="Inter">FROM python:3.11-alpine (Capa 0 - Caché) </text>
+                
+                <!-- Install Layer -->
+                <rect x="250" y="125" width="200" height="30" rx="4" fill="#475569" />
+                <text x="350" y="144" text-anchor="middle" fill="#f8fafc" font-size="11" font-weight="700" font-family="Inter">RUN apt-get install (Capa 1) </text>
+
+                <!-- Requirements Layer -->
+                <rect x="250" y="90" width="200" height="30" rx="4" fill="#64748b" />
+                <text x="350" y="109" text-anchor="middle" fill="#f8fafc" font-size="11" font-weight="700" font-family="Inter">COPY requisitos.txt (Capa 2) </text>
+
+                <!-- Static Code Layer -->
+                <rect x="250" y="55" width="200" height="30" rx="4" fill="#94a3b8" />
+                <text x="350" y="74" text-anchor="middle" fill="#0f172a" font-size="11" font-weight="700" font-family="Inter">COPY ./src /app/ (Capa 3) </text>
+
+                <!-- Container Mount (R/W) Layer -->
+                <rect x="240" y="15" width="220" height="35" rx="6" fill="rgba(16,185,129,0.25)" stroke="#10b981" stroke-width="2" stroke-dasharray="4,4" />
+                <text x="350" y="32" text-anchor="middle" fill="#10b981" font-size="12" font-weight="800" font-family="Inter">Capa Efímera R/W (Contenedor Vivo)</text>
+                <text x="350" y="44" text-anchor="middle" fill="#4ade80" font-size="8" font-family="Inter">Pérdida de datos al ejecutar 'docker rm'</text>
+                
+                <path d="M 460 70 q 30 0 50 30 t 0 70" fill="none" stroke="#22d3ee" stroke-width="2" marker-end="url(#arrow)" />
+                <text x="560" y="130" fill="#22d3ee" font-size="10" font-family="Inter">Cada capa es Inmutable (120MB Totales)</text>
+            </svg>
+        </div>
+
+        <h2>2. Patrones de Diseño: Invalidación de Caché</h2>
+        <p>Al procesar un Dockerfile top-down, si Docker detecta que el archivo local ha cambiado frente al registrado, descarta al instante la capa de caché en proceso y todas las capas subyacentes siguientes. Por tanto, copiar el código fuente agresivamente al principio de nuestro documento forzará al servidor de Build a descargar los 800MB de frameworks una vez por edición de backend.</p>
+
+        <div class="two-col">
+            <div class="mini-card">
+                <h5>Estrategia Suspendida y Lenta</h5>
+                <ul>
+                    <li><code>COPY . /app</code></li>
+                    <li><code>RUN pip install -r reqs.txt</code></li>
+                    <li>Modificar el readme rompe el pip.</li>
+                </ul>
+            </div>
+            <div class="mini-card">
+                <h5>Estrategia Eficiente y Optimizada</h5>
+                <ul>
+                    <li><code>COPY requirements.txt /app/</code></li>
+                    <li><code>RUN pip install -r reqs.txt</code></li>
+                    <li><code>COPY src/ /app/src/</code></li>
+                </ul>
+            </div>
+        </div>
+
+        <h2>3. El Atacante Root (Riesgos Estructurales)</h2>
+        <p>Si nuestro contenedor corre internamente como <code>root</code> y sufre una brecha de RCE por una vulnerabilidad de Node.js, y nuestro clúster Kubernetes no restringe la directiva <code>privileged</code>, el atacante controlará el FS inyectando volúmenes laterales perimetrales hacia el host real de AWS/GCP.</p>
+
+        <div class="code-block">
+            <div class="code-header">
+                <span class="code-lang">dockerfile — Desacoplamiento de Privilegios</span>
+                <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+            </div>
+            <pre><code>FROM node:18-alpine
+
+WORKDIR /usr/app-segura
+
+# 1. Compilación con privilegios administrativos del daemon durante el CI/CD:
+COPY package.json package-lock.json ./
+RUN npm ci --only=production
+
+COPY src ./src
+
+# 2. Hardening: Configuración de subgrupo de sistema local carente de shells.
+# Otorgamos permisos de acceso únicamente al binario o carpeta.
+RUN addgroup -S securitygroup && adduser -S serviceuser -G securitygroup
+RUN chown -R serviceuser:securitygroup /usr/app-segura
+
+# 3. Transición obligatoria sin retorno: Declinamos nuestro rango Root en tiempo de ejecución.
+USER serviceuser
+
+EXPOSE 3000
+
+# 4. Proceso en Namespace blindado:
+CMD ["npm", "start"]
+</code></pre>
+        </div>
+
+        <h2>4. Multi-Stage Builds (Microscópicas e Inexpugnables)</h2>
+        <p>Distribuir compiladores al cliente final y en producción implica mantener miles de librerías base expuestas (como gcc o pyinstaller). Herramientas nativas compiladoras, tales como Golang o Rust, habilitan una técnica destructiva: empaquetar un contenedor pesado como Builder, exportar su ejecutable CGO hacia un contenedor ínfimo, y lanzar las dependencias a la basura antes de enviar la huella final.</p>
+
+        <div class="code-block">
+            <div class="code-header">
+                <span class="code-lang">dockerfile — Compilación Destructiva Bifásica (Go)</span>
+                <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+            </div>
+            <pre><code># --- START: PRIMERA FASE: EL MAQUINISTA (1.2GB)
+FROM golang:1.20-alpine AS worker_builder
+
+WORKDIR /sys_compiler
+COPY . .
+
+# Inhabilitamos llamadas dinámicas embebidas hacia librerías que solo existirían en Alpine.
+# El binario dependerá única y exclusivamente del kernel directo.
+RUN CGO_ENABLED=0 GOOS=linux go build -o /worker_kernel_daemon main.go
+
+
+# --- END: SEGUNDA FASE: MICRO-RUNTIME ISOTEMPORAL (3MB)
+# Partimos de una imagen purga y vacía ("scratch" o "distroless"). Ni siquiera posee un comando de bash disponible.
+FROM gcr.io/distroless/static-debian11
+
+# Puente de red trans-contenedor: importamos nuestro binario desde el ente extinto worker_builder
+COPY --from=worker_builder /worker_kernel_daemon /bin/nuclear_daemon
+
+USER nonroot:nonroot
+CMD ["/bin/nuclear_daemon"]
+</code></pre>
+        </div>
+
+        <div style="display:flex; gap:1rem; flex-wrap:wrap; margin-top:2rem">
+            <a href="nivel_3_volumenes_redes.html" class="btn btn-primary">Siguiente Capítulo: Persistencia R/W en Capas Aisladas</a>
+            <a href="nivel_1_arquitectura.html" class="btn btn-outline">Volver a Arquitectura</a>
+        </div>
+    </div>
+
+    <footer class="footer">
+        <div class="footer-inner">
+            <div class="footer-brand">
+                <div class="brand-logo">Docker Bootcamp</div>
+                <p>Entendiendo infraestructuras desde cero a experto.</p>
+            </div>
+            <div class="footer-links">
+                <h5>Secciones Avanzadas</h5>
+                <ul>
+                    <li><a href="index.html">Inicio</a></li>
+                    <li><a href="nivel_1_arquitectura.html">1. Arquitectura</a></li>
+                    <li><a href="nivel_2_dockerfiles.html">2. Dockerfiles</a></li>
+                    <li><a href="nivel_3_volumenes_redes.html">3. Volúmenes y Red</a></li>
+                    <li><a href="nivel_4_compose_basico.html">4. Orquestación Base</a></li>
+                    <li><a href="nivel_5_compose_avanzado.html">5. Orquestación Avanzada</a></li>
+                </ul>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p>Laboratorio Formativo Docker</p>
+        </div>
+    </footer>
+
+    <script>
+        const navbar = document.getElementById('navbar');
+        window.addEventListener('scroll', () => { navbar.classList.toggle('scrolled', window.scrollY > 50); });
+        document.getElementById('navToggle').addEventListener('click', () => { document.querySelector('.nav-links').classList.toggle('open'); });
+        function copyCode(btn) {
+            const pre = btn.closest('.code-block').querySelector('pre');
+            navigator.clipboard.writeText(pre.innerText).then(() => {
+                btn.textContent = 'Copiado'; btn.classList.add('copied');
+                setTimeout(() => { btn.textContent = 'Copiar'; btn.classList.remove('copied'); }, 2000);
+            });
+        }
+    </script>
+</body>
+
+</html>

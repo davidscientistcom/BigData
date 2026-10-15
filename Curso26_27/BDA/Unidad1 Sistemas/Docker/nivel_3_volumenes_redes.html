@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nivel 3: Persistencia y Redes — Docker Bootcamp</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+
+    <nav class="navbar" id="navbar">
+        <div class="nav-inner">
+            <div class="nav-brand"><span class="brand-text">Docker Bootcamp</span></div>
+            <ul class="nav-links">
+                <li><a href="index.html">Inicio</a></li>
+                <li><a href="nivel_1_arquitectura.html">1. Arquitectura</a></li>
+                <li><a href="nivel_2_dockerfiles.html">2. Dockerfiles</a></li>
+                <li><a href="nivel_3_volumenes_redes.html" class="active">3. Volúmenes</a></li>
+                <li><a href="nivel_4_compose_basico.html">4. Compose Base</a></li>
+                <li><a href="nivel_5_compose_avanzado.html">5. Compose Pro</a></li>
+            </ul>
+            <button class="nav-mobile-btn" id="navToggle">MENU</button>
+        </div>
+    </nav>
+
+    <div class="breadcrumb">
+        <div class="breadcrumb-inner">
+            <a href="index.html">Inicio</a><span class="breadcrumb-sep">›</span><span>Nivel 3: Volúmenes y Redes</span>
+        </div>
+    </div>
+
+    <div class="page-hero">
+        <h1>Persistencia <span class="gradient-text">Estructural</span> y Redes Abiertas</h1>
+        <p>Los contenedores sufren de amnesia intencional. Extrayendo el estado desde la capa de UnionFS mediante montajes directos al sistema Host para salvaguardar las bases de datos y propiciar el recambio en caliente en entornos de desarrollo local.</p>
+    </div>
+
+    <div class="content">
+
+        <h2>1. El Paradigma de Pérdida Efímera de Datos</h2>
+        <p>Cuando la Base de Datos escribe un registro en su disco simulado <code>/var/lib/postgresql/data</code>, realmente está marcando sectores físicos de la capa R/W temporal generada de forma on-the-fly por Docker al arrancar. Destruir el contenedor (mediante el ciclo usual estandarizado Serverless) elimina la capa y desencadena un Data Breach irreparable. Docker mitiga esta arquitectura ofreciendo mecanismos para "agujerear" el contenedor desde el exterior, introduciendo tuberías físicas al FS anfitrión real.</p>
+
+        <div class="diagram-demo">
+            <span class="diagram-demo-label">Esquema de las Tres Topologías de Almacenamiento Estructural (Storage Drivers)</span>
+            <svg viewBox="0 0 700 240" style="height:240px">
+                <!-- Docker Host Area -->
+                <rect x="20" y="20" width="660" height="200" rx="10" fill="rgba(51,65,85,0.1)" stroke="#cbd5e1" stroke-width="2" stroke-dasharray="8,8" />
+                <text x="350" y="45" text-anchor="middle" fill="#64748b" font-size="14" font-weight="700" font-family="Inter">Arquitectura Host Local y Demonio (FS Principal / Kernel)</text>
+
+                <!-- Bind Mount -->
+                <rect x="60" y="70" width="160" height="60" rx="6" fill="rgba(6,182,212,0.15)" stroke="#06b6d4" stroke-width="2" />
+                <text x="140" y="95" text-anchor="middle" fill="#0891b2" font-size="12" font-weight="800" font-family="Inter">BIND MOUNT</text>
+                <text x="140" y="115" text-anchor="middle" fill="#0f172a" font-size="10" font-family="Inter">Local FS Path Absoluto</text>
+
+                <!-- Docker Area (Volumes) -->
+                <rect x="270" y="70" width="160" height="60" rx="6" fill="rgba(16,185,129,0.15)" stroke="#10b981" stroke-width="2" />
+                <text x="350" y="95" text-anchor="middle" fill="#059669" font-size="12" font-weight="800" font-family="Inter">NAMED VOLUMES</text>
+                <text x="350" y="115" text-anchor="middle" fill="#0f172a" font-size="10" font-family="Inter">Ruta Oculta de Docker Daemon</text>
+
+                <!-- TMPFS -->
+                <rect x="480" y="70" width="160" height="60" rx="6" fill="rgba(245,158,11,0.15)" stroke="#f59e0b" stroke-width="2" />
+                <text x="560" y="95" text-anchor="middle" fill="#d97706" font-size="12" font-weight="800" font-family="Inter">TMPFS (Memoria RAM)</text>
+                <text x="560" y="115" text-anchor="middle" fill="#0f172a" font-size="10" font-family="Inter">Nunca se Escribe en Disco Físico</text>
+
+                <!-- Vectors -->
+                <defs>
+                    <marker id="arrowB" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+                        <path d="M0,0 L0,6 L8,3 z" fill="#0ea5e9" />
+                    </marker>
+                </defs>
+
+                <line x1="140" y1="130" x2="330" y2="170" stroke="#0ea5e9" stroke-width="2" marker-end="url(#arrowB)" />
+                <line x1="350" y1="130" x2="350" y2="170" stroke="#0ea5e9" stroke-width="2" marker-end="url(#arrowB)" />
+                <line x1="560" y1="130" x2="370" y2="170" stroke="#0ea5e9" stroke-width="2" marker-end="url(#arrowB)" />
+
+                <!-- The Container -->
+                <rect x="250" y="170" width="200" height="35" rx="6" fill="rgba(232,66,26,0.1)" stroke="#e8421a" stroke-width="2" />
+                <text x="350" y="193" text-anchor="middle" fill="#e8421a" font-size="12" font-weight="800" font-family="Inter">Punto de Inyección Interno en el Contenedor (Namespace)</text>
+            </svg>
+        </div>
+
+        <h2>2. Bind Mounts: La Herramienta Crítica del Desarrollador (Live Reload)</h2>
+        <p>Sincronización bidireccional inmediata. Cada carácter modificado en su archivo local en VSCode usando la ruta absoluta anfitriona, es propagado automáticamente al nodo equivalente en la estructura de ficheros virtual inyectada. Es vital para montar carpetas de código en lenguajes interpretados como Python o Node.js.</p>
+
+        <div class="code-block">
+            <div class="code-header">
+                <span class="code-lang">bash — Puente Bi-direccional Interdimensional</span>
+                <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+            </div>
+            <pre><code># Emplearemos la variable de entorno $PWD que denota la terminal actual de bash.
+# El flag :ro asegura asimétricamente un puente en sólo lectura.
+docker run -d --name hot-reload-server \
+  -v $PWD/src:/usr/src/app:ro \
+  miapp:latest
+</code></pre>
+        </div>
+
+        <div class="info-box flink">
+            <div class="info-box-text">
+                <strong>Análisis Crítico de Producción:</strong> Jamás use Bind Mounts directos contra ficheros de datos en Bases de Datos pesadas. Los bloqueos subyacentes entre el driver NTFS de Windows o HFS+ de MacOS contra la unidad en ext4 virtual paralizan I/O originando severas corrupciones de escritura.
+            </div>
+        </div>
+
+        <h2>3. Volumes Dinámicos Nativos: El Santuario</h2>
+        <p>La orquestación moderna requiere despreocuparse de rutas estrictas absolutas. Si lanzamos un clúster sobre Linux, es el servicio Docker el encargado de forjar una caja negra asilada en <code>/var/lib/docker/volumes/</code> que perdura frente a ciclos de poda e instanciaciones infinitas.</p>
+
+        <div class="code-block">
+            <div class="code-header">
+                <span class="code-lang">bash — Inicialización de Entorno Cerrado para PostgreSQL</span>
+                <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+            </div>
+            <pre><code># Primeramente solicitamos al Kernel la creación explícita de un sector opaco persistente.
+docker volume create bd-datos-produccion
+
+# Ingestionamos la persistencia atando de manera definitiva la partición lógica
+docker run -d --name cluster-maestro-postgres \
+    -e POSTGRES_PASSWORD=corepassword \
+    -v bd-datos-produccion:/var/lib/postgresql/data \
+    postgres:15-alpine
+</code></pre>
+        </div>
+
+        <h2>4. Redes (DNS Autónomo vs Puertos Base)</h2>
+        <p>Acoplar dos Contenedores usando IPs (Ej: 172.17.0.3) es insostenible: el daemon reasigna las IPs tras cada reinicio, causando desconexión irrecuperable de la topología. Para ello, es absolutamente obligatorio interconectar los procesos levantando una Red Definida por el Usuario.</p>
+
+        <div class="code-block">
+            <div class="code-header">
+                <span class="code-lang">bash — Capa de Name-Resolving Privada</span>
+                <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+            </div>
+            <pre><code># La red se forja basándose en el driver bridge
+docker network create red-aplicacion-nativa
+
+# Inyectamos el nodo A asignándole la nomenclatura identificativa en la red
+docker run -d --name mi-base-datos --network red-aplicacion-nativa postgres:15
+
+# El nodo B resolverá localmente y de manera mágica la etiqueta alfonumérica "mi-base-datos"
+# a la IP interna subyacente.
+docker run -d --name nodo-worker --network red-aplicacion-nativa \
+  -e DB_HOST=mi-base-datos \
+  node-app:lateest
+</code></pre>
+        </div>
+
+        <div style="display:flex; gap:1rem; flex-wrap:wrap; margin-top:2rem">
+            <a href="nivel_4_compose_basico.html" class="btn btn-primary">Siguiente Capítulo: Orquestación Estructural Automatizada (Docker Compose)</a>
+            <a href="nivel_2_dockerfiles.html" class="btn btn-outline">Volver a Dockerfiles</a>
+        </div>
+    </div>
+
+    <footer class="footer">
+        <div class="footer-inner">
+            <div class="footer-brand">
+                <div class="brand-logo">Docker Bootcamp</div>
+                <p>Entendiendo infraestructuras desde cero a experto.</p>
+            </div>
+            <div class="footer-links">
+                <h5>Secciones Avanzadas</h5>
+                <ul>
+                    <li><a href="index.html">Inicio</a></li>
+                    <li><a href="nivel_1_arquitectura.html">1. Arquitectura</a></li>
+                    <li><a href="nivel_2_dockerfiles.html">2. Dockerfiles</a></li>
+                    <li><a href="nivel_3_volumenes_redes.html">3. Volúmenes y Red</a></li>
+                    <li><a href="nivel_4_compose_basico.html">4. Orquestación Base</a></li>
+                    <li><a href="nivel_5_compose_avanzado.html">5. Orquestación Avanzada</a></li>
+                </ul>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p>Laboratorio Formativo Docker</p>
+        </div>
+    </footer>
+
+    <script>
+        const navbar = document.getElementById('navbar');
+        window.addEventListener('scroll', () => { navbar.classList.toggle('scrolled', window.scrollY > 50); });
+        document.getElementById('navToggle').addEventListener('click', () => { document.querySelector('.nav-links').classList.toggle('open'); });
+        function copyCode(btn) {
+            const pre = btn.closest('.code-block').querySelector('pre');
+            navigator.clipboard.writeText(pre.innerText).then(() => {
+                btn.textContent = 'Copiado'; btn.classList.add('copied');
+                setTimeout(() => { btn.textContent = 'Copiar'; btn.classList.remove('copied'); }, 2000);
+            });
+        }
+    </script>
+</body>
+
+</html>
