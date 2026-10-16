@@ -1,18 +1,25 @@
 Vagrant.configure("2") do |config|
-    # Especifica la caja base de Ubuntu
-    config.vm.box = "ubuntu/xenial64"
+    # Especifica la caja base de Ubuntu (LTS)
+    config.vm.box = "ubuntu/jammy64"
   
     # Configura una red privada con una IP fija
     config.vm.network "private_network", ip: "192.168.56.2"
     config.vm.network "forwarded_port", guest: 5432, host: 5432
 
-  
-    # Configura los recursos de hardware
+    # Configura los recursos de hardware (2 GB suelen bastar para pruebas de Postgres)
     config.vm.provider "virtualbox" do |vb|
-      vb.memory = "4096"  # 4 GB de memoria
-      vb.cpus = 2          # 2 CPUs
+      vb.memory = "2048"
+      vb.cpus = 2
     end
   
+    # Configuración para evitar prompts de SSH y permitir acceso con clave personalizada
+    config.ssh.insert_key = false
+    config.ssh.private_key_path = [
+      "#{Dir.home}/.ssh/vagrant_vm_key",
+      "#{Dir.home}/.vagrant.d/insecure_private_key"
+    ]
+    config.ssh.extra_args = ["-o StrictHostKeyChecking=no", "-o UserKnownHostsFile=/dev/null"]
+
     # Copia la clave pública generada en el host a la VM
     config.vm.provision "file", run: "once", source: "#{Dir.home}/.ssh/vagrant_vm_key.pub", destination: "/home/vagrant/.ssh/vagrant_vm_key.pub"
   
@@ -32,10 +39,10 @@ Vagrant.configure("2") do |config|
         chmod 700 /home/vagrant/.ssh
         chown vagrant:vagrant /home/vagrant/.ssh
   
-        # Sobrescribir el contenido de authorized_keys con la clave pública
-        cat /home/vagrant/.ssh/vagrant_vm_key.pub > /home/vagrant/.ssh/authorized_keys
+        # Añadir la clave pública sin sobrescribir la existente
+        cat /home/vagrant/.ssh/vagrant_vm_key.pub >> /home/vagrant/.ssh/authorized_keys
   
-        # Ajustar permisos
+        # Ajustar permisos estrictos
         chmod 600 /home/vagrant/.ssh/authorized_keys
         chown vagrant:vagrant /home/vagrant/.ssh/authorized_keys
   
@@ -45,8 +52,4 @@ Vagrant.configure("2") do |config|
         loadkeys es
       SHELL
     end
-  
-    # Configuración para evitar prompts de SSH
-    config.ssh.insert_key = false
-    config.ssh.extra_args = ["-o StrictHostKeyChecking=no", "-o UserKnownHostsFile=/dev/null"]
   end

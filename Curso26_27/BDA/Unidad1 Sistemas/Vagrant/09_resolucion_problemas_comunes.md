@@ -25,6 +25,7 @@ A veces, la máquina virtual no es accesible desde el host, lo cual suele debers
 - **Fallo de Conexión SSH**: Si al intentar `vagrant ssh` no puedes conectarte, verifica los siguientes puntos:
   - Asegúrate de que el servicio SSH esté instalado y en ejecución en la máquina virtual. Puedes verificar esto conectándote a la consola de la máquina virtual desde VirtualBox y ejecutando `systemctl status sshd`.
   - Si has cambiado la configuración de SSH en el Vagrantfile, ejecuta `vagrant reload --provision` para aplicar los cambios en el servicio SSH.
+  - **Conflicto de claves personalizadas (`Permission denied`)**: Si añadiste tu clave SSH mediante provisionamiento y `vagrant ssh` falla mientras que `ssh` manual sí entra, revisa si machacaste `authorized_keys` con `>` en vez de `>>` o si te falta `config.ssh.private_key_path`. Consulta la guía detallada: **`101_el_misterio_de_las_claves_ssh_en_vagrant.md`**.
 
 - **Problemas con Reenvío de Puertos**: Si no puedes acceder a un puerto de la máquina virtual desde el host, asegúrate de que:
   - El puerto esté abierto y el servicio esté en ejecución en la máquina virtual.
