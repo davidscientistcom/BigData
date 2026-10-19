@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>4. Gestión Global de Redes en VirtualBox — BDA VirtualBox Lab</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+
+    <!-- Prism.js Syntax Highlighting -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/themes/prism-tomorrow.min.css">
+</head>
+
+<body>
+
+    <!-- NAVBAR PRINCIPAL -->
+    <nav class="navbar" id="navbar">
+        <div class="nav-inner">
+            <div class="nav-brand">
+                <span class="brand-text">BDA · VirtualBox Lab</span>
+            </div>
+            <ul class="nav-links" id="navLinks">
+                <li><a href="0_Asignar_ip_estatica_bridge.html">0. IP Puente</a></li>
+                <li><a href="1_Asignar_ip_estatica_host_only.html">1. IP Host-Only</a></li>
+                <li><a href="2_ssh.html">2. Acceso SSH</a></li>
+                <li><a href="3_Inteface_de_red.html">3. Interfaces Red</a></li>
+                <li><a href="4_opciones_red.html" class="active">4. Modos de Red</a></li>
+                <li><a href="5_portforward.html">5. Port Forwarding</a></li>
+            </ul>
+            <button class="nav-mobile-btn" id="navToggle" onclick="toggleNav()">MENÚ</button>
+        </div>
+    </nav>
+
+    <!-- BREADCRUMB -->
+    <div class="breadcrumb">
+        <div class="breadcrumb-inner">
+            <span>Sistemas &amp; Virtualización</span>
+            <span class="breadcrumb-sep">›</span>
+            <span>VirtualBox</span>
+            <span class="breadcrumb-sep">›</span>
+            <span>4. Gestión Global de Redes</span>
+        </div>
+    </div>
+
+    <!-- PAGE HERO -->
+    <header class="page-hero">
+        <div class="hero-badge">
+            <span class="badge-dot"></span>
+            Unidad 1 · Administración de Infraestructura Virtual
+        </div>
+        <h1>Administrador de Redes <span class="gradient-text">Globales en VirtualBox</span></h1>
+        <p>Aprende a gestionar conmutadores virtuales a nivel de hipervisor: creación de adaptadores de host, redes NAT multi-VM y control fino de los servidores DHCP integrados.</p>
+    </header>
+
+    <!-- CONTENIDO PRINCIPAL -->
+    <main class="content">
+
+        <!-- INTRODUCCIÓN -->
+        <h2>1. El Administrador de Red del Anfitrión</h2>
+        <p>A diferencia de la pestaña "Red" de cada máquina virtual (que configura la tarjeta individual), el <strong>Administrador de red del anfitrión</strong> de VirtualBox actúa como el centro de control de switches y routers virtuales compartidos entre todas las máquinas del hipervisor.</p>
+
+        <div class="image-container">
+            <img src="./images/crear_adaptador.png" alt="Crear adaptador en el Administrador de red" onclick="openLightbox(this.src)" title="Haz clic para ampliar">
+            <p class="image-caption">🔍 Creación y configuración de un nuevo adaptador de red en VirtualBox (clic para ampliar)</p>
+        </div>
+
+        <!-- SECCIONES DE REDES GLOBALES -->
+        <h2>2. Tipos de Redes Gestionadas Globalmente</h2>
+
+        <div class="steps">
+            <div class="step">
+                <div class="step-num">1</div>
+                <div class="step-body">
+                    <h4>Redes de Solo-Anfitrión (Host-Only Networks)</h4>
+                    <p>Crea un adaptador virtual en tu sistema operativo (visible en Windows como <code>VirtualBox Host-Only Ethernet Adapter</code> o en macOS/Linux como <code>vboxnet0</code>). Funciona como un switch privado donde el anfitrión tiene la IP <code>192.168.56.1</code> y las VMs se conectan a él.</p>
+                    <div class="two-col">
+                        <div class="mini-card">
+                            <h5>✦ Casos de Uso</h5>
+                            <p>Desarrollo local aislado, comunicación SSH estable sin depender de la Wi-Fi y entornos de pruebas cliente-servidor seguros.</p>
+                        </div>
+                        <div class="mini-card">
+                            <h5>✦ Buenas Prácticas</h5>
+                            <p>Desactivar el servidor DHCP integrado si vas a fijar IPs estáticas con Netplan para evitar solapamientos.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="step">
+                <div class="step-num">2</div>
+                <div class="step-body">
+                    <h4>Redes NAT (NAT Networks)</h4>
+                    <p>Un router virtual compartido con salida a Internet. Todas las máquinas virtuales conectadas a la misma Red NAT (por ejemplo, <code>NatNetwork</code> en <code>10.0.2.0/24</code>) pueden enviarse paquetes entre sí y navegar a Internet.</p>
+                    <div class="two-col">
+                        <div class="mini-card">
+                            <h5>✦ Casos de Uso</h5>
+                            <p>Simular clusters de Big Data (Hadoop, Spark, Kafka) que necesitan comunicarse entre sí y descargar librerías o dependencias de Internet.</p>
+                        </div>
+                        <div class="mini-card">
+                            <h5>✦ Reenvío de Puertos</h5>
+                            <p>Permite configurar reglas de Port Forwarding globales para exponer servicios del cluster hacia el anfitrión.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="step">
+                <div class="step-num">3</div>
+                <div class="step-body">
+                    <h4>Servidor DHCP Integrado de VirtualBox</h4>
+                    <p>VirtualBox incorpora un demonio DHCP ligero capaz de asignar direcciones IP dinámicas dentro de cualquier red Solo-Anfitrión o Red NAT.</p>
+                    <div class="table-wrapper">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Parámetro DHCP</th>
+                                    <th>Valor Típico Recomendado</th>
+                                    <th>Significado</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><strong>Dirección del Servidor</strong></td>
+                                    <td><code>192.168.56.100</code></td>
+                                    <td>IP del demonio DHCP virtual</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Máscara de red</strong></td>
+                                    <td><code>255.255.255.0 (/24)</code></td>
+                                    <td>Tamaño de la subred privada</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Límite inferior</strong></td>
+                                    <td><code>192.168.56.101</code></td>
+                                    <td>Primera IP que entrega dinámicamente</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Límite superior</strong></td>
+                                    <td><code>192.168.56.254</code></td>
+                                    <td>Última IP del pool dinámico</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- RECOMENDACIÓN PARA EL LABORATORIO -->
+        <h2>3. Recomendación para Sistemas Big Data</h2>
+        <div class="info-box tip">
+            <span class="info-box-icon">💡</span>
+            <div class="info-box-text">
+                <strong>¿Cuándo usar DHCP y cuándo IP Estática?</strong><br>
+                En estaciones de trabajo normales, DHCP es muy cómodo. Pero en **servidores y nodos de Big Data** (bases de datos Postgres, brokers de Kafka, workers de Spark), **las IPs deben ser estáticas e inmutables**. Si la IP cambia tras un reinicio, todos los ficheros de configuración (`zoo.cfg`, `server.properties`, cadenas de conexión JDBC) se rompen. Por eso, en nuestros laboratorios **desactivamos el DHCP en VirtualBox** y fijamos la IP con Netplan.
+            </div>
+        </div>
+
+    </main>
+
+    <!-- LIGHTBOX MODAL -->
+    <div id="lightboxModal" class="lightbox-modal" onclick="closeLightbox()">
+        <button class="lightbox-close" onclick="closeLightbox()" aria-label="Cerrar imagen">✕</button>
+        <img id="lightboxImg" src="" alt="Ampliación de imagen">
+    </div>
+
+    <!-- FOOTER -->
+    <footer class="footer">
+        <div class="footer-inner">
+            <div class="footer-brand">
+                <div class="brand-logo"><span class="brand-text">IES San Vicente</span> · Big Data &amp; Cloud</div>
+                <p>Material de laboratorio de Sistemas Informáticos &amp; Virtualización (Curso 2026-2027).</p>
+            </div>
+            <div class="footer-brand" style="text-align: right;">
+                <p>Módulo 1 · Unidad de Sistemas · <strong>Laboratorio VirtualBox</strong></p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- SCRIPTS -->
+    <script>
+        function toggleNav() {
+            const links = document.getElementById('navLinks');
+            links.classList.toggle('open');
+        }
+
+        function openLightbox(src) {
+            const modal = document.getElementById('lightboxModal');
+            const img = document.getElementById('lightboxImg');
+            img.src = src;
+            modal.classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeLightbox() {
+            const modal = document.getElementById('lightboxModal');
+            modal.classList.remove('active');
+            document.body.style.overflow = '';
+        }
+
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                closeLightbox();
+            }
+        });
+    </script>
+</body>
+
+</html>
