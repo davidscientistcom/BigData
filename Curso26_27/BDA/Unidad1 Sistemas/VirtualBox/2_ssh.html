@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>2. Acceso Remoto Seguro con Claves SSH — BDA VirtualBox Lab</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+
+    <!-- Prism.js Syntax Highlighting (Tema Tomorrow Night) -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/themes/prism-tomorrow.min.css">
+</head>
+
+<body>
+
+    <!-- NAVBAR PRINCIPAL -->
+    <nav class="navbar" id="navbar">
+        <div class="nav-inner">
+            <div class="nav-brand">
+                <span class="brand-text">BDA · VirtualBox Lab</span>
+            </div>
+            <ul class="nav-links" id="navLinks">
+                <li><a href="0_Asignar_ip_estatica_bridge.html">0. IP Puente</a></li>
+                <li><a href="1_Asignar_ip_estatica_host_only.html">1. IP Host-Only</a></li>
+                <li><a href="2_ssh.html" class="active">2. Acceso SSH</a></li>
+                <li><a href="3_Inteface_de_red.html">3. Interfaces Red</a></li>
+                <li><a href="4_opciones_red.html">4. Modos de Red</a></li>
+                <li><a href="5_portforward.html">5. Port Forwarding</a></li>
+            </ul>
+            <button class="nav-mobile-btn" id="navToggle" onclick="toggleNav()">MENÚ</button>
+        </div>
+    </nav>
+
+    <!-- BREADCRUMB -->
+    <div class="breadcrumb">
+        <div class="breadcrumb-inner">
+            <span>Sistemas &amp; Virtualización</span>
+            <span class="breadcrumb-sep">›</span>
+            <span>VirtualBox</span>
+            <span class="breadcrumb-sep">›</span>
+            <span>2. Acceso Remoto Seguro con Clave Pública SSH</span>
+        </div>
+    </div>
+
+    <!-- PAGE HERO -->
+    <header class="page-hero">
+        <div class="hero-badge">
+            <span class="badge-dot"></span>
+            Unidad 1 · Administración Remota Profesional
+        </div>
+        <h1>Configuración Completa de <span class="gradient-text">SSH por Clave Pública</span></h1>
+        <p>Elimina las contraseñas para siempre: criptografía asimétrica, protección contra ataques Man-in-the-Middle con Fingerprints y despliegue de authorized_keys con permisos estrictos.</p>
+    </header>
+
+    <!-- CONTENIDO PRINCIPAL -->
+    <main class="content">
+
+        <!-- INTRODUCCIÓN Y CONCEPTO CRIPTOGRÁFICO -->
+        <h2>1. El Fin de las Contraseñas: Criptografía Asimétrica en SSH</h2>
+        <p>En administración de servidores de Big Data (clusters de Spark, nodos Kafka, Kubernetes), <strong>nadie entra a los servidores tecleando una contraseña interactiva</strong>. Las contraseñas son vulnerables a ataques de fuerza bruta, no son automatizables en pipelines y suponen un riesgo crítico de seguridad.</p>
+        <p>El estándar de la industria es la <strong>autenticación asimétrica por par de claves (Key-based Authentication)</strong>:</p>
+
+        <!-- DIAGRAMA SVG DE CRIPTOGRAFÍA SSH -->
+        <div class="diagram-demo">
+            <span class="diagram-demo-label">Esquema Criptográfico: Desafío y Respuesta SSH</span>
+            <svg viewBox="0 0 850 240" xmlns="http://www.w3.org/2000/svg" style="height:240px">
+                <!-- Cliente / Host -->
+                <rect x="30" y="30" width="240" height="180" rx="8" fill="#141d2e" stroke="#38bdf8" stroke-width="2"/>
+                <text x="150" y="65" text-anchor="middle" fill="#38bdf8" font-size="13" font-weight="800" font-family="Inter">Tu Ordenador (Cliente SSH)</text>
+                
+                <rect x="50" y="85" width="200" height="45" rx="6" fill="#1e293b" stroke="#ef4444" stroke-width="1.5"/>
+                <text x="150" y="105" text-anchor="middle" fill="#ef4444" font-size="11" font-weight="700" font-family="'JetBrains Mono', monospace">🔒 Clave Privada (id_ed25519)</text>
+                <text x="150" y="122" text-anchor="middle" fill="#94a3b8" font-size="9" font-family="Inter">NUNCA sale de tu máquina (Secreto)</text>
+
+                <rect x="50" y="145" width="200" height="45" rx="6" fill="#1e293b" stroke="#10b981" stroke-width="1.5"/>
+                <text x="150" y="165" text-anchor="middle" fill="#10b981" font-size="11" font-weight="700" font-family="'JetBrains Mono', monospace">🔓 Clave Pública (id_ed25519.pub)</text>
+                <text x="150" y="182" text-anchor="middle" fill="#94a3b8" font-size="9" font-family="Inter">Se puede compartir con el mundo</text>
+
+                <!-- Canal Red / Cifrado -->
+                <line x1="270" y1="120" x2="580" y2="120" stroke="#38bdf8" stroke-width="2" stroke-dasharray="6,4"/>
+                <text x="425" y="105" text-anchor="middle" fill="#38bdf8" font-size="10" font-family="'JetBrains Mono', monospace">1. Envío de Clave Pública</text>
+                <text x="425" y="140" text-anchor="middle" fill="#f59e0b" font-size="10" font-family="'JetBrains Mono', monospace">2. Reto Cifrado con Clave Privada</text>
+                <text x="425" y="160" text-anchor="middle" fill="#10b981" font-size="10" font-family="'JetBrains Mono', monospace">3. ¡Sesión Abierta sin Password!</text>
+
+                <!-- Servidor Ubuntu -->
+                <rect x="580" y="30" width="240" height="180" rx="8" fill="#141d2e" stroke="#10b981" stroke-width="2"/>
+                <text x="700" y="65" text-anchor="middle" fill="#10b981" font-size="13" font-weight="800" font-family="Inter">Ubuntu Server (VM)</text>
+
+                <rect x="600" y="95" width="200" height="85" rx="6" fill="#1e293b" stroke="#10b981" stroke-width="1.5"/>
+                <text x="700" y="120" text-anchor="middle" fill="#10b981" font-size="11" font-weight="700" font-family="'JetBrains Mono', monospace">~/.ssh/authorized_keys</text>
+                <text x="700" y="140" text-anchor="middle" fill="#94a3b8" font-size="10" font-family="Inter">Lista de claves públicas autorizadas</text>
+                <text x="700" y="165" text-anchor="middle" fill="#f1f5f9" font-size="9" font-family="Inter">Si coincide el reto → Entrada libre</text>
+            </svg>
+        </div>
+
+        <div class="two-col">
+            <div class="mini-card">
+                <h5>✦ Clave Privada (Private Key)</h5>
+                <p>Es tu firma digital exclusiva. Se almacena en tu equipo local bajo permisos restrictivos. <strong>Bajo ningún concepto debe enviarse por correo, subirse a GitHub ni compartirse</strong>.</p>
+            </div>
+            <div class="mini-card">
+                <h5>✦ Clave Pública (Public Key)</h5>
+                <p>Es la "cerradura" que abres con tu llave privada. Se añade en el archivo <code>~/.ssh/authorized_keys</code> del servidor. Cualquiera puede ver tu clave pública sin comprometer tu seguridad.</p>
+            </div>
+        </div>
+
+        <!-- PASO 1: INSTALACIÓN OPENSSH -->
+        <h2>2. Paso 1: Instalación y Verificación del Servidor OpenSSH</h2>
+        <p>Inicia sesión en la consola de Ubuntu Server en VirtualBox y asegúrate de que el servicio de SSH está instalado y en ejecución:</p>
+
+        <div class="code-block">
+            <div class="code-header">
+                <span class="code-lang">bash</span>
+                <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+            </div>
+            <pre><code class="language-bash"># 1. Actualiza repositorios e instala OpenSSH Server
+sudo apt update && sudo apt install -y openssh-server
+
+# 2. Habilita e inicia el servicio para que arranque automáticamente al encender la VM
+sudo systemctl enable --now ssh
+
+# 3. Comprueba el estado del demonio SSH
+sudo systemctl status ssh</code></pre>
+        </div>
+
+        <p>El servicio debe mostrar <code>Active: active (running)</code> con un punto verde, escuchando en el puerto estándar <code>22</code>.</p>
+
+        <!-- PASO 2: PRIMERA CONEXIÓN Y FINGERPRINT -->
+        <h2>3. Paso 2: El Misterio del Fingerprint y 'known_hosts'</h2>
+        <p>Cuando te conectas por primera vez por SSH desde tu terminal anfitrión (Windows PowerShell o Terminal en macOS/Linux):</p>
+
+        <div class="code-block">
+            <div class="code-header">
+                <span class="code-lang">terminal anfitrión</span>
+                <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+            </div>
+            <pre><code class="language-bash">ssh alumno@192.168.56.10</code></pre>
+        </div>
+
+        <p>Aparece el siguiente mensaje que desconcierta a los principiantes:</p>
+
+        <div class="code-block">
+            <div class="code-header">
+                <span class="code-lang">alerta de seguridad ssh</span>
+            </div>
+            <pre><code class="language-plaintext">The authenticity of host '192.168.56.10 (192.168.56.10)' can't be established.
+ED25519 key fingerprint is SHA256:abc123def456ghi789...
+Are you sure you want to continue connecting (yes/no/[fingerprint])?</code></pre>
+        </div>
+
+        <div class="info-box info">
+            <span class="info-box-icon">ℹ️</span>
+            <div class="info-box-text">
+                <strong>¿Qué es el Fingerprint y para qué sirve?</strong><br>
+                El <strong>fingerprint</strong> es el hash criptográfico (huella digital) de la clave pública del <em>servidor</em>. Sirve para protegerte contra ataques <strong>Man-in-the-Middle (MitM)</strong>. Al escribir <code>yes</code>, tu cliente SSH guarda esa huella en el archivo local <code>~/.ssh/known_hosts</code>. Si en el futuro alguien suplanta la IP de tu servidor, SSH detectará que la huella no coincide, abortará la conexión y te lanzará una alarma de seguridad.
+            </div>
+        </div>
+
+        <!-- PASO 3: GENERAR PAR DE CLAVES -->
+        <h2>4. Paso 3: Generar tu Par de Claves en tu Ordenador Anfitrión</h2>
+        <p>En tu ordenador personal (desde donde te conectas, <strong>NO</strong> dentro de la máquina virtual), abre una terminal y genera un par de claves moderno:</p>
+
+        <div class="two-col">
+            <div>
+                <h4>Opción A (Recomendada): ED25519</h4>
+                <div class="code-block">
+                    <div class="code-header">
+                        <span class="code-lang">bash / powershell</span>
+                        <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+                    </div>
+                    <pre><code class="language-bash">ssh-keygen -t ed25519 -C "tu_nombre@bda"</code></pre>
+                </div>
+                <p style="font-size: 0.85rem; color: var(--text3);">Curva elíptica de última generación: claves más cortas, cálculo ultrarrápido y máxima resistencia a ataques.</p>
+            </div>
+
+            <div>
+                <h4>Opción B: RSA de 4096 bits</h4>
+                <div class="code-block">
+                    <div class="code-header">
+                        <span class="code-lang">bash / powershell</span>
+                        <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+                    </div>
+                    <pre><code class="language-bash">ssh-keygen -t rsa -b 4096 -C "tu_nombre@bda"</code></pre>
+                </div>
+                <p style="font-size: 0.85rem; color: var(--text3);">Estándar clásico compatible con sistemas legados.</p>
+            </div>
+        </div>
+
+        <p>El comando te preguntará dónde guardar el archivo (presiona <code>ENTER</code> para aceptar la ruta predeterminada <code>~/.ssh/id_ed25519</code>) y si deseas una contraseña de cifrado (<em>passphrase</em>). Para este laboratorio de desarrollo, puedes presionar <code>ENTER</code> dos veces para dejarla sin contraseña.</p>
+
+        <!-- PASO 4: COPIAR CLAVE AL SERVIDOR -->
+        <h2>5. Paso 4: Copiar la Clave Pública al Servidor</h2>
+        <p>Para que el servidor reconozca tu clave pública, debe insertarse en <code>~/.ssh/authorized_keys</code> del usuario en la VM.</p>
+
+        <h3>Método Rápido: Usando 'ssh-copy-id'</h3>
+        <p>En macOS, Linux y Windows 10/11 con OpenSSH habilitado:</p>
+
+        <div class="code-block">
+            <div class="code-header">
+                <span class="code-lang">terminal anfitrión</span>
+                <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+            </div>
+            <pre><code class="language-bash">ssh-copy-id -i ~/.ssh/id_ed25519.pub alumno@192.168.56.10</code></pre>
+        </div>
+
+        <p>Te pedirá la contraseña del usuario en la VM por última vez. <code>ssh-copy-id</code> se encarga automáticamente de crear el directorio <code>~/.ssh</code>, asignar los permisos exactos y añadir la clave sin sobreescribir las que ya existan.</p>
+
+        <h3>Método Manual: Inyección por tubería SSH</h3>
+        <p>Si por algún motivo tu terminal no dispone de <code>ssh-copy-id</code>, puedes inyectar la clave en una sola línea de comando:</p>
+
+        <div class="code-block">
+            <div class="code-header">
+                <span class="code-lang">powershell / bash</span>
+                <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+            </div>
+            <pre><code class="language-bash">cat ~/.ssh/id_ed25519.pub | ssh alumno@192.168.56.10 "mkdir -p ~/.ssh && chmod 700 ~/.ssh && cat >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys"</code></pre>
+        </div>
+
+        <!-- PASO 5: PERMISOS CRÍTICOS UNIX -->
+        <h2>6. Paso 5: La Regla de los Permisos Estrictos de OpenSSH</h2>
+        <div class="info-box danger">
+            <span class="info-box-icon">🛑</span>
+            <div class="info-box-text">
+                <strong>¿Por qué SSH te sigue pidiendo contraseña a pesar de haber copiado la clave?</strong><br>
+                OpenSSH tiene una directiva de seguridad interna llamada <code>StrictModes</code>. Si el directorio <code>~/.ssh</code> o el archivo <code>authorized_keys</code> tienen permisos abiertos (por ejemplo, si otros usuarios del sistema pueden leerlos o escribir en ellos), **OpenSSH descarta la clave en silencio por seguridad** y retrocede a pedir contraseña.
+            </div>
+        </div>
+
+        <p>En el servidor Ubuntu, ejecuta siempre estos permisos canónicos:</p>
+
+        <div class="code-block">
+            <div class="code-header">
+                <span class="code-lang">bash (en la máquina virtual)</span>
+                <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+            </div>
+            <pre><code class="language-bash"># El directorio .ssh solo puede ser accesible por el dueño (700 = rwx------)
+chmod 700 ~/.ssh
+
+# El archivo authorized_keys solo puede ser leído/escrito por el dueño (600 = rw-------)
+chmod 600 ~/.ssh/authorized_keys
+
+# Verifica que el propietario sea tu usuario (no root)
+chown -R $USER:$USER ~/.ssh</code></pre>
+        </div>
+
+        <!-- PASO 6: HARDENING DEL SERVIDOR SSH -->
+        <h2>7. Paso 6: Blindaje del Servidor (Desactivar Contraseñas)</h2>
+        <p>Una vez que hayas comprobado que puedes conectarte sin contraseña, el paso profesional en entornos productivos es deshabilitar totalmente el login por contraseña para que ningún atacante pueda intentar fuerza bruta:</p>
+
+        <div class="code-block">
+            <div class="code-header">
+                <span class="code-lang">bash (en la máquina virtual)</span>
+                <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+            </div>
+            <pre><code class="language-bash"># Edita la configuración del demonio SSH
+sudo nano /etc/ssh/sshd_config.d/99-hardened.conf</code></pre>
+        </div>
+
+        <p>Añade las siguientes tres directivas de seguridad:</p>
+
+        <div class="code-block">
+            <div class="code-header">
+                <span class="code-lang">sshd_config</span>
+                <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+            </div>
+            <pre><code class="language-bash">PasswordAuthentication no
+PermitEmptyPasswords no
+PubkeyAuthentication yes</code></pre>
+        </div>
+
+        <p>Reinicia el servicio para aplicar el blindaje:</p>
+
+        <div class="code-block">
+            <div class="code-header">
+                <span class="code-lang">bash</span>
+                <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+            </div>
+            <pre><code class="language-bash">sudo systemctl restart ssh</code></pre>
+        </div>
+
+        <!-- CHECKLIST INTERACTIVA -->
+        <div class="checklist-card">
+            <h4>✓ Lista de Comprobación del Administrador SSH</h4>
+            <ul class="checklist-items">
+                <li class="check-item" onclick="toggleCheck(this)">
+                    <input type="checkbox">
+                    <span>Servidor <code>openssh-server</code> activo y escuchando en el puerto 22.</span>
+                </li>
+                <li class="check-item" onclick="toggleCheck(this)">
+                    <input type="checkbox">
+                    <span>Par de claves <code>id_ed25519</code> generado en el ordenador local anfitrión.</span>
+                </li>
+                <li class="check-item" onclick="toggleCheck(this)">
+                    <input type="checkbox">
+                    <span>Clave pública inyectada en <code>~/.ssh/authorized_keys</code> en el servidor.</span>
+                </li>
+                <li class="check-item" onclick="toggleCheck(this)">
+                    <input type="checkbox">
+                    <span>Permisos restrictivos aplicados: <code>chmod 700 ~/.ssh</code> y <code>chmod 600 authorized_keys</code>.</span>
+                </li>
+                <li class="check-item" onclick="toggleCheck(this)">
+                    <input type="checkbox">
+                    <span>Acceso SSH probado con éxito desde el host sin que solicite contraseña.</span>
+                </li>
+            </ul>
+        </div>
+
+    </main>
+
+    <!-- FOOTER -->
+    <footer class="footer">
+        <div class="footer-inner">
+            <div class="footer-brand">
+                <div class="brand-logo"><span class="brand-text">IES San Vicente</span> · Big Data &amp; Cloud</div>
+                <p>Material de laboratorio de Sistemas Informáticos &amp; Virtualización (Curso 2026-2027).</p>
+            </div>
+            <div class="footer-brand" style="text-align: right;">
+                <p>Módulo 1 · Unidad de Sistemas · <strong>Laboratorio VirtualBox</strong></p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- PRISM.JS PARA RESALTADO DE CÓDIGO -->
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/prism.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-bash.min.js"></script>
+
+    <!-- SCRIPTS DE INTERACCIÓN -->
+    <script>
+        function copyCode(btn) {
+            const pre = btn.closest('.code-block').querySelector('pre code');
+            if (!pre) return;
+            const text = pre.innerText || pre.textContent;
+            navigator.clipboard.writeText(text).then(() => {
+                const originalText = btn.innerText;
+                btn.innerText = '✓ Copiado';
+                btn.classList.add('copied');
+                setTimeout(() => {
+                    btn.innerText = originalText;
+                    btn.classList.remove('copied');
+                }, 2000);
+            }).catch(err => {
+                console.error('Error al copiar:', err);
+            });
+        }
+
+        function toggleNav() {
+            const links = document.getElementById('navLinks');
+            links.classList.toggle('open');
+        }
+
+        function toggleCheck(item) {
+            const checkbox = item.querySelector('input[type="checkbox"]');
+            if (event.target !== checkbox) {
+                checkbox.checked = !checkbox.checked;
+            }
+            if (checkbox.checked) {
+                item.classList.add('completed');
+            } else {
+                item.classList.remove('completed');
+            }
+        }
+    </script>
+</body>
+
+</html>
