@@ -1,33 +1,32 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bloque 1: El Despertar del Event Loop — Python Async</title>
-    <link rel="stylesheet" href="../shared/styles.css"/>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>01. Event Loop & E/S No Bloqueante | LucentIA</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../shared/styles.css"/>
   <link rel="stylesheet" href="styles.css"/>
-  <!-- Anti-flash: aplica el tema antes de pintar la página -->
   <script>!function(){var t=localStorage.getItem('lucentia-theme')||'dark';'light'===t&&document.documentElement.setAttribute('data-theme','light')}()</script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
-
 </head>
 <body>
-<!-- Botón hamburguesa — visible en tablet/móvil -->
-<!-- Botón hamburguesa — visible siempre -->
+<!-- Control de menú en dispositivos móviles -->
 <button class="sidebar-toggle" id="sidebarToggle" onclick="toggleSidebar()" aria-label="Abrir menú" aria-expanded="false">&#9776;</button>
 <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
 
 <nav id="sidebar" class="sidebar">
   <div class="sidebar-logo">LucentIA</div>
-  <div class="sidebar-course">Python Async</div>
+  <div class="sidebar-course">Python Concurrente & Asíncrono</div>
   <ul class="sidebar-nav">
-    <li class="sidebar-section">Índice del curso</li>
-    <li><a href="index.html">Python Async</a></li>
-    <li class="active"><a href="sandbox-b1.html">Bloque 1: El Despertar del Event Loop</a></li>
-    <li><a href="sandbox-b2.html">Bloque 2: Controlando Tareas</a></li>
-    <li><a href="sandbox-b3.html">Bloque 3: Sincronización</a></li>
-    <li><a href="sandbox-b4.html">Bloque 4: Productor-Consumidor</a></li>
-    <li><a href="sandbox-b5.html">Bloque 5: Mini Proyectos</a></li>
+    <li class="sidebar-section">Contenidos del Módulo</li>
+    <li><a href="index.html">Python Asíncrono — Índice</a></li>
+    <li class="active"><a href="sandbox-b1.html">01. Event Loop & E/S No Bloqueante</a></li>
+    <li><a href="sandbox-b2.html">02. Tareas, Timeouts y Cancelación</a></li>
+    <li><a href="sandbox-b3.html">03. Exclusión Mutua & Semáforos</a></li>
+    <li><a href="sandbox-b4.html">04. Productor-Consumidor con Colas</a></li>
+    <li><a href="sandbox-b5.html">05. Pipeline Concurrente Práctico</a></li>
   </ul>
   <div class="theme-toggle">
     <button class="theme-btn" id="themeBtn" onclick="toggleTheme()">
@@ -38,139 +37,144 @@
 </nav>
 
 <div class="main-content">
-<header class="page-hero">
-        <span class="page-hero-icon">🧪</span>
-        <h1>Bloque 1: El Despertar del <span class="gradient-text">Event Loop</span></h1>
-        <p>Antes de diseñar arquitecturas (M2), hay que entender qué significa ceder el control. Ejecuta estos scripts para entender la diferencia fundamental entre bloquear el mundo y pausar una tarea.</p>
-    </header>
+  <header class="page-hero">
+    <div style="font-size:0.75rem; font-weight:700; letter-spacing:1.5px; text-transform:uppercase; color:var(--primary-light); margin-bottom:0.75rem;">Bloque 01 · Fundamentos de Ejecución</div>
+    <h1>Event Loop y <span class="gradient-text">E/S No Bloqueante</span></h1>
+    <p>Comprender la diferencia fundamental entre el bloqueo del hilo del sistema operativo y la suspensión cooperativa de corrutinas en CPython.</p>
+  </header>
 
 <main class="content">
-            <!-- EJERCICIO 1.0 -->
-            <div class="section-header">
-                <h2>E1.0: El Falso Asincronismo (time.sleep)</h2>
-            </div>
-            <p><strong>Objetivo:</strong> Ver con tus propios ojos cómo funciones síncronas bloquean el Event Loop y rompen la concurrencia. No hay magia, si bloqueas el "hilo de eventos", nada avanza.</p>
-            
-            <div class="code-block">
-                <div class="code-header">
-                    <span><i class="icon">🐍</i> E1_0_falso_async.py</span>
-                    <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
-                </div>
-                <pre><code>import asyncio
+  <div class="section-header">
+    <h2>E1.0: Bloqueo Síncrono del Hilo Principal (time.sleep)</h2>
+  </div>
+  <p><strong>Objetivo Técnico:</strong> Comprobar el efecto de invocar llamadas bloqueantes dentro de un contexto asíncrono. Cuando una rutina ejecuta una función síncrona que bloquea el hilo del sistema operativo (como <code>time.sleep</code> o una llamada de socket sin soporte async), todo el Event Loop se congela, impidiendo que cualquier otra corrutina progrese.</p>
+  
+  <div class="code-block">
+    <div class="code-header">
+      <span class="code-lang">python — e1_0_bloqueo_sincrono.py</span>
+      <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+    </div>
+    <pre><code>import asyncio
 import time
 
-async def tarea_lenta_falsa(id_tarea):
-    print(f"[Tarea {id_tarea}] Empezando trabajo...")
-    # ❌ ESTO BLOQUEA TODO EL EVENT LOOP
-    time.sleep(2) 
-    print(f"[Tarea {id_tarea}] Trabajo terminado.")
+async def tarea_bloqueante(id_tarea: int):
+    print(f"[INFO] [Tarea {id_tarea}] Iniciando fase de espera...")
+    # ERROR CRÍTICO: Bloqueo de hilo a nivel de SO (detiene todo el proceso)
+    time.sleep(2)
+    print(f"[INFO] [Tarea {id_tarea}] Espera finalizada.")
 
 async def main():
-    print("Iniciando Event Loop...")
-    # Intentamos ejecutar dos tareas "al mismo tiempo"
+    print("[INIT] Inicializando Event Loop...")
+    # Intentamos concurrir ambas tareas
     await asyncio.gather(
-        tarea_lenta_falsa(1),
-        tarea_lenta_falsa(2)
+        tarea_bloqueante(1),
+        tarea_bloqueante(2)
     )
-    print("Todo listo.")
+    print("[DONE] Ejecución completada.")
 
 if __name__ == "__main__":
-    tiempo_inicio = time.time()
+    t_inicio = time.time()
     asyncio.run(main())
-    print(f"Tiempo total: {time.time() - tiempo_inicio:.2f} segundos")
+    print(f"[BENCHMARK] Tiempo total: {time.time() - t_inicio:.2f} segundos")
 </code></pre>
-            </div>
-            <div class="info-box warning">
-                <div class="info-box-text"><strong>Prueba esto:</strong> Ejecuta el código. Aunque uses `asyncio.gather()`, la ejecución tardará <strong>4 segundos</strong>. El hilo principal se congela en `time.sleep()`, impidiendo que la Tarea 2 arranque mientras la Tarea 1 duerme.</div>
-            </div>
+  </div>
+  <div class="info-box warning">
+    <div class="info-box-text">
+      <strong>Diagnóstico:</strong> El tiempo total de ejecución es de <strong>4.0 segundos</strong> (2s + 2s). A pesar de emplear <code>asyncio.gather()</code>, <code>time.sleep()</code> no devuelve el control al planificador de eventos; por consiguiente, la Tarea 2 no puede inicializarse hasta que la Tarea 1 desaloja completamente el procesador.
+    </div>
+  </div>
 
-            <!-- EJERCICIO 1.1 -->
-            <div style="margin-top: 4rem;">
-                <div class="section-header">
-                    <h2>E1.1: El Asincronismo Real (asyncio.sleep)</h2>
-                </div>
-                <p><strong>Objetivo:</strong> Reemplazar el bloqueo con "ceder el paso". Entender el uso fundamental de `await`.</p>
-                
-                <div class="code-block">
-                    <div class="code-header">
-                        <span><i class="icon">🐍</i> E1_1_verdadero_async.py</span>
-                        <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
-                    </div>
-                    <pre><code>import asyncio
+  <div style="margin-top: 4rem;">
+    <div class="section-header">
+      <h2>E1.1: Concurrencia Cooperativa y Suspensión (asyncio.sleep)</h2>
+    </div>
+    <p><strong>Objetivo Técnico:</strong> Sustituir la detención del hilo por una suspensión cooperativa mediante <code>await asyncio.sleep()</code>. Al pausar la corrutina en una llamada asíncrona no bloqueante, el control de la CPU se devuelve al Event Loop, permitiendo que otras corrutinas pendientes consuman ciclos de reloj.</p>
+    
+    <div class="code-block">
+      <div class="code-header">
+        <span class="code-lang">python — e1_1_concurrencia_cooperativa.py</span>
+        <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+      </div>
+      <pre><code>import asyncio
 import time
 
-async def tarea_lenta_real(id_tarea):
-    print(f"[Tarea {id_tarea}] Empezando trabajo...")
-    # ✅ ESTO CEDE EL CONTROL AL EVENT LOOP
-    await asyncio.sleep(2) 
-    print(f"[Tarea {id_tarea}] Trabajo terminado.")
+async def tarea_cooperativa(id_tarea: int):
+    print(f"[INFO] [Tarea {id_tarea}] Iniciando espera asíncrona...")
+    # CORRECTO: Cede voluntariamente el control al planificador del Event Loop
+    await asyncio.sleep(2)
+    print(f"[INFO] [Tarea {id_tarea}] Reanudación tras espera.")
 
 async def main():
-    print("Iniciando Event Loop...")
+    print("[INIT] Inicializando Event Loop...")
     await asyncio.gather(
-        tarea_lenta_real(1),
-        tarea_lenta_real(2)
+        tarea_cooperativa(1),
+        tarea_cooperativa(2)
     )
-    print("Todo listo.")
+    print("[DONE] Ambas tareas finalizadas concurrentemente.")
 
 if __name__ == "__main__":
-    tiempo_inicio = time.time()
+    t_inicio = time.time()
     asyncio.run(main())
-    print(f"Tiempo total: {time.time() - tiempo_inicio:.2f} segundos")
+    print(f"[BENCHMARK] Tiempo total: {time.time() - t_inicio:.2f} segundos")
 </code></pre>
-                </div>
-                <div class="info-box success">
-                    <div class="info-box-text"><strong>Resultado:</strong> Ejecuta el código. Ahora tarda <strong>solo 2 segundos</strong>. Cuando la Tarea 1 hace `await asyncio.sleep(2)`, <strong>le devuelve el volante al Event Loop</strong>, que inmediatamente arranca la Tarea 2.</div>
-                </div>
-            </div>
+    </div>
+    <div class="info-box success">
+      <div class="info-box-text">
+        <strong>Diagnóstico:</strong> El tiempo total es de solo <strong>2.0 segundos</strong>. La Tarea 1 ejecuta hasta alcanzar el punto de suspensión <code>await</code>, momento en el que el bucle transfiere inmediatamente la ejecución a la Tarea 2. Ambas esperas de E/S se solapan en paralelo sobre el mismo hilo.
+      </div>
+    </div>
+  </div>
 
-            <!-- EJERCICIO 1.2 -->
-            <div style="margin-top: 4rem;">
-                <div class="section-header">
-                    <h2>E1.2: El Bucle de Vida (Simulación de I/O)</h2>
-                </div>
-                <p><strong>Objetivo:</strong> Ver cómo se comportan 3 tareas de duraciones distintas cuando concurren.</p>
-                
-                <div class="code-block">
-                    <div class="code-header">
-                        <span><i class="icon">🐍</i> E1_2_multi_tiempos.py</span>
-                        <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
-                    </div>
-                    <pre><code>import asyncio
+  <div style="margin-top: 4rem;">
+    <div class="section-header">
+      <h2>E1.2: Resolución Asíncrona Múltiple (asyncio.gather)</h2>
+    </div>
+    <p><strong>Objetivo Técnico:</strong> Observar cómo <code>asyncio.gather()</code> preserva de forma determinista el orden del vector de resultados retornado, con independencia de que las operaciones subyacentes terminen en momentos y secuencias distintas debido a variaciones en la latencia de red.</p>
+    
+    <div class="code-block">
+      <div class="code-header">
+        <span class="code-lang">python — e1_2_agregacion_gather.py</span>
+        <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+      </div>
+      <pre><code>import asyncio
 
-async def descargar_archivo(nombre, segundos):
-    print(f"[{nombre}] Empezando descarga...")
-    await asyncio.sleep(segundos)
-    print(f"[{nombre}] Descarga finalizada! ({segundos}s)")
-    return f"Contenido_{nombre}"
+async def descargar_recurso(nombre: str, latencia_s: float) -> str:
+    print(f"[I/O] [{nombre}] Iniciando petición (latencia estimada: {latencia_s}s)...")
+    await asyncio.sleep(latencia_s)
+    print(f"[I/O] [{nombre}] Respuesta recibida tras {latencia_s}s.")
+    return f"PAYLOAD_{nombre.upper()}"
 
 async def main():
-    print("Iniciando descargas concurrentes...")
+    print("[INIT] Lanzando peticiones asíncronas simultáneas...")
+    # Orden de paso: Video (3s), Imagen (1s), Metadatos (0.5s)
     resultados = await asyncio.gather(
-        descargar_archivo("Video", 3),
-        descargar_archivo("Imagen", 1),
-        descargar_archivo("Texto", 0.5)
+        descargar_recurso("Video", 3.0),
+        descargar_recurso("Imagen", 1.0),
+        descargar_recurso("Metadatos", 0.5)
     )
-    print(f"Resultados recolectados en el mismo orden: {resultados}")
+    print(f"[DONE] Vector de resultados en orden de invocación original:
+       {resultados}")
 
-asyncio.run(main())
+if __name__ == "__main__":
+    asyncio.run(main())
 </code></pre>
-                </div>
-                <div class="info-box info">
-                    <div class="info-box-text"><strong>Observa:</strong> El "Texto" termina primero, luego "Imagen", y por último "Video". Sin embargo, `asyncio.gather` te devuelve la lista de resultados <code>['Contenido_Video', 'Contenido_Imagen', 'Contenido_Texto']</code> en el orden que le pasaste inicialmente, agrupando mágicamente el desorden del I/O concurrent.</div>
-                </div>
-            </div>
+    </div>
+    <div class="info-box info">
+      <div class="info-box-text">
+        <strong>Observación Arquitectural:</strong> El recurso "Metadatos" finaliza en 0.5s y "Imagen" en 1.0s, mucho antes que "Video". Sin embargo, <code>gather()</code> devuelve <code>['PAYLOAD_VIDEO', 'PAYLOAD_IMAGEN', 'PAYLOAD_METADATOS']</code> manteniendo intacta la correspondencia posicional con la firma de llamada.
+      </div>
+    </div>
+  </div>
 
-            <div style="display:flex; justify-content:space-between; margin-top:4rem;">
-                <a href="index.html" class="btn btn-outline">← Volver al Inicio</a>
-                <a href="sandbox-b2.html" class="btn btn-primary" style="background-color:#10b981; color:#fff;">Siguiente: B2 Tasks →</a>
-            </div>
+  <div style="display:flex; justify-content:space-between; margin-top:4rem;">
+    <a href="index.html" class="btn btn-outline">&larr; Volver al Índice</a>
+    <a href="sandbox-b2.html" class="btn btn-primary">Siguiente: Bloque 02 — Tareas y Timeouts &rarr;</a>
+  </div>
+</main>
 
-        </main>
-
-<footer style="text-align:center;padding:2rem;color:var(--text3);font-size:0.8rem;border-top:1px solid var(--border);">
-        &copy; 2026 LucentIA Research · Python Async TDD-First
-    </footer>
+<footer>
+  &copy; 2026 LucentIA Research · Módulo de Concurrencia y Sistemas Asíncronos
+</footer>
 </div>
 
 <script src="../shared/lucentia.js" defer></script>

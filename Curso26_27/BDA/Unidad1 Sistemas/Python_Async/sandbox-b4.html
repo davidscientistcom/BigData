@@ -1,33 +1,32 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bloque 4: Productor-Consumidor — Python Async</title>
-    <link rel="stylesheet" href="../shared/styles.css"/>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>04. Productor-Consumidor con Colas | LucentIA</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../shared/styles.css"/>
   <link rel="stylesheet" href="styles.css"/>
-  <!-- Anti-flash: aplica el tema antes de pintar la página -->
   <script>!function(){var t=localStorage.getItem('lucentia-theme')||'dark';'light'===t&&document.documentElement.setAttribute('data-theme','light')}()</script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
-
 </head>
 <body>
-<!-- Botón hamburguesa — visible en tablet/móvil -->
-<!-- Botón hamburguesa — visible siempre -->
+<!-- Control de menú en dispositivos móviles -->
 <button class="sidebar-toggle" id="sidebarToggle" onclick="toggleSidebar()" aria-label="Abrir menú" aria-expanded="false">&#9776;</button>
 <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
 
 <nav id="sidebar" class="sidebar">
   <div class="sidebar-logo">LucentIA</div>
-  <div class="sidebar-course">Python Async</div>
+  <div class="sidebar-course">Python Concurrente & Asíncrono</div>
   <ul class="sidebar-nav">
-    <li class="sidebar-section">Índice del curso</li>
-    <li><a href="index.html">Python Async</a></li>
-    <li><a href="sandbox-b1.html">Bloque 1: El Despertar del Event Loop</a></li>
-    <li><a href="sandbox-b2.html">Bloque 2: Controlando Tareas</a></li>
-    <li><a href="sandbox-b3.html">Bloque 3: Sincronización</a></li>
-    <li class="active"><a href="sandbox-b4.html">Bloque 4: Productor-Consumidor</a></li>
-    <li><a href="sandbox-b5.html">Bloque 5: Mini Proyectos</a></li>
+    <li class="sidebar-section">Contenidos del Módulo</li>
+    <li><a href="index.html">Python Asíncrono — Índice</a></li>
+    <li><a href="sandbox-b1.html">01. Event Loop & E/S No Bloqueante</a></li>
+    <li><a href="sandbox-b2.html">02. Tareas, Timeouts y Cancelación</a></li>
+    <li><a href="sandbox-b3.html">03. Exclusión Mutua & Semáforos</a></li>
+    <li class="active"><a href="sandbox-b4.html">04. Productor-Consumidor con Colas</a></li>
+    <li><a href="sandbox-b5.html">05. Pipeline Concurrente Práctico</a></li>
   </ul>
   <div class="theme-toggle">
     <button class="theme-btn" id="themeBtn" onclick="toggleTheme()">
@@ -38,81 +37,84 @@
 </nav>
 
 <div class="main-content">
-<header class="page-hero">
-        <span class="page-hero-icon">🧪</span>
-        <h1>Bloque 4: <span class="gradient-text">El Productor y los Workers</span></h1>
-        <p>El Santo Grial de la concurrencia eficiente. Desligar a quien descubre el trabajo de quienes ejecutan el trabajo usando Colas (Queues).</p>
-    </header>
+  <header class="page-hero">
+    <div style="font-size:0.75rem; font-weight:700; letter-spacing:1.5px; text-transform:uppercase; color:var(--primary-light); margin-bottom:0.75rem;">Bloque 04 · Patrones de Arquitectura</div>
+    <h1>Patrón Productor-Consumidor y <span class="gradient-text">Colas Asíncronas</span></h1>
+    <p>Desacoplamiento de componentes, gestión de contrapresión (backpressure) y sincronización de pools de workers con <code>asyncio.Queue</code>.</p>
+  </header>
 
 <main class="content">
-            <!-- EJERCICIO 4.0 -->
-            <div class="section-header">
-                <h2>E4.0: La Cinta Transportadora (asyncio.Queue)</h2>
-            </div>
-            <p><strong>Objetivo:</strong> Implementar un Productor que añade elementos a la cola rápidamente, y Workers que leen y procesan de esa cola a su propio ritmo constante.</p>
-            
-            <div class="code-block">
-                <div class="code-header">
-                    <span><i class="icon">🐍</i> E4_0_queue_basic.py</span>
-                    <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
-                </div>
-                <pre><code>import asyncio
+  <div class="section-header">
+    <h2>E4.0: Pipeline Desacoplado con asyncio.Queue</h2>
+  </div>
+  <p><strong>Objetivo Técnico:</strong> Diseñar una arquitectura donde la tasa de producción de eventos y la velocidad de consumo operan de forma independiente. Empleando <code>asyncio.Queue</code>, los workers consumen elementos a ritmo constante, mientras que <code>queue.join()</code> garantiza la finalización determinista de todo el lote.</p>
+  
+  <div class="code-block">
+    <div class="code-header">
+      <span class="code-lang">python — e4_0_pipeline_queue.py</span>
+      <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+    </div>
+    <pre><code>import asyncio
 import random
 
-async def productor(cola):
-    for i in range(1, 11):
-        paquete = f"Paquete-{i}"
-        print(f"📦 Productor generando: {paquete}")
-        await cola.put(paquete)
-        await asyncio.sleep(random.uniform(0.1, 0.4))
-    print("📦 Productor terminó de poner paquetes en la cola.")
+async def productor(cola: asyncio.Queue, total_mensajes: int):
+    for i in range(1, total_mensajes + 1):
+        item = f"MSG_BATCH_{i:04d}"
+        print(f"[PRODUCER] Encolando: {item}")
+        await cola.put(item)
+        await asyncio.sleep(random.uniform(0.05, 0.2))
+    print("[PRODUCER] Ingesta finalizada. Productor desocupado.")
 
-async def consumidor(id_trabajador, cola):
+async def consumidor(id_worker: int, cola: asyncio.Queue):
     while True:
-        # Se quedará esperando eternamente hasta que haya algo en la cola
-        paquete = await cola.get()
-        print(f"  🧑‍🏭 W-{id_trabajador} sacó de la cinta: {paquete}. Procesando...")
-        await asyncio.sleep(random.uniform(0.5, 1.5))  # El procesado es lento!
+        # Espera no bloqueante hasta la disponibilidad de nuevos elementos
+        item = await cola.get()
+        print(f"  [WORKER-{id_worker}] Procesando: {item}")
+        await asyncio.sleep(random.uniform(0.3, 0.8))  # Latencia de procesamiento
         
-        # Marcamos la tarea como completada para el sistema interno de la cola
+        # Notificación al monitor interno de la cola
         cola.task_done()
 
 async def main():
     cola = asyncio.Queue()
+    num_workers = 3
+    total_items = 10
 
-    # Arrancamos los consumidores como tareas en background perpetuas
-    workers = [asyncio.create_task(consumidor(i, cola)) for i in range(3)]
+    # Inicialización del pool de workers como tareas en background
+    workers = [asyncio.create_task(consumidor(i, cola)) for i in range(1, num_workers + 1)]
 
-    # Ejecutamos el productor
-    await productor(cola)
+    # Ejecución de la ingesta
+    await productor(cola, total_items)
 
-    # Bloqueamos el flujo principal hasta que se haya llamado task_done() por cada elemento put()
-    print("🕒 Main esperando a que la fábrica vacíe la cola completa...")
+    # Bloqueo sincronizado hasta que todos los items encolados reciban task_done()
+    print("[COORDINATOR] Esperando a que el pool procese todos los items de la cola...")
     await cola.join()
 
-    # Cancelamos los workers (porque sus loops While True nunca acaban solos)
+    # Cancelación controlada de los workers (bucle perpetuo finalizado limpiamente)
     for w in workers:
         w.cancel()
 
-    print("✅ Fábrica cerrada. Todo procesado.")
+    print("[COORDINATOR] Pipeline completado. Todos los registros han sido procesados.")
 
-asyncio.run(main())
+if __name__ == "__main__":
+    asyncio.run(main())
 </code></pre>
-            </div>
-            <div class="info-box info">
-                <div class="info-box-text"><strong>Desacoplamiento:</strong> Observa que el Productor termina mucho antes que los Consumidores, porque él es muy rápido poniendo cajas en la cinta. `cola.join()` es mágico: mantiene al programa base en pausa hasta que se acaban todas las cajas. ¡Súper útil para Crawlers web!</div>
-            </div>
+  </div>
+  <div class="info-box info">
+    <div class="info-box-text">
+      <strong>Contrapresión y Coordinación:</strong> La llamada <code>cola.join()</code> bloquea la corrutina invocadora hasta que el contador interno de tareas pendientes de la cola se reduce exactamente a cero. Esto permite desacoplar los ciclos de vida y evitar que el proceso principal finalice prematuramente con datos sin persistir en el buffer.
+    </div>
+  </div>
 
-            <div style="display:flex; justify-content:space-between; margin-top:4rem;">
-                <a href="sandbox-b3.html" class="btn btn-outline">← Anterior: B3</a>
-                <a href="sandbox-b5.html" class="btn btn-primary" style="background-color:#9333ea; color:#fff;">Siguiente: B5 Mini Proyectos →</a>
-            </div>
+  <div style="display:flex; justify-content:space-between; margin-top:4rem;">
+    <a href="sandbox-b3.html" class="btn btn-outline">&larr; Anterior: Bloque 03</a>
+    <a href="sandbox-b5.html" class="btn btn-primary">Siguiente: Bloque 05 — Pipeline Completo &rarr;</a>
+  </div>
+</main>
 
-        </main>
-
-<footer style="text-align:center;padding:2rem;color:var(--text3);font-size:0.8rem;border-top:1px solid var(--border);">
-        &copy; 2026 LucentIA Research · Python Async TDD-First
-    </footer>
+<footer>
+  &copy; 2026 LucentIA Research · Módulo de Concurrencia y Sistemas Asíncronos
+</footer>
 </div>
 
 <script src="../shared/lucentia.js" defer></script>

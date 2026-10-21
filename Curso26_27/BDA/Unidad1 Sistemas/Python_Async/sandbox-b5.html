@@ -1,33 +1,32 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bloque 5: Mini Proyectos — Python Async</title>
-    <link rel="stylesheet" href="../shared/styles.css"/>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>05. Pipeline Concurrente Práctico | LucentIA</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../shared/styles.css"/>
   <link rel="stylesheet" href="styles.css"/>
-  <!-- Anti-flash: aplica el tema antes de pintar la página -->
   <script>!function(){var t=localStorage.getItem('lucentia-theme')||'dark';'light'===t&&document.documentElement.setAttribute('data-theme','light')}()</script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
-
 </head>
 <body>
-<!-- Botón hamburguesa — visible en tablet/móvil -->
-<!-- Botón hamburguesa — visible siempre -->
+<!-- Control de menú en dispositivos móviles -->
 <button class="sidebar-toggle" id="sidebarToggle" onclick="toggleSidebar()" aria-label="Abrir menú" aria-expanded="false">&#9776;</button>
 <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
 
 <nav id="sidebar" class="sidebar">
   <div class="sidebar-logo">LucentIA</div>
-  <div class="sidebar-course">Python Async</div>
+  <div class="sidebar-course">Python Concurrente & Asíncrono</div>
   <ul class="sidebar-nav">
-    <li class="sidebar-section">Índice del curso</li>
-    <li><a href="index.html">Python Async</a></li>
-    <li><a href="sandbox-b1.html">Bloque 1: El Despertar del Event Loop</a></li>
-    <li><a href="sandbox-b2.html">Bloque 2: Controlando Tareas</a></li>
-    <li><a href="sandbox-b3.html">Bloque 3: Sincronización</a></li>
-    <li><a href="sandbox-b4.html">Bloque 4: Productor-Consumidor</a></li>
-    <li class="active"><a href="sandbox-b5.html">Bloque 5: Mini Proyectos</a></li>
+    <li class="sidebar-section">Contenidos del Módulo</li>
+    <li><a href="index.html">Python Asíncrono — Índice</a></li>
+    <li><a href="sandbox-b1.html">01. Event Loop & E/S No Bloqueante</a></li>
+    <li><a href="sandbox-b2.html">02. Tareas, Timeouts y Cancelación</a></li>
+    <li><a href="sandbox-b3.html">03. Exclusión Mutua & Semáforos</a></li>
+    <li><a href="sandbox-b4.html">04. Productor-Consumidor con Colas</a></li>
+    <li class="active"><a href="sandbox-b5.html">05. Pipeline Concurrente Práctico</a></li>
   </ul>
   <div class="theme-toggle">
     <button class="theme-btn" id="themeBtn" onclick="toggleTheme()">
@@ -38,104 +37,116 @@
 </nav>
 
 <div class="main-content">
-<header class="page-hero">
-        <span class="page-hero-icon">🧪</span>
-        <h1>Bloque 5: <span class="gradient-text">Mini-Proyectos</span></h1>
-        <p>Es hora de unir todas las piezas. Descargadores masivos de archivos falsos respetando los límites de los servidores, gestionando el flujo del programa como un arquitecto real de I/O concurrente.</p>
-    </header>
+  <header class="page-hero">
+    <div style="font-size:0.75rem; font-weight:700; letter-spacing:1.5px; text-transform:uppercase; color:var(--primary-light); margin-bottom:0.75rem;">Bloque 05 · Caso Práctico de Ingeniería</div>
+    <h1>Extractor Concurrente con <span class="gradient-text">Rate Limiting y Métricas</span></h1>
+    <p>Consolidación de patrones: arquitectura de workers con colas, agregación métrica protegida contra condiciones de carrera y tolerancia a fallos transitorios.</p>
+  </header>
 
 <main class="content">
-            <!-- EJERCICIO 5.0 -->
-            <div class="section-header">
-                <h2>E5.0: Crawler Simulado con Límite de Tasa</h2>
-            </div>
-            <p><strong>Objetivo:</strong> Tienes 100 enlaces que descargar (imágenes falsas). Si lanzas las 100 a la vez, el servidor Fake HTTP te bloquea. Debes usar un Worker Pool (Queue) y un Lock para imprimir estadísticas ordenadamente.</p>
-            
-            <div class="code-block">
-                <div class="code-header">
-                    <span><i class="icon">🐍</i> E5_0_crawler_sandbox.py</span>
-                    <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
-                </div>
-                <pre><code>import asyncio
+  <div class="section-header">
+    <h2>E5.0: Pipeline de Extracción Concurrente y Agregación Métrica</h2>
+  </div>
+  <p><strong>Objetivo Técnico:</strong> Desarrollar un sistema de extracción asíncrono para ingesta de datos a escala. El componente debe procesar un lote de 30 URLs concurrentes utilizando un pool fijo de workers, tolerar errores aleatorios de red (HTTP 500/404) y registrar métricas globales de latencia y estado mediante exclusión mutua.</p>
+  
+  <div class="code-block">
+    <div class="code-header">
+      <span class="code-lang">python — e5_0_crawler_concurrente.py</span>
+      <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+    </div>
+    <pre><code>import asyncio
 import random
 import time
 
-# Estadísticas compartidas (necesitan Lock para evitar race conditions al imprimir y sumar)
-stats_descargados = 0
-stats_fallidos = 0
-stats_lock = asyncio.Lock()
+# Estructura de métricas compartida
+metricas = {
+    "exitosos": 0,
+    "fallidos": 0,
+    "latencia_total": 0.0
+}
+mutex_metricas = asyncio.Lock()
 
-async def worker_scraper(id_worker, queue):
-    global stats_descargados, stats_fallidos
+async def worker_extractor(id_worker: str, cola: asyncio.Queue):
+    global metricas
     while True:
-        url = await queue.get()
-        print(f"[{id_worker}] Descargando: {url}")
+        url = await cola.get()
+        t_inicio = time.time()
         
-        # Simulamos latencia de red variable
-        tiempo_red = random.uniform(0.1, 1.0)
-        await asyncio.sleep(tiempo_red)
+        # Simulación de latencia de red variable
+        latencia = random.uniform(0.1, 0.8)
+        await asyncio.sleep(latencia)
         
-        # Simulamos que un 10% de las URLs dan error (404)
-        exito = random.random() > 0.1
+        # Simulación de fallos transitorios de red (tasa de error 10%)
+        es_exitoso = random.random() > 0.10
         
-        async with stats_lock:
-            if exito:
-                stats_descargados += 1
-                estado = "OK"
+        # Actualización de estado compartido bajo exclusión mutua estricta
+        async with mutex_metricas:
+            metricas["latencia_total"] += latencia
+            if es_exitoso:
+                metricas["exitosos"] += 1
+                status = "HTTP 200"
             else:
-                stats_fallidos += 1
-                estado = "FAILED"
-            print(f"  → [{id_worker}] Finalizado {url}: {estado} ({tiempo_red:.2f}s)")
+                metricas["fallidos"] += 1
+                status = "HTTP 503"
+            print(f"[{id_worker}] {url} -> {status} ({latencia:.2f}s)")
             
-        queue.task_done()
+        cola.task_done()
 
 async def main():
-    inicio = time.time()
+    t_global = time.time()
     cola = asyncio.Queue()
-    NUM_WORKERS = 5  # Nuestro "Semaphore" estructurado por hilos de tarea
-    TOTAL_URLS = 30
+    num_workers = 5
+    total_recursos = 30
+
+    # 1. Encolado de recursos objetivo
+    for i in range(1, total_recursos + 1):
+        cola.put_nowait(f"https://api.empresa.internal/v1/records/{i:05d}")
+
+    # 2. Despliegue del pool acotado de workers
+    workers = [
+        asyncio.create_task(worker_extractor(f"W-{i:02d}", cola))
+        for i in range(1, num_workers + 1)
+    ]
+
+    print(f"[ORCHESTRATOR] Procesando {total_recursos} peticiones con pool concurrente de {num_workers} workers...")
     
-    # 1. Creamos las tareas (productores)
-    for i in range(1, TOTAL_URLS + 1):
-        cola.put_nowait(f"http://fake.api/item/{i}")
-        
-    # 2. Arrancamos los Workers (consumidores limitados concurrentes)
-    workers = [asyncio.create_task(worker_scraper(f"W-{i}", cola)) for i in range(NUM_WORKERS)]
-    
-    # 3. Esperar a que la cola se vacíe
-    print(f"🚀 Iniciando crawler de {TOTAL_URLS} URLs con {NUM_WORKERS} workers concurrentes...")
+    # 3. Sincronización de vaciado de cola
     await cola.join()
-    
-    # 4. Limpieza (Graceful Shutdown de los workers iterativos)
+
+    # 4. Parada limpia de workers
     for w in workers:
         w.cancel()
-        
-    # 5. Reporte
+
+    # 5. Consolidación analítica final
+    duracion = time.time() - t_global
     print("
-" + "="*40)
-    print("📊 REPORTE FINAL DEL CRAWLER ASÍNCRONO")
-    print("="*40)
-    print(f"Tiempo Total:  {time.time() - inicio:.2f} segundos")
-    print(f"Descargados:   {stats_descargados}")
-    print(f"Fallidos:      {stats_fallidos}")
+" + "=" * 50)
+    print("REPORTE DE INGESTA CONCURRENTE")
+    print("=" * 50)
+    print(f"Tiempo total transcurrido:    {duracion:.2f} segundos")
+    print(f"Peticiones exitosas:          {metricas['exitosos']}")
+    print(f"Peticiones fallidas:          {metricas['fallidos']}")
+    print(f"Throughput efectivo:          {total_recursos / duracion:.1f} req/s")
+    print("=" * 50)
 
 if __name__ == "__main__":
     asyncio.run(main())
 </code></pre>
-            </div>
-            <div class="info-box success">
-                <div class="info-box-text"><strong>Prueba final superada:</strong>  Un código tan corto como este, en un mundo puramente síncrono, requeriría ThreadPools pesados de la librería `concurrent.futures`, manejo complejo de GIL, o peor, se programaría de forma secuencial y tomaría 15 segundos en vez de 3. Aquí logras altísima concurrencia solo con bucles de eventos ligeros. ¡Bienvenido al ecosistema Async de Python!</div>
-            </div>
+  </div>
+  <div class="info-box success">
+    <div class="info-box-text">
+      <strong>Evaluación de Rendimiento:</strong> En un enfoque síncrono secuencial clásico, 30 peticiones con una latencia media de 0.45s habrían requerido aproximadamente <strong>13.5 segundos</strong>. Mediante este pipeline asíncrono con 5 workers, el lote completo se procesa en ~<strong>2.7 segundos</strong>, multiplicando el throughput por un factor de 5x sin el sobrecoste de memoria ni cambios de contexto de 30 hilos del sistema operativo.
+    </div>
+  </div>
 
-            <div style="display:flex; justify-content:center; margin-top:5rem;">
-                <a href="index.html" class="btn btn-primary" style="background-color:#1e293b; color:#fff;">Volver al Inicio del Bootcamp</a>
-            </div>
+  <div style="display:flex; justify-content:center; margin-top:5rem;">
+    <a href="index.html" class="btn btn-primary" style="background-color:#1e293b; color:#fff;">&larr; Volver al Índice del Módulo</a>
+  </div>
+</main>
 
-        </main>
-
-<footer style="text-align:center;padding:2rem;color:var(--text3);font-size:0.8rem;border-top:1px solid var(--border);">
-        &copy; 2026 LucentIA Research · Python Async TDD-First
-    </footer>
+<footer>
+  &copy; 2026 LucentIA Research · Módulo de Concurrencia y Sistemas Asíncronos
+</footer>
 </div>
 
 <script src="../shared/lucentia.js" defer></script>

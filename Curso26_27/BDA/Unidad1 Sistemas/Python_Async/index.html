@@ -1,34 +1,32 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Python Async — Síncrono y Asíncrono TDD-First | LucentIA</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="../shared/styles.css"/>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Python Asíncrono — Índice | LucentIA</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../shared/styles.css"/>
   <link rel="stylesheet" href="styles.css"/>
-
-  <!-- Anti-flash -->
   <script>!function(){var t=localStorage.getItem('lucentia-theme')||'dark';'light'===t&&document.documentElement.setAttribute('data-theme','light')}()</script>
-
 </head>
 <body>
-<!-- Botón hamburguesa — visible siempre -->
-<!-- Botón hamburguesa — visible siempre -->
+<!-- Control de menú en dispositivos móviles -->
 <button class="sidebar-toggle" id="sidebarToggle" onclick="toggleSidebar()" aria-label="Abrir menú" aria-expanded="false">&#9776;</button>
 <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
 
 <nav id="sidebar" class="sidebar">
   <div class="sidebar-logo">LucentIA</div>
-  <div class="sidebar-course">Python Async</div>
+  <div class="sidebar-course">Python Concurrente & Asíncrono</div>
   <ul class="sidebar-nav">
-    <li class="sidebar-section">Índice del curso</li>
-    <li class="active"><a href="index.html">Python Async</a></li>
-    <li><a href="sandbox-b1.html">Bloque 1: El Despertar del Event Loop</a></li>
-    <li><a href="sandbox-b2.html">Bloque 2: Controlando Tareas</a></li>
-    <li><a href="sandbox-b3.html">Bloque 3: Sincronización</a></li>
-    <li><a href="sandbox-b4.html">Bloque 4: Productor-Consumidor</a></li>
-    <li><a href="sandbox-b5.html">Bloque 5: Mini Proyectos</a></li>
+    <li class="sidebar-section">Contenidos del Módulo</li>
+    <li class="active"><a href="index.html">Python Asíncrono — Índice</a></li>
+    <li><a href="sandbox-b1.html">01. Event Loop & E/S No Bloqueante</a></li>
+    <li><a href="sandbox-b2.html">02. Tareas, Timeouts y Cancelación</a></li>
+    <li><a href="sandbox-b3.html">03. Exclusión Mutua & Semáforos</a></li>
+    <li><a href="sandbox-b4.html">04. Productor-Consumidor con Colas</a></li>
+    <li><a href="sandbox-b5.html">05. Pipeline Concurrente Práctico</a></li>
   </ul>
   <div class="theme-toggle">
     <button class="theme-btn" id="themeBtn" onclick="toggleTheme()">
@@ -39,100 +37,86 @@
 </nav>
 
 <div class="main-content">
-<header class="page-hero">
-        <span class="page-hero-icon">🐍</span>
-        <h1>Python <span class="gradient-text">Síncrono & Asíncrono</span></h1>
-        <p>Apuntes expertos con enfoque TDD-First. El modelo de ejecución CPython, concurrencia real, asyncio de cero a producción, y cómo testear todo correctamente.</p>
-    </header>
+  <header class="page-hero">
+    <div style="font-size:0.75rem; font-weight:700; letter-spacing:1.5px; text-transform:uppercase; color:var(--primary-light); margin-bottom:0.75rem;">Módulo Técnico · Concurrencia y Rendimiento</div>
+    <h1>Python <span class="gradient-text">Asíncrono y Concurrente</span></h1>
+    <p>Fundamentos de concurrencia cooperativa en CPython, anatomía del Event Loop, gestión no bloqueante de E/S, primitivas de sincronización y patrones de arquitectura para Big Data.</p>
+  </header>
 
 <main class="content">
-        <div class="info-box info">
-            <div class="info-box-icon">🎯</div>
-            <div class="info-box-text">
-                <strong>Enfoque TDD-First:</strong> Cada bloque de código va precedido de sus tests. Doble propósito: verificar la implementación y enseñar cómo testear código asíncrono, uno de los puntos más complicados del ecosistema Python. Requiere Python 3.11+ y pytest-asyncio 0.23+.
-            </div>
-        </div>
+  <div class="info-box info">
+    <div class="info-box-text">
+      <strong>Modelo de Ejecución en CPython:</strong> A diferencia de los modelos basados en multihilo con cambio de contexto preemptivo del sistema operativo (restringidos en CPU por el GIL), <code>asyncio</code> implementa multitarea cooperativa monohilo. Las corrutinas ceden voluntariamente el control de la CPU durante los periodos de espera de red o disco, alcanzando una alta densidad de conexiones con un consumo mínimo de memoria.
+    </div>
+  </div>
 
-        <h2>📚 Mapa del Curso</h2>
-        <div class="concept-grid">
-            <a href="m1-modelo.html" class="concept-card orange" style="text-decoration:none;cursor:pointer;">
-                <span class="concept-icon">⚙️</span>
-                <h3>M1 — GIL & Modelo de Ejecución</h3>
-                <p>CPython por dentro, el GIL, concurrencia vs paralelismo vs asincronía, los tres modelos y sus reglas de uso.</p>
-            </a>
-            <a href="m2-sincrono.html" class="concept-card cyan" style="text-decoration:none;cursor:pointer;">
-                <span class="concept-icon">🔗</span>
-                <h3>M2 — Python Síncrono con TDD</h3>
-                <p>Threading, ThreadPoolExecutor, multiprocessing, ProcessPoolExecutor. Tests que demuestran race conditions, locks y benchmarks.</p>
-            </a>
-            <a href="m3-asyncio.html" class="concept-card green" style="text-decoration:none;cursor:pointer;">
-                <span class="concept-icon">⚡</span>
-                <h3>M3 — asyncio de Cero a Expert</h3>
-                <p>Coroutines, event loop, gather, tasks, semaphore, queue, async context managers, async generators. Tests antes de cada concepto.</p>
-            </a>
-            <a href="m4-testing.html" class="concept-card amber" style="text-decoration:none;cursor:pointer;">
-                <span class="concept-icon">🧪</span>
-                <h3>M4 — Testing Async con pytest</h3>
-                <p>pytest-asyncio completo: configuración, fixtures async, AsyncMock, timeouts, concurrencia. El módulo más crítico del curso.</p>
-            </a>
-            <a href="m5-casos.html" class="concept-card purple" style="text-decoration:none;cursor:pointer;">
-                <span class="concept-icon">🏗️</span>
-                <h3>M5 — Casos Reales TDD</h3>
-                <p>Cliente HTTP concurrente, pipeline de datos, caché async con TTL, rate limiter para LLM APIs (OpenAI/Anthropic).</p>
-            </a>
-            <a href="m6-ecosistema.html" class="concept-card rose" style="text-decoration:none;cursor:pointer;">
-                <span class="concept-icon">🌐</span>
-                <h3>M6 — Ecosistema Async</h3>
-                <p>aiohttp, httpx, aiofiles, asyncpg, FastAPI sync vs async, asyncio.to_thread(), Celery vs asyncio.</p>
-            </a>
-            <a href="m7-debugging.html" class="concept-card orange" style="text-decoration:none;cursor:pointer;">
-                <span class="concept-icon">🔍</span>
-                <h3>M7 — Debugging & Profiling</h3>
-                <p>Modo debug asyncio, coroutines lentas, aiomonitor, yappi, errores de producción, memory leaks de tasks.</p>
-            </a>
-            <a href="sandbox-b1.html" class="concept-card" style="text-decoration:none;cursor:pointer; border-color: #f59e0b; background-color: rgba(245,158,11,0.05);">
-                <span class="concept-icon">🧪</span>
-                <h3 style="color: #f59e0b;">Laboratorio Sandbox</h3>
-                <p>13 ejercicios prácticos progresivos para mancharse las manos con concurrencia sin usar TDD de entrada.</p>
-            </a>
-        </div>
+  <h2>Módulos del Curso</h2>
+  <div class="concept-grid">
+    <a href="sandbox-b1.html" class="concept-card cyan" style="text-decoration:none;cursor:pointer;">
+      <span class="concept-icon" style="font-size:1.4rem;font-weight:700;color:var(--cyan);font-family:'JetBrains Mono',monospace;">01</span>
+      <h3>Event Loop & E/S No Bloqueante</h3>
+      <p>Suspensión cooperativa vs bloqueo de hilo. Demostración práctica del coste de <code>time.sleep</code> frente a <code>asyncio.sleep</code> y agregación concurrente con <code>gather</code>.</p>
+    </a>
 
-        <h2>📋 Stack del Curso</h2>
-        <div class="table-wrapper">
-            <table>
-                <thead><tr><th>Módulo</th><th>Paquetes clave</th><th>Python</th><th>Foco</th></tr></thead>
-                <tbody>
-                    <tr><td>M1</td><td>—</td><td>CPython internals</td><td>Modelo mental, GIL, event loop</td></tr>
-                    <tr><td>M2</td><td><code>threading</code>, <code>concurrent.futures</code>, <code>multiprocessing</code></td><td>stdlib</td><td>TDD + benchmarks</td></tr>
-                    <tr><td>M3</td><td><code>asyncio</code></td><td>stdlib</td><td>Patrones async completos</td></tr>
-                    <tr><td>M4</td><td><code>pytest-asyncio 0.23+</code>, <code>AsyncMock</code></td><td>pytest</td><td>Testing async system</td></tr>
-                    <tr><td>M5</td><td><code>httpx</code>, <code>respx</code>, <code>aiofiles</code></td><td>3.11+</td><td>Casos reales end-to-end</td></tr>
-                    <tr><td>M6</td><td><code>aiohttp</code>, <code>asyncpg</code>, <code>fastapi</code></td><td>3.11+</td><td>Integraciones producción</td></tr>
-                    <tr><td>M7</td><td><code>yappi</code>, <code>aiomonitor</code></td><td>3.11+</td><td>Performance & diagnosis</td></tr>
-                </tbody>
-            </table>
-        </div>
+    <a href="sandbox-b2.html" class="concept-card orange" style="text-decoration:none;cursor:pointer;">
+      <span class="concept-icon" style="font-size:1.4rem;font-weight:700;color:var(--orange);font-family:'JetBrains Mono',monospace;">02</span>
+      <h3>Ciclo de Vida de Tareas y Timeouts</h3>
+      <p>Planificación de corrutinas en background con <code>create_task</code>, control de latencia estricto con <code>wait_for</code> y manejo determinista de <code>CancelledError</code>.</p>
+    </a>
 
-        <div class="code-block">
-            <div class="code-header"><span class="code-lang">bash — setup entorno del curso</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
-            <pre><code><span class="cmt"># Crear entorno virtual</span>
-python -m venv .venv && source .venv/bin/activate
+    <a href="sandbox-b3.html" class="concept-card green" style="text-decoration:none;cursor:pointer;">
+      <span class="concept-icon" style="font-size:1.4rem;font-weight:700;color:var(--secondary);font-family:'JetBrains Mono',monospace;">03</span>
+      <h3>Sincronización y Exclusión Mutua</h3>
+      <p>Reproducción de condiciones de carrera (Race Conditions) sobre estado mutable compartido. Protección con <code>asyncio.Lock</code> y contrapresión con <code>Semaphore</code>.</p>
+    </a>
 
-<span class="cmt"># Instalar todas las dependencias del curso</span>
-pip install pytest pytest-asyncio httpx respx aiofiles aiohttp asyncpg \
-            fastapi uvicorn motor yappi aiomonitor anyio
+    <a href="sandbox-b4.html" class="concept-card purple" style="text-decoration:none;cursor:pointer;">
+      <span class="concept-icon" style="font-size:1.4rem;font-weight:700;color:var(--purple);font-family:'JetBrains Mono',monospace;">04</span>
+      <h3>Patrón Productor-Consumidor</h3>
+      <p>Desacoplamiento asíncrono con <code>asyncio.Queue</code>. Coordinación de workers concurrentes, control de contrapresión y sincronización con <code>join()</code> y <code>task_done()</code>.</p>
+    </a>
 
-<span class="cmt"># pyproject.toml — configuración base que usaremos en todo el curso</span>
-<span class="cmt"># [tool.pytest.ini_options]</span>
-<span class="cmt"># asyncio_mode = "auto"</span></code></pre>
-        </div>
+    <a href="sandbox-b5.html" class="concept-card amber" style="text-decoration:none;cursor:pointer;">
+      <span class="concept-icon" style="font-size:1.4rem;font-weight:700;color:var(--accent);font-family:'JetBrains Mono',monospace;">05</span>
+      <h3>Pipeline Concurrente con Rate Limiting</h3>
+      <p>Caso de ingeniería completo: extractor asíncrono resiliente a fallos transitorios de red, concurrencia acotada y consolidación de métricas de rendimiento sin contención.</p>
+    </a>
+  </div>
 
-        <a href="sandbox-b1.html" class="btn btn-primary" style="margin-top:1rem;">Empezar con Bloque 1: El Despertar del Event Loop →</a>
-    </main>
+  <h2>Primitivas Clave del Ecosistema Asyncio</h2>
+  <div class="table-wrapper">
+    <table>
+      <thead>
+        <tr><th>Primitiva</th><th>Función Principal</th><th>Complejidad / Tipo</th><th>Caso de Uso Típico</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code>asyncio.gather(*tasks)</code></td><td>Agrupación concurrente</td><td>Orquestación</td><td>Lanzamiento simultáneo de múltiples consultas HTTP o SQL independientes.</td></tr>
+        <tr><td><code>asyncio.create_task(coro)</code></td><td>Planificación en background</td><td>Task Scheduling</td><td>Tareas asíncronas no bloqueantes sin esperar su resolución inmediata.</td></tr>
+        <tr><td><code>asyncio.wait_for(coro, timeout)</code></td><td>Control de latencia</td><td>SLA Enforcement</td><td>Imposición de tiempos límite para evitar peticiones colgadas en llamadas a microservicios.</td></tr>
+        <tr><td><code>asyncio.Lock()</code></td><td>Exclusión mutua (Mutex)</td><td>Sincronización</td><td>Protección de variables o cachés locales mutadas concurrentemente.</td></tr>
+        <tr><td><code>asyncio.Semaphore(N)</code></td><td>Control de contrapresión</td><td>Limitación de Tasa</td><td>Límites de concurrencia hacia APIs externas o bases de datos sin saturar conexiones.</td></tr>
+        <tr><td><code>asyncio.Queue(maxsize)</code></td><td>Cola FIFO no bloqueante</td><td>Arquitectura</td><td>Pipelines de ingesta streaming, indexación de documentos y workers desacoplados.</td></tr>
+      </tbody>
+    </table>
+  </div>
 
-<footer style="text-align:center;padding:2rem;color:var(--text3);font-size:0.8rem;border-top:1px solid var(--border);">
-        &copy; 2026 LucentIA Research · Python Async TDD-First
-    </footer>
+  <div class="code-block">
+    <div class="code-header"><span class="code-lang">bash — preparación del entorno de ejecución</span><button class="copy-btn" onclick="copyCode(this)">Copiar</button></div>
+    <pre><code># Verificación de versión mínima recomendada (Python 3.11+)
+python3 --version
+
+# Ejecución de los laboratorios interactivos
+python3 e1_0_bloqueo_sincrono.py</code></pre>
+  </div>
+
+  <div style="margin-top:2.5rem;">
+    <a href="sandbox-b1.html" class="btn btn-primary">Comenzar Bloque 01: Event Loop & E/S No Bloqueante &rarr;</a>
+  </div>
+</main>
+
+<footer>
+  &copy; 2026 LucentIA Research · Módulo de Concurrencia y Sistemas Asíncronos
+</footer>
 </div>
 
 <script src="../shared/lucentia.js" defer></script>

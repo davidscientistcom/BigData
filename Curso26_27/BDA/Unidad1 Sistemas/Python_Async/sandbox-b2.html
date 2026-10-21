@@ -1,33 +1,32 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bloque 2: Controlando Tareas — Python Async</title>
-    <link rel="stylesheet" href="../shared/styles.css"/>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>02. Tareas, Timeouts y Cancelación | LucentIA</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../shared/styles.css"/>
   <link rel="stylesheet" href="styles.css"/>
-  <!-- Anti-flash: aplica el tema antes de pintar la página -->
   <script>!function(){var t=localStorage.getItem('lucentia-theme')||'dark';'light'===t&&document.documentElement.setAttribute('data-theme','light')}()</script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
-
 </head>
 <body>
-<!-- Botón hamburguesa — visible en tablet/móvil -->
-<!-- Botón hamburguesa — visible siempre -->
+<!-- Control de menú en dispositivos móviles -->
 <button class="sidebar-toggle" id="sidebarToggle" onclick="toggleSidebar()" aria-label="Abrir menú" aria-expanded="false">&#9776;</button>
 <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
 
 <nav id="sidebar" class="sidebar">
   <div class="sidebar-logo">LucentIA</div>
-  <div class="sidebar-course">Python Async</div>
+  <div class="sidebar-course">Python Concurrente & Asíncrono</div>
   <ul class="sidebar-nav">
-    <li class="sidebar-section">Índice del curso</li>
-    <li><a href="index.html">Python Async</a></li>
-    <li><a href="sandbox-b1.html">Bloque 1: El Despertar del Event Loop</a></li>
-    <li class="active"><a href="sandbox-b2.html">Bloque 2: Controlando Tareas</a></li>
-    <li><a href="sandbox-b3.html">Bloque 3: Sincronización</a></li>
-    <li><a href="sandbox-b4.html">Bloque 4: Productor-Consumidor</a></li>
-    <li><a href="sandbox-b5.html">Bloque 5: Mini Proyectos</a></li>
+    <li class="sidebar-section">Contenidos del Módulo</li>
+    <li><a href="index.html">Python Asíncrono — Índice</a></li>
+    <li><a href="sandbox-b1.html">01. Event Loop & E/S No Bloqueante</a></li>
+    <li class="active"><a href="sandbox-b2.html">02. Tareas, Timeouts y Cancelación</a></li>
+    <li><a href="sandbox-b3.html">03. Exclusión Mutua & Semáforos</a></li>
+    <li><a href="sandbox-b4.html">04. Productor-Consumidor con Colas</a></li>
+    <li><a href="sandbox-b5.html">05. Pipeline Concurrente Práctico</a></li>
   </ul>
   <div class="theme-toggle">
     <button class="theme-btn" id="themeBtn" onclick="toggleTheme()">
@@ -38,143 +37,146 @@
 </nav>
 
 <div class="main-content">
-<header class="page-hero">
-        <span class="page-hero-icon">🧪</span>
-        <h1>Bloque 2: <span class="gradient-text">Controlando Tareas</span></h1>
-        <p>Hasta ahora hemos esperado que todas las tareas terminen (`gather`). ¿Pero qué pasa si queremos lanzarlas en segundo plano (Fire & Forget), o cancelarlas si tardan demasiado?</p>
-    </header>
+  <header class="page-hero">
+    <div style="font-size:0.75rem; font-weight:700; letter-spacing:1.5px; text-transform:uppercase; color:var(--primary-light); margin-bottom:0.75rem;">Bloque 02 · Planificación y Resiliencia</div>
+    <h1>Ciclo de Vida de Tareas, <span class="gradient-text">Timeouts y Cancelación</span></h1>
+    <p>Planificación de corrutinas concurrentes mediante Tasks, cumplimiento estricto de SLA con tiempos límite y liberación determinista de recursos.</p>
+  </header>
 
 <main class="content">
-            <!-- EJERCICIO 2.0 -->
-            <div class="section-header">
-                <h2>E2.0: Disparar y olvidar (create_task)</h2>
-            </div>
-            <p><strong>Objetivo:</strong> Ver cómo planificar una tarea sin tener que usar `await` inmediatamente sobre ella. Muy útil para iniciar procesamiento en "background".</p>
-            
-            <div class="code-block">
-                <div class="code-header">
-                    <span><i class="icon">🐍</i> E2_0_create_task.py</span>
-                    <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
-                </div>
-                <pre><code>import asyncio
+  <div class="section-header">
+    <h2>E2.0: Planificación en Background (asyncio.create_task)</h2>
+  </div>
+  <p><strong>Objetivo Técnico:</strong> Encolar la ejecución inmediata de una corrutina en el bucle de eventos como un objeto <code>Task</code> sin suspender la ejecución de la función invocadora, facilitando el procesamiento en segundo plano.</p>
+  
+  <div class="code-block">
+    <div class="code-header">
+      <span class="code-lang">python — e2_0_create_task.py</span>
+      <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+    </div>
+    <pre><code>import asyncio
 
-async def tarea_fondo():
-    print("[Background] Tarea iniciada.")
+async def worker_background():
+    print("[WORKER] Tarea de background iniciada.")
     await asyncio.sleep(2)
-    print("[Background] Tarea terminada. (No verás esto si el main termina primero)")
+    print("[WORKER] Tarea de background finalizada con éxito.")
 
 async def main():
-    print("[Main] Planificando tarea en segundo plano...")
-    # Creamos la tarea, se encola en el Event Loop
-    tarea = asyncio.create_task(tarea_fondo())
+    print("[MAIN] Planificando tarea en el Event Loop...")
+    # create_task agenda la corrutina; comienza en el siguiente yield del loop
+    tarea = asyncio.create_task(worker_background())
     
-    print("[Main] Haciendo otras cosas por 1 segundo...")
-    await asyncio.sleep(1)
+    print("[MAIN] Ejecutando trabajo complementario (1.0s)...")
+    await asyncio.sleep(1.0)
     
-    print("[Main] Main a punto de terminar.")
-    # Si terminamos main() el Event Loop se cierra. 
-    # Comenta la línea de abajo para ver la diferencia.
-    # await tarea  
+    print("[MAIN] Función principal próxima a terminar.")
+    # Si se omite await tarea, el loop se destruye al salir de main()
+    await tarea
 
-asyncio.run(main())
+if __name__ == "__main__":
+    asyncio.run(main())
 </code></pre>
-            </div>
-            <div class="info-box info">
-                <div class="info-box-text"><strong>Juega:</strong> Si ejecutas el código como está, verás "Main a punto de terminar" y el script morirá antes de imprimir que el Background ha terminado. `create_task()` planifica, pero si el loop principal muere, la tarea muere.</div>
-            </div>
+  </div>
+  <div class="info-box info">
+    <div class="info-box-text">
+      <strong>Regla Operativa:</strong> Al invocar <code>asyncio.create_task()</code>, la corrutina queda agendada inmediatamente en la cola de tareas listas del bucle. Sin embargo, si el punto de entrada principal (<code>main()</code>) retorna sin esperar la tarea ni persistir su referencia, el recolector de basura o el cierre del bucle abortarán su ejecución.
+    </div>
+  </div>
 
-            <!-- EJERCICIO 2.1 -->
-            <div style="margin-top: 4rem;">
-                <div class="section-header">
-                    <h2>E2.1: El Cronómetro Implacable (Timeouts)</h2>
-                </div>
-                <p><strong>Objetivo:</strong> Las APIs fallan y las bases de datos se cuelgan. Aprenderemos a imponer límites de tiempo con `asyncio.wait_for()`.</p>
-                
-                <div class="code-block">
-                    <div class="code-header">
-                        <span><i class="icon">🐍</i> E2_1_timeouts.py</span>
-                        <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
-                    </div>
-                    <pre><code>import asyncio
+  <div style="margin-top: 4rem;">
+    <div class="section-header">
+      <h2>E2.1: Control de Latencia y Límites Temporales (asyncio.wait_for)</h2>
+    </div>
+    <p><strong>Objetivo Técnico:</strong> Implementar mecanismos de protección de SLA. En arquitecturas distribuidas, una llamada de red que no responda debe cancelarse antes de agotar los recursos del cliente mediante <code>asyncio.wait_for()</code>.</p>
+    
+    <div class="code-block">
+      <div class="code-header">
+        <span class="code-lang">python — e2_1_timeouts.py</span>
+        <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+      </div>
+      <pre><code>import asyncio
 
-async def peticion_api_lenta():
-    print("[Petición] Consultando API externa...")
-    await asyncio.sleep(5)  # El servidor no responde rápido
-    return "Datos de la API"
+async def consultar_servicio_remoto():
+    print("[NET] Emitiendo petición a servicio downstream...")
+    await asyncio.sleep(5.0)  # Simulación de cuello de botella en red
+    return {"status": 200, "data": "OK"}
 
 async def main():
     try:
-        print("Lanzando petición con límite de 2 segundos...")
-        # Imponemos un timeout. Si pasa 2 segundos, lanza TimeoutError
-        resultado = await asyncio.wait_for(peticion_api_lenta(), timeout=2.0)
-        print(f"Resultado: {resultado}")
+        print("[CLIENT] Invocando con timeout máximo de 2.0 segundos...")
+        resultado = await asyncio.wait_for(consultar_servicio_remoto(), timeout=2.0)
+        print(f"[CLIENT] Respuesta: {resultado}")
     except asyncio.TimeoutError:
-        print("🚨 CRÍTICO: La petición a la API excedió el tiempo máximo. Cancelando...")
+        print("[ERROR] Timeout excedido: la petición superó el límite de 2.0s y ha sido cancelada.")
 
-asyncio.run(main())
+if __name__ == "__main__":
+    asyncio.run(main())
 </code></pre>
-                </div>
-                <div class="info-box success">
-                    <div class="info-box-text"><strong>Observa:</strong> La corrutina `peticion_api_lenta` se interrumpe de forma limpia al llegar a los 2 segundos. Python se encarga de inyectar una excepción en el punto de `await asyncio.sleep()` para matarla.</div>
-                </div>
-            </div>
+    </div>
+    <div class="info-box success">
+      <div class="info-box-text">
+        <strong>Mecanismo Interno:</strong> Al alcanzar el umbral de <code>timeout</code>, <code>asyncio.wait_for()</code> no solo eleva una excepción <code>TimeoutError</code> en el invocador, sino que envía una señal de cancelación inmediata (<code>task.cancel()</code>) a la corrutina interna, evitando el consumo residual de memoria y CPU.
+      </div>
+    </div>
+  </div>
 
-            <!-- EJERCICIO 2.2 -->
-            <div style="margin-top: 4rem;">
-                <div class="section-header">
-                    <h2>E2.2: Cancelación Fina y Limpieza (Graceful Shutdown)</h2>
-                </div>
-                <p><strong>Objetivo:</strong> Qué hacer cuando una tarea es cancelada por Timeout (o manualmente). A veces necesitas asegurar que cierras la conexión a la red antes de morir.</p>
-                
-                <div class="code-block">
-                    <div class="code-header">
-                        <span><i class="icon">🐍</i> E2_2_cancelacion.py</span>
-                        <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
-                    </div>
-                    <pre><code>import asyncio
+  <div style="margin-top: 4rem;">
+    <div class="section-header">
+      <h2>E2.2: Manejo de Cancelación y Limpieza Limpia (Graceful Shutdown)</h2>
+    </div>
+    <p><strong>Objetivo Técnico:</strong> Capturar la excepción <code>asyncio.CancelledError</code> en procesos de larga duración para garantizar la liberación determinista de descriptores, conexiones y recursos antes de confirmar la parada.</p>
+    
+    <div class="code-block">
+      <div class="code-header">
+        <span class="code-lang">python — e2_2_graceful_shutdown.py</span>
+        <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+      </div>
+      <pre><code>import asyncio
 
-async def trabajo_delicado():
-    print("▶️ [Worker] Abriendo conexión a base de datos...")
+async def transaccion_estado():
+    print("[TRANSACTION] Apertura de socket y reserva de recursos...")
     try:
-        print("▶️ [Worker] Trabajando (podría tardar 10 segundos)...")
-        await asyncio.sleep(10)
-        print("▶️ [Worker] Trabajo completado.")
+        print("[TRANSACTION] Procesamiento transaccional en curso...")
+        await asyncio.sleep(10.0)
+        print("[TRANSACTION] Procesamiento completado sin incidencias.")
     except asyncio.CancelledError:
-        print("⚠️ [Worker] ME HAN CANCELADO! Limpiando sesión...")
-        await asyncio.sleep(0.5) # Tiempo para limpiar
-        print("✅ [Worker] Sesión cerrada de forma segura.")
-        raise  # Es buena práctica relanzar la cancelación si se intercepta
+        print("[WARN] Señal de cancelación detectada. Ejecutando rollback y cierre de sesión...")
+        await asyncio.sleep(0.3)  # Liberación de recursos
+        print("[CLEANUP] Rollback completado y socket cerrado correctamente.")
+        raise  # CRÍTICO: Relanzar siempre para confirmar la cancelación al framework
 
 async def main():
-    tarea = asyncio.create_task(trabajo_delicado())
+    tarea = asyncio.create_task(transaccion_estado())
     
-    await asyncio.sleep(2)
-    print("🛑 [Main] El usuario ha pulsado el botón de cancelar. Cancelando trabajador.")
+    await asyncio.sleep(1.5)
+    print("[SUPERVISOR] Señal de parada recibida. Cancelando tarea activa...")
     tarea.cancel()
     
     try:
         await tarea
     except asyncio.CancelledError:
-        print("🛑 [Main] Tarea confirmada como cancelada.")
+        print("[SUPERVISOR] Tarea confirmada en estado CANCELLED.")
 
-asyncio.run(main())
+if __name__ == "__main__":
+    asyncio.run(main())
 </code></pre>
-                </div>
-                <div class="info-box warning">
-                    <div class="info-box-text">Capturar `asyncio.CancelledError` es vital en arquitecturas robustas. Te da la oportunidad final de cerrar archivos, conexiones TCP o deshacer transacciones antes de que la función sea destruida del stack de ejecución.</div>
-                </div>
-            </div>
+    </div>
+    <div class="info-box info">
+      <div class="info-box-text">
+        <strong>Buenas Prácticas de Ingeniería:</strong> Si interceptas <code>CancelledError</code> para tareas de limpieza, es imprescindible ejecutar <code>raise</code> al final del bloque. Silenciar la excepción impide que el orquestador registre la tarea como debidamente cancelada y puede generar bloqueos en cascada.
+      </div>
+    </div>
+  </div>
 
-            <div style="display:flex; justify-content:space-between; margin-top:4rem;">
-                <a href="sandbox-b1.html" class="btn btn-outline">← Anterior: B1</a>
-                <a href="sandbox-b3.html" class="btn btn-primary" style="background-color:#f59e0b; color:#fff;">Siguiente: B3 Sincronización →</a>
-            </div>
+  <div style="display:flex; justify-content:space-between; margin-top:4rem;">
+    <a href="sandbox-b1.html" class="btn btn-outline">&larr; Anterior: Bloque 01</a>
+    <a href="sandbox-b3.html" class="btn btn-primary">Siguiente: Bloque 03 — Sincronización &rarr;</a>
+  </div>
+</main>
 
-        </main>
-
-<footer style="text-align:center;padding:2rem;color:var(--text3);font-size:0.8rem;border-top:1px solid var(--border);">
-        &copy; 2026 LucentIA Research · Python Async TDD-First
-    </footer>
+<footer>
+  &copy; 2026 LucentIA Research · Módulo de Concurrencia y Sistemas Asíncronos
+</footer>
 </div>
 
 <script src="../shared/lucentia.js" defer></script>
