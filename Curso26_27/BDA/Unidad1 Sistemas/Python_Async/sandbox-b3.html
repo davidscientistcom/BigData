@@ -13,16 +13,38 @@
 </head>
 <body>
 <!-- Botón hamburguesa — visible en tablet/móvil -->
-<button class="sidebar-toggle" id="sidebarToggle" onclick="toggleSidebar()" aria-label="Abrir menú" aria-expanded="true">&#9776;</button>
+<!-- Botón hamburguesa — visible siempre -->
+<button class="sidebar-toggle" id="sidebarToggle" onclick="toggleSidebar()" aria-label="Abrir menú" aria-expanded="false">&#9776;</button>
 <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
 
-    <header class="page-hero">
+<nav id="sidebar" class="sidebar">
+  <div class="sidebar-logo">LucentIA</div>
+  <div class="sidebar-course">Python Async</div>
+  <ul class="sidebar-nav">
+    <li class="sidebar-section">Índice del curso</li>
+    <li><a href="index.html">Python Async</a></li>
+    <li><a href="sandbox-b1.html">Bloque 1: El Despertar del Event Loop</a></li>
+    <li><a href="sandbox-b2.html">Bloque 2: Controlando Tareas</a></li>
+    <li class="active"><a href="sandbox-b3.html">Bloque 3: Sincronización</a></li>
+    <li><a href="sandbox-b4.html">Bloque 4: Productor-Consumidor</a></li>
+    <li><a href="sandbox-b5.html">Bloque 5: Mini Proyectos</a></li>
+  </ul>
+  <div class="theme-toggle">
+    <button class="theme-btn" id="themeBtn" onclick="toggleTheme()">
+      <span id="themeIcon">&#9728;</span>
+      <span id="themeLabel">Modo claro</span>
+    </button>
+  </div>
+</nav>
+
+<div class="main-content">
+<header class="page-hero">
         <span class="page-hero-icon">🧪</span>
         <h1>Bloque 3: <span class="gradient-text">Primitivas de Sincronización</span></h1>
         <p>La concurrencia trae un problema: varias tareas queriendo el mismo recurso a la vez causan "Condiciones de Carrera". Aprende a poner Semáforos y Candados.</p>
     </header>
 
-    <main class="content">
+<main class="content">
             <!-- EJERCICIO 3.0 -->
             <div class="section-header">
                 <h2>E3.0: La Condición de Carrera</h2>
@@ -141,33 +163,11 @@ asyncio.run(main())
 
         </main>
 
-    <footer style="text-align:center;padding:2rem;color:var(--text3);font-size:0.8rem;border-top:1px solid var(--border);">
+<footer style="text-align:center;padding:2rem;color:var(--text3);font-size:0.8rem;border-top:1px solid var(--border);">
         &copy; 2026 LucentIA Research · Python Async TDD-First
     </footer>
+</div>
 
-    
 <script src="../shared/lucentia.js" defer></script>
-
-<!-- ── Sidebar inyectada por inject_gen1_sidebar.py ────────────────────────── -->
-<nav id="sidebar" class="sidebar">
-  <div class="sidebar-logo">LucentIA</div>
-  <div class="sidebar-course">Python Async</div>
-  <ul class="sidebar-nav">
-    <li class="sidebar-section">Índice del curso</li>
-    <li><a href="index.html">Python Async</a></li>
-    <li><a href="sandbox-b1.html">Bloque 1: El Despertar del Event Loop</a></li>
-    <li><a href="sandbox-b2.html">Bloque 2: Controlando Tareas</a></li>
-    <li><a href="sandbox-b3.html">Bloque 3: Sincronización</a></li>
-    <li><a href="sandbox-b4.html">Bloque 4: Productor-Consumidor</a></li>
-    <li><a href="sandbox-b5.html">Bloque 5: Mini Proyectos</a></li>
-  </ul>
-  <div class="theme-toggle">
-    <button class="theme-btn" id="themeBtn" onclick="toggleTheme()">
-      <span id="themeIcon">&#9728;</span>
-      <span id="themeLabel">Modo claro</span>
-    </button>
-  </div>
-</nav>
-
 </body>
 </html>

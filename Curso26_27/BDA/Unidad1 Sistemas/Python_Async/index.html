@@ -14,16 +14,38 @@
 </head>
 <body>
 <!-- Botón hamburguesa — visible siempre -->
-<button id="sidebarToggle" onclick="toggleSidebar()" aria-label="Abrir menú" aria-expanded="false">&#9776;</button>
-<div id="sidebarOverlay" onclick="toggleSidebar()"></div>
+<!-- Botón hamburguesa — visible siempre -->
+<button class="sidebar-toggle" id="sidebarToggle" onclick="toggleSidebar()" aria-label="Abrir menú" aria-expanded="false">&#9776;</button>
+<div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
 
-    <header class="page-hero">
+<nav id="sidebar" class="sidebar">
+  <div class="sidebar-logo">LucentIA</div>
+  <div class="sidebar-course">Python Async</div>
+  <ul class="sidebar-nav">
+    <li class="sidebar-section">Índice del curso</li>
+    <li class="active"><a href="index.html">Python Async</a></li>
+    <li><a href="sandbox-b1.html">Bloque 1: El Despertar del Event Loop</a></li>
+    <li><a href="sandbox-b2.html">Bloque 2: Controlando Tareas</a></li>
+    <li><a href="sandbox-b3.html">Bloque 3: Sincronización</a></li>
+    <li><a href="sandbox-b4.html">Bloque 4: Productor-Consumidor</a></li>
+    <li><a href="sandbox-b5.html">Bloque 5: Mini Proyectos</a></li>
+  </ul>
+  <div class="theme-toggle">
+    <button class="theme-btn" id="themeBtn" onclick="toggleTheme()">
+      <span id="themeIcon">&#9728;</span>
+      <span id="themeLabel">Modo claro</span>
+    </button>
+  </div>
+</nav>
+
+<div class="main-content">
+<header class="page-hero">
         <span class="page-hero-icon">🐍</span>
         <h1>Python <span class="gradient-text">Síncrono & Asíncrono</span></h1>
         <p>Apuntes expertos con enfoque TDD-First. El modelo de ejecución CPython, concurrencia real, asyncio de cero a producción, y cómo testear todo correctamente.</p>
     </header>
 
-    <main class="content">
+<main class="content">
         <div class="info-box info">
             <div class="info-box-icon">🎯</div>
             <div class="info-box-text">
@@ -108,39 +130,10 @@ pip install pytest pytest-asyncio httpx respx aiofiles aiohttp asyncpg \
         <a href="sandbox-b1.html" class="btn btn-primary" style="margin-top:1rem;">Empezar con Bloque 1: El Despertar del Event Loop →</a>
     </main>
 
-    <footer style="text-align:center;padding:2rem;color:var(--text3);font-size:0.8rem;border-top:1px solid var(--border);">
+<footer style="text-align:center;padding:2rem;color:var(--text3);font-size:0.8rem;border-top:1px solid var(--border);">
         &copy; 2026 LucentIA Research · Python Async TDD-First
     </footer>
-    <script>
-        const nb = document.getElementById('navbar');
-        window.addEventListener('scroll', () => nb.classList.toggle('scrolled', window.scrollY > 50));
-        document.getElementById('navToggle')?.addEventListener('click', () => document.querySelector('.nav-links').classList.toggle('open'));
-        function copyCode(btn) {
-            const code = btn.closest('.code-block').querySelector('pre').innerText;
-            navigator.clipboard.writeText(code).then(() => { btn.textContent = '✓'; setTimeout(() => btn.textContent = 'Copiar', 2000); });
-        }
-    </script>
-
-<!-- ── Sidebar inyectada por inject_gen1_sidebar.py ────────────────────────── -->
-<nav id="sidebar" class="sidebar">
-  <div class="sidebar-logo">LucentIA</div>
-  <div class="sidebar-course">Python Async</div>
-  <ul class="sidebar-nav">
-    <li class="sidebar-section">Índice del curso</li>
-    <li><a href="index.html">Python Async</a></li>
-    <li><a href="sandbox-b1.html">Bloque 1: El Despertar del Event Loop</a></li>
-    <li><a href="sandbox-b2.html">Bloque 2: Controlando Tareas</a></li>
-    <li><a href="sandbox-b3.html">Bloque 3: Sincronización</a></li>
-    <li><a href="sandbox-b4.html">Bloque 4: Productor-Consumidor</a></li>
-    <li><a href="sandbox-b5.html">Bloque 5: Mini Proyectos</a></li>
-  </ul>
-  <div class="theme-toggle">
-    <button class="theme-btn" id="themeBtn" onclick="toggleTheme()">
-      <span id="themeIcon">&#9728;</span>
-      <span id="themeLabel">Modo claro</span>
-    </button>
-  </div>
-</nav>
+</div>
 
 <script src="../shared/lucentia.js" defer></script>
 </body>
