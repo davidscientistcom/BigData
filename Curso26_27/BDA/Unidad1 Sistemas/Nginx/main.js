@@ -4,7 +4,7 @@
  */
 
 document.addEventListener('DOMContentLoaded', () => {
-  // Initialize Copy Buttons on all code blocks
+  // 1. Initialize Copy Buttons on all code blocks
   const copyButtons = document.querySelectorAll('.btn-copy');
   
   copyButtons.forEach(button => {
@@ -40,7 +40,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  // Sticky navbar shadow on scroll
+  // 2. Sticky navbar shadow on scroll
   const navbar = document.querySelector('.navbar');
   window.addEventListener('scroll', () => {
     if (window.scrollY > 30) {
@@ -49,4 +49,24 @@ document.addEventListener('DOMContentLoaded', () => {
       navbar.classList.remove('scrolled');
     }
   });
+
+  // 3. Horizontal Scrollable Tabs: Wheel support & Auto-Center Active Tab
+  const navLinks = document.querySelector('.nav-links');
+  if (navLinks) {
+    // Translate mouse wheel vertically to horizontal scroll
+    navLinks.addEventListener('wheel', (e) => {
+      if (e.deltaY !== 0) {
+        e.preventDefault();
+        navLinks.scrollLeft += e.deltaY;
+      }
+    }, { passive: false });
+
+    // Auto-scroll active tab into view
+    const activeLink = navLinks.querySelector('a.active');
+    if (activeLink) {
+      setTimeout(() => {
+        activeLink.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+      }, 100);
+    }
+  }
 });

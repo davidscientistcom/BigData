@@ -271,11 +271,28 @@
     <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-python.min.js"></script>
 
     <!-- SCRIPTS -->
-    <script>
+        <script>
         function toggleNav() {
             const links = document.getElementById('navLinks');
-            links.classList.toggle('open');
+            if (links) links.classList.toggle('open');
         }
+        document.addEventListener('DOMContentLoaded', () => {
+            const navLinks = document.getElementById('navLinks');
+            if (navLinks) {
+                navLinks.addEventListener('wheel', (e) => {
+                    if (e.deltaY !== 0) {
+                        e.preventDefault();
+                        navLinks.scrollLeft += e.deltaY;
+                    }
+                }, { passive: false });
+                const active = navLinks.querySelector('a.active');
+                if (active) {
+                    setTimeout(() => {
+                        active.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+                    }, 100);
+                }
+            }
+        });
 
         function toggleCheck(item) {
             const checkbox = item.querySelector('input[type="checkbox"]');

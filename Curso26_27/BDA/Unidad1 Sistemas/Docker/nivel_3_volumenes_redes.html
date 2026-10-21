@@ -177,6 +177,23 @@ docker run -d --name nodo-worker --network red-aplicacion-nativa \
     <script>
         const navbar = document.getElementById('navbar');
         window.addEventListener('scroll', () => { navbar.classList.toggle('scrolled', window.scrollY > 50); });
+                document.addEventListener('DOMContentLoaded', () => {
+            const navLinks = document.querySelector('.nav-links');
+            if (navLinks) {
+                navLinks.addEventListener('wheel', (e) => {
+                    if (e.deltaY !== 0) {
+                        e.preventDefault();
+                        navLinks.scrollLeft += e.deltaY;
+                    }
+                }, { passive: false });
+                const active = navLinks.querySelector('a.active');
+                if (active) {
+                    setTimeout(() => {
+                        active.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+                    }, 100);
+                }
+            }
+        });
         document.getElementById('navToggle').addEventListener('click', () => { document.querySelector('.nav-links').classList.toggle('open'); });
         function copyCode(btn) {
             const pre = btn.closest('.code-block').querySelector('pre');
