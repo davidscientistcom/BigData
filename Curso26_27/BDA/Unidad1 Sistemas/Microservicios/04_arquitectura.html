@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>4. Arquitectura | Microservicios</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({ startOnLoad: true, theme: 'dark' });</script>
+<link rel="stylesheet" href="shared_styles.css">
+</head>
+<body>
+  <nav class="navbar" id="navbar">
+    <div class="nav-inner">
+      <a href="index.html" class="nav-brand" style="text-decoration:none;"><span class="brand-text">Microservicios</span></a>
+      <ul class="nav-links" id="navLinks">
+        <li><a href="index.html">Inicio</a></li>
+        <li><a href="01_por_que_microservicios.html">1. Por qué</a></li>
+        <li><a href="02_conceptos_clave.html">2. Conceptos</a></li>
+        <li><a href="03_service_discovery.html">3. Discovery</a></li>
+        <li><a href="04_arquitectura.html" class="active">4. Arquitectura</a></li>
+        <li><a href="05_construccion_paso_a_paso.html">5. Paso a Paso</a></li>
+        <li><a href="06_probar_y_siguientes.html">6. Pruebas</a></li>
+        <li><a href="07_consul_en_profundidad.html">7. Consul</a></li>
+      </ul>
+    </div>
+  </nav>
+
+<div class="container">
+<div class="breadcrumb"><a href="index.html">Índice</a> → Módulo 4</div>
+
+<h2>4. La arquitectura que vamos a montar</h2>
+
+<p>Tres piezas pequeñas, cada una con un trabajo único — lo suficientemente simple para
+ver el patrón completo sin perderse en detalles de infraestructura:</p>
+
+<pre class="mermaid">
+graph LR
+    Client[Cliente / curl] --> GW[Gateway :8000]
+    GW --> US[users-service :8001]
+    GW --> OS[orders-service :8002]
+    OS -.HTTP interno.-> US
+    style GW fill:#3b82f6,color:#fff
+    style US fill:#22c55e,color:#fff
+    style OS fill:#f59e0b,color:#fff
+</pre>
+
+<ul>
+  <li><strong><code>users-service</code></strong> — guarda usuarios en memoria. Expone
+  <code>GET /users</code> y <code>GET /users/{id}</code>.</li>
+  <li><strong><code>orders-service</code></strong> — guarda pedidos en memoria. Al crear
+  un pedido, <strong>llama a <code>users-service</code></strong> para comprobar que el
+  usuario existe antes de aceptarlo — esto es el corazón de la lección: dos servicios
+  independientes colaborando por HTTP, en tiempo real.</li>
+  <li><strong><code>gateway</code></strong> — el único puerto que ve el cliente. Reparte
+  <code>/users/*</code> hacia <code>users-service</code> y <code>/orders/*</code> hacia
+  <code>orders-service</code>.</li>
+</ul>
+
+<h3>El flujo completo, paso a paso</h3>
+<p>Esto es lo que pasa de verdad, en orden, cuando alguien crea un pedido:</p>
+<pre class="mermaid">
+sequenceDiagram
+    participant C as Cliente
+    participant GW as Gateway
+    participant OS as orders-service
+    participant US as users-service
+    C->>GW: POST /orders {user_id: 3, item: "libro"}
+    GW->>OS: POST /orders (reenviado)
+    OS->>US: GET /users/3 (¿existe?)
+    US-->>OS: 200 OK {id: 3, name: "Ana"}
+    OS-->>GW: 201 Created {order}
+    GW-->>C: 201 Created {order}
+</pre>
+<p>Fíjate en algo importante: el <strong>cliente nunca sabe</strong> que por dentro
+hicieron falta dos servicios y una llamada extra entre ellos. Desde fuera, parece una
+sola petición normal. Esa es exactamente la ventaja de tener un gateway — la complejidad
+interna queda escondida.</p>
+
+<h3>Estructura de carpetas que vamos a crear</h3>
+<pre><code>microservicios-demo/
+├── docker-compose.yml
+├── users-service/
+│   ├── Dockerfile
+│   └── main.py
+├── orders-service/
+│   ├── Dockerfile
+│   └── main.py
+└── gateway/
+    ├── Dockerfile
+    └── main.py
+</code></pre>
+<p>Cada carpeta es completamente independiente — podrías copiar <code>users-service/</code>
+a otro proyecto sin llevarte nada más, porque no depende del código de los otros dos,
+solo de su contrato HTTP.</p>
+
+<nav class="pager">
+  <a href="03_service_discovery.html">← Service discovery</a>
+  <a href="05_construccion_paso_a_paso.html">Siguiente: Construcción paso a paso →</a>
+</nav>
+</div>
+
+<script>
+  // Soporte de rueda de ratón para scroll horizontal en la barra de navegación
+  const navLinks = document.querySelector('.nav-links');
+  if (navLinks) {
+    navLinks.addEventListener('wheel', (e) => {
+      if (e.deltaY !== 0) {
+        e.preventDefault();
+        navLinks.scrollLeft += e.deltaY;
+      }
+    }, { passive: false });
+    // Centrar automáticamente la pestaña activa al cargar
+    const activeTab = navLinks.querySelector('a.active');
+    if (activeTab) {
+      activeTab.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+    }
+  }
+</script>
+</body>
+</html>

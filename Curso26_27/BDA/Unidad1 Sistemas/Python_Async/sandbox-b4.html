@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bloque 4: Productor-Consumidor — Python Async</title>
+    <link rel="stylesheet" href="../shared/styles.css"/>
+  <link rel="stylesheet" href="styles.css"/>
+  <!-- Anti-flash: aplica el tema antes de pintar la página -->
+  <script>!function(){var t=localStorage.getItem('lucentia-theme')||'dark';'light'===t&&document.documentElement.setAttribute('data-theme','light')}()</script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+
+</head>
+<body>
+<!-- Botón hamburguesa — visible en tablet/móvil -->
+<button class="sidebar-toggle" id="sidebarToggle" onclick="toggleSidebar()" aria-label="Abrir menú" aria-expanded="true">&#9776;</button>
+<div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
+
+    <header class="page-hero">
+        <span class="page-hero-icon">🧪</span>
+        <h1>Bloque 4: <span class="gradient-text">El Productor y los Workers</span></h1>
+        <p>El Santo Grial de la concurrencia eficiente. Desligar a quien descubre el trabajo de quienes ejecutan el trabajo usando Colas (Queues).</p>
+    </header>
+
+    <main class="content">
+            <!-- EJERCICIO 4.0 -->
+            <div class="section-header">
+                <h2>E4.0: La Cinta Transportadora (asyncio.Queue)</h2>
+            </div>
+            <p><strong>Objetivo:</strong> Implementar un Productor que añade elementos a la cola rápidamente, y Workers que leen y procesan de esa cola a su propio ritmo constante.</p>
+            
+            <div class="code-block">
+                <div class="code-header">
+                    <span><i class="icon">🐍</i> E4_0_queue_basic.py</span>
+                    <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+                </div>
+                <pre><code>import asyncio
+import random
+
+async def productor(cola):
+    for i in range(1, 11):
+        paquete = f"Paquete-{i}"
+        print(f"📦 Productor generando: {paquete}")
+        await cola.put(paquete)
+        await asyncio.sleep(random.uniform(0.1, 0.4))
+    print("📦 Productor terminó de poner paquetes en la cola.")
+
+async def consumidor(id_trabajador, cola):
+    while True:
+        # Se quedará esperando eternamente hasta que haya algo en la cola
+        paquete = await cola.get()
+        print(f"  🧑‍🏭 W-{id_trabajador} sacó de la cinta: {paquete}. Procesando...")
+        await asyncio.sleep(random.uniform(0.5, 1.5))  # El procesado es lento!
+        
+        # Marcamos la tarea como completada para el sistema interno de la cola
+        cola.task_done()
+
+async def main():
+    cola = asyncio.Queue()
+
+    # Arrancamos los consumidores como tareas en background perpetuas
+    workers = [asyncio.create_task(consumidor(i, cola)) for i in range(3)]
+
+    # Ejecutamos el productor
+    await productor(cola)
+
+    # Bloqueamos el flujo principal hasta que se haya llamado task_done() por cada elemento put()
+    print("🕒 Main esperando a que la fábrica vacíe la cola completa...")
+    await cola.join()
+
+    # Cancelamos los workers (porque sus loops While True nunca acaban solos)
+    for w in workers:
+        w.cancel()
+
+    print("✅ Fábrica cerrada. Todo procesado.")
+
+asyncio.run(main())
+</code></pre>
+            </div>
+            <div class="info-box info">
+                <div class="info-box-text"><strong>Desacoplamiento:</strong> Observa que el Productor termina mucho antes que los Consumidores, porque él es muy rápido poniendo cajas en la cinta. `cola.join()` es mágico: mantiene al programa base en pausa hasta que se acaban todas las cajas. ¡Súper útil para Crawlers web!</div>
+            </div>
+
+            <div style="display:flex; justify-content:space-between; margin-top:4rem;">
+                <a href="sandbox-b3.html" class="btn btn-outline">← Anterior: B3</a>
+                <a href="sandbox-b5.html" class="btn btn-primary" style="background-color:#9333ea; color:#fff;">Siguiente: B5 Mini Proyectos →</a>
+            </div>
+
+        </main>
+
+    <footer style="text-align:center;padding:2rem;color:var(--text3);font-size:0.8rem;border-top:1px solid var(--border);">
+        &copy; 2026 LucentIA Research · Python Async TDD-First
+    </footer>
+
+    
+<script src="../shared/lucentia.js" defer></script>
+
+<!-- ── Sidebar inyectada por inject_gen1_sidebar.py ────────────────────────── -->
+<nav id="sidebar" class="sidebar">
+  <div class="sidebar-logo">LucentIA</div>
+  <div class="sidebar-course">Python Async</div>
+  <ul class="sidebar-nav">
+    <li class="sidebar-section">Índice del curso</li>
+    <li><a href="index.html">Python Async</a></li>
+    <li><a href="sandbox-b1.html">Bloque 1: El Despertar del Event Loop</a></li>
+    <li><a href="sandbox-b2.html">Bloque 2: Controlando Tareas</a></li>
+    <li><a href="sandbox-b3.html">Bloque 3: Sincronización</a></li>
+    <li><a href="sandbox-b4.html">Bloque 4: Productor-Consumidor</a></li>
+    <li><a href="sandbox-b5.html">Bloque 5: Mini Proyectos</a></li>
+  </ul>
+  <div class="theme-toggle">
+    <button class="theme-btn" id="themeBtn" onclick="toggleTheme()">
+      <span id="themeIcon">&#9728;</span>
+      <span id="themeLabel">Modo claro</span>
+    </button>
+  </div>
+</nav>
+
+</body>
+</html>

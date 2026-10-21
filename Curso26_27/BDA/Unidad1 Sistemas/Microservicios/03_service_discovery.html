@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>3. Service discovery | Microservicios</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="shared_styles.css">
+</head>
+<body>
+  <nav class="navbar" id="navbar">
+    <div class="nav-inner">
+      <a href="index.html" class="nav-brand" style="text-decoration:none;"><span class="brand-text">Microservicios</span></a>
+      <ul class="nav-links" id="navLinks">
+        <li><a href="index.html">Inicio</a></li>
+        <li><a href="01_por_que_microservicios.html">1. Por qué</a></li>
+        <li><a href="02_conceptos_clave.html">2. Conceptos</a></li>
+        <li><a href="03_service_discovery.html" class="active">3. Discovery</a></li>
+        <li><a href="04_arquitectura.html">4. Arquitectura</a></li>
+        <li><a href="05_construccion_paso_a_paso.html">5. Paso a Paso</a></li>
+        <li><a href="06_probar_y_siguientes.html">6. Pruebas</a></li>
+        <li><a href="07_consul_en_profundidad.html">7. Consul</a></li>
+      </ul>
+    </div>
+  </nav>
+
+<div class="container">
+<div class="breadcrumb"><a href="index.html">Índice</a> → Módulo 3</div>
+
+<h2>3. El problema del "¿dónde está el otro servicio?"</h2>
+
+<p>Imagina que tienes 5 copias del servicio de usuarios corriendo a la vez, para
+aguantar más tráfico. Cada copia puede reiniciarse en cualquier momento y, al hacerlo,
+puede acabar con una dirección de red (IP) distinta. Ahora el servicio de pedidos
+necesita llamar al de usuarios — pero ¿a qué dirección exacta llama, si puede cambiar en
+cualquier momento? Ese es el problema de <strong>service discovery</strong>
+("descubrimiento de servicios"): cómo encuentra un servicio la dirección real de otro
+cuando esa dirección no es fija.</p>
+
+<h3>Eureka — de dónde viene esta idea</h3>
+<p><strong>Eureka</strong> fue la solución que popularizó Netflix (parte de su
+ecosistema Spring Cloud, en Java) para resolver exactamente este problema: un servicio
+adicional que hace de "directorio" — cada microservicio se registra en Eureka al
+arrancar, diciendo dónde está, y antes de llamar a otro servicio, le pregunta primero a
+Eureka su dirección actual. Fue durante años el ejemplo de libro de texto de service
+discovery, y por eso sigue apareciendo en casi cualquier introducción al tema.</p>
+
+<h3>Qué ha cambiado desde entonces</h3>
+<ul>
+  <li><strong>Eureka en sí sigue existiendo, pero en modo mantenimiento</strong> — Netflix
+  dejó de desarrollarla activamente hace años. Spring Cloud la sigue soportando por
+  compatibilidad, pero ya no es la opción por defecto para un proyecto nuevo.</li>
+  <li><strong>Kubernetes absorbió gran parte de este problema.</strong> Si se despliega
+  en un clúster de Kubernetes, el propio clúster da descubrimiento de servicios gratis,
+  vía DNS interno: cada servicio tiene un nombre estable (ej. <code>users-service</code>)
+  que siempre resuelve a una instancia sana, sin montar nada aparte.</li>
+  <li><strong>Consul (de HashiCorp)</strong> es hoy la alternativa más usada fuera de
+  Kubernetes, e independiente del lenguaje de programación — muy común en proyectos que
+  no usan Java/Spring.</li>
+</ul>
+
+<div class="box">
+<strong>Y para el sistema principal que montamos en este curso (módulos 4-6):</strong>
+Con solo 2-3 servicios fijos, Docker ya resuelve el problema gratis: cada servicio
+tiene un nombre fijo dentro de la red que crea Docker (ej. <code>users-service</code>),
+y ese nombre siempre resuelve a la IP correcta, aunque el contenedor se reinicie por
+dentro. Eso <strong>es</strong> service discovery, en su forma más simple — y así
+funcionan de verdad muchos sistemas pequeños en producción real, sin necesitar nada más
+sofisticado. Cuando un sistema crece a docenas de servicios con instancias que suben y
+bajan solas automáticamente (auto-escalado), ahí sí hace falta dar el salto a algo como
+Kubernetes o Consul. El módulo 7 monta Consul de verdad, en marcha, para ver exactamente
+qué da de más frente a lo que hace Docker gratis.
+</div>
+
+<div class="box check">
+<strong>Para comprobar que ha quedado claro:</strong>
+¿Por qué no sirve simplemente "apuntar" la IP de cada servicio a mano en un fichero de
+configuración? — Porque esa IP cambia cada vez que el contenedor se reinicia o se mueve
+a otra máquina; un fichero fijo quedaría desactualizado en minutos. Service discovery
+existe precisamente para no depender de una dirección fija.
+</div>
+
+<nav class="pager">
+  <a href="02_conceptos_clave.html">← Conceptos clave</a>
+  <a href="04_arquitectura.html">Siguiente: La arquitectura →</a>
+</nav>
+</div>
+
+<script>
+  // Soporte de rueda de ratón para scroll horizontal en la barra de navegación
+  const navLinks = document.querySelector('.nav-links');
+  if (navLinks) {
+    navLinks.addEventListener('wheel', (e) => {
+      if (e.deltaY !== 0) {
+        e.preventDefault();
+        navLinks.scrollLeft += e.deltaY;
+      }
+    }, { passive: false });
+    // Centrar automáticamente la pestaña activa al cargar
+    const activeTab = navLinks.querySelector('a.active');
+    if (activeTab) {
+      activeTab.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+    }
+  }
+</script>
+</body>
+</html>

@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>7. Consul de verdad | Microservicios</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({ startOnLoad: true, theme: 'dark' });</script>
+<link rel="stylesheet" href="shared_styles.css">
+</head>
+<body>
+  <nav class="navbar" id="navbar">
+    <div class="nav-inner">
+      <a href="index.html" class="nav-brand" style="text-decoration:none;"><span class="brand-text">Microservicios</span></a>
+      <ul class="nav-links" id="navLinks">
+        <li><a href="index.html">Inicio</a></li>
+        <li><a href="01_por_que_microservicios.html">1. Por qué</a></li>
+        <li><a href="02_conceptos_clave.html">2. Conceptos</a></li>
+        <li><a href="03_service_discovery.html">3. Discovery</a></li>
+        <li><a href="04_arquitectura.html">4. Arquitectura</a></li>
+        <li><a href="05_construccion_paso_a_paso.html">5. Paso a Paso</a></li>
+        <li><a href="06_probar_y_siguientes.html">6. Pruebas</a></li>
+        <li><a href="07_consul_en_profundidad.html" class="active">7. Consul</a></li>
+      </ul>
+    </div>
+  </nav>
+
+<div class="container">
+<div class="breadcrumb"><a href="index.html">Índice</a> → Módulo 7 (extra)</div>
+
+<h2>7. Consul, desde cero y en marcha</h2>
+<p>Este módulo es autocontenido: no hace falta tocar los tres servicios de antes para
+empezar. Primero vemos Consul solo, con un servicio de mentira, para entender qué hace
+exactamente. Al final lo conectamos con <code>users-service</code> y
+<code>orders-service</code> de verdad.</p>
+
+<h3>7.1 — Qué es Consul, en una frase</h3>
+<p>Consul es, él mismo, <strong>un servicio más</strong> que corre en tu sistema — un
+"directorio telefónico" al que los demás servicios llaman para registrarse
+("aquí estoy, en esta dirección, en este puerto") y al que otros servicios preguntan
+("¿dónde está el servicio X ahora mismo, y está sano?"). Nada mágico: por dentro,
+Consul expone su propia API HTTP normal y corriente — vamos a hablar con ella con
+<code>curl</code>, igual que hemos hablado con nuestros propios servicios.</p>
+
+<pre class="mermaid">
+graph LR
+    US[users-service] -- "1. me registro" --> C[Consul :8500]
+    OS[orders-service] -- "2. ¿dónde está users-service?" --> C
+    C -- "3. aquí: users-service:8001, sano" --> OS
+    OS -- "4. llamada real" --> US
+    style C fill:#dc2626,color:#fff
+</pre>
+
+<h3>7.2 — Arrancarlo solo, para verlo funcionar</h3>
+<p>No hace falta meterlo en el <code>docker-compose.yml</code> todavía. Un único
+comando lo levanta en modo desarrollo (no usar este modo en producción — sin
+persistencia ni seguridad, pero perfecto para aprender):</p>
+<pre><code>docker run -d --name consul-dev -p 8500:8500 -p 8600:8600/udp hashicorp/consul agent -dev -client=0.0.0.0</code></pre>
+<p>Abre <code>http://localhost:8500</code> en el navegador — Consul trae una interfaz
+web propia donde vas a ver aparecer, en vivo, cada servicio que se registre. Déjala
+abierta en una pestaña mientras haces lo siguiente.</p>
+
+<h3>7.3 — Registrar un servicio a mano, con curl</h3>
+<p>Antes de tocar código Python, vamos a registrar un servicio "de mentira" directamente
+con <code>curl</code>, para ver exactamente qué información hace falta:</p>
+<pre><code>curl -X PUT http://localhost:8500/v1/agent/service/register \
+  -H "Content-Type: application/json" \
+  -d '{
+    "Name": "users-service",
+    "Address": "localhost",
+    "Port": 8001,
+    "Check": {
+      "HTTP": "http://localhost:8001/users",
+      "Interval": "10s"
+    }
+  }'
+</code></pre>
+<p>Esto le dice a Consul: "existe un servicio llamado <code>users-service</code>, en
+<code>localhost:8001</code>, y cada 10 segundos comprueba tú mismo si sigue vivo
+llamando a <code>/users</code>". Si tienes <code>users-service</code> del módulo 5
+corriendo en local (fuera de Docker, con <code>uvicorn main:app --port 8001</code>),
+ese <em>health check</em> lo vas a ver pasar de verdad.</p>
+
+<p>Ahora pregúntale a Consul quién está registrado y sano:</p>
+<pre><code>curl http://localhost:8500/v1/health/service/users-service?passing=true</code></pre>
+<p>Devuelve un JSON con la dirección, el puerto, y el estado del <em>health check</em>.
+<strong>Esto es la pieza que Docker Compose no te da gratis</strong>: docker-compose
+resuelve el nombre a una IP, pero no sabe (ni le importa) si el servicio detrás
+responde de verdad. Consul sí lo sabe, porque lo comprueba activamente.</p>
+
+<div class="box next">
+<strong>Pruébalo tú mismo, en vivo:</strong>
+Para <code>users-service</code> (Ctrl+C si lo tienes corriendo suelto, o
+<code>docker compose stop users-service</code> si está en Docker) y repite la consulta
+de arriba a los pocos segundos — el <em>health check</em> falla, y Consul deja de
+devolver esa instancia como <code>passing</code>. Un servicio que solo mirase el
+resultado de <code>passing=true</code> nunca intentaría llamar a una instancia caída
+— eso es lo que gana un sistema real usando Consul en vez de Docker Compose a secas.
+</div>
+
+<h3>7.4 — Integrarlo en el sistema de los módulos 4-6</h3>
+<p>Para que <code>users-service</code> se registre solo al arrancar (en vez de hacerlo
+a mano con curl), se añade una llamada HTTP a Consul en el arranque de la aplicación:</p>
+<span class="file-tag">users-service/main.py — añadir al principio</span>
+<pre><code>import httpx
+from fastapi import FastAPI
+
+app = FastAPI(title="users-service")
+
+@app.on_event("startup")
+def register_with_consul():
+    httpx.put(
+        "http://consul:8500/v1/agent/service/register",
+        json={
+            "Name": "users-service",
+            "Address": "users-service",
+            "Port": 8001,
+            "Check": {"HTTP": "http://users-service:8001/users", "Interval": "10s"},
+        },
+    )
+
+# ... el resto de users-service/main.py sigue igual que en el módulo 5
+</code></pre>
+
+<p>Y <code>orders-service</code>, en vez de tener la dirección de
+<code>users-service</code> escrita a fuego (<code>USERS_SERVICE_URL =
+"http://users-service:8001"</code> del módulo 5), le pregunta a Consul cada vez:</p>
+<span class="file-tag">orders-service/main.py — reemplaza USERS_SERVICE_URL fijo</span>
+<pre><code>def find_users_service() -> str:
+    resp = httpx.get("http://consul:8500/v1/health/service/users-service?passing=true")
+    instances = resp.json()
+    if not instances:
+        raise HTTPException(status_code=503, detail="users-service no disponible ahora mismo")
+    service = instances[0]["Service"]
+    return f"http://{service['Address']}:{service['Port']}"
+
+# dentro de create_order(), en vez de USERS_SERVICE_URL fijo:
+users_url = find_users_service()
+resp = httpx.get(f"{users_url}/users/{order.user_id}", timeout=3.0)
+</code></pre>
+
+<p>Y en <code>docker-compose.yml</code>, se añade Consul como un servicio más:</p>
+<span class="file-tag">docker-compose.yml — añadir</span>
+<pre><code>  consul:
+    image: hashicorp/consul:latest
+    command: "agent -dev -client=0.0.0.0"
+    ports:
+      - "8500:8500"
+</code></pre>
+
+<div class="box check">
+<strong>La diferencia real, en una frase, para cerrar el módulo:</strong>
+Con Docker Compose a secas, <code>orders-service</code> siempre confía en que
+<code>users-service</code> está bien con solo resolver su nombre. Con Consul,
+<code>orders-service</code> pregunta activamente "¿está sano ahora mismo?" antes de
+llamar — y si la respuesta es que no, puede decidir qué hacer (esperar, avisar, usar
+otra instancia) en vez de estrellarse contra un servicio caído sin saberlo de antemano.
+</div>
+
+<nav class="pager">
+  <a href="06_probar_y_siguientes.html">← Probar y siguientes pasos</a>
+  <a href="index.html">Volver al índice</a>
+</nav>
+</div>
+
+<script>
+  // Soporte de rueda de ratón para scroll horizontal en la barra de navegación
+  const navLinks = document.querySelector('.nav-links');
+  if (navLinks) {
+    navLinks.addEventListener('wheel', (e) => {
+      if (e.deltaY !== 0) {
+        e.preventDefault();
+        navLinks.scrollLeft += e.deltaY;
+      }
+    }, { passive: false });
+    // Centrar automáticamente la pestaña activa al cargar
+    const activeTab = navLinks.querySelector('a.active');
+    if (activeTab) {
+      activeTab.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+    }
+  }
+</script>
+</body>
+</html>

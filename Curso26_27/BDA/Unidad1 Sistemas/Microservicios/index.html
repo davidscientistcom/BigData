@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Microservicios desde cero | Índice</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="shared_styles.css">
+<style>
+  .modules { display: flex; flex-direction: column; gap: 12px; }
+  .module {
+    display: flex; align-items: center; gap: 16px;
+    background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 18px 22px; text-decoration: none; transition: border-color .15s;
+  }
+  .module:hover { border-color: var(--accent); }
+  .module .num {
+    display: flex; align-items: center; justify-content: center;
+    width: 36px; height: 36px; border-radius: 50%; background: var(--accent);
+    color: #fff; font-weight: 700; flex-shrink: 0;
+  }
+  .module .info h3 { margin: 0 0 4px; color: #fff; font-size: 1.05em; }
+  .module .info p { margin: 0; color: var(--text-dim); font-size: 0.9em; }
+</style>
+</head>
+<body>
+  <nav class="navbar" id="navbar">
+    <div class="nav-inner">
+      <a href="index.html" class="nav-brand" style="text-decoration:none;"><span class="brand-text">Microservicios</span></a>
+      <ul class="nav-links" id="navLinks">
+        <li><a href="index.html" class="active">Inicio</a></li>
+        <li><a href="01_por_que_microservicios.html">1. Por qué</a></li>
+        <li><a href="02_conceptos_clave.html">2. Conceptos</a></li>
+        <li><a href="03_service_discovery.html">3. Discovery</a></li>
+        <li><a href="04_arquitectura.html">4. Arquitectura</a></li>
+        <li><a href="05_construccion_paso_a_paso.html">5. Paso a Paso</a></li>
+        <li><a href="06_probar_y_siguientes.html">6. Pruebas</a></li>
+        <li><a href="07_consul_en_profundidad.html">7. Consul</a></li>
+      </ul>
+    </div>
+  </nav>
+
+<header class="hero">
+  <h1>Microservicios desde cero</h1>
+  <p>Qué son, por qué existen, y cómo se ven de verdad — con un sistema pequeño y real
+  que vamos a montar paso a paso, en Python, con Docker.</p>
+</header>
+<div class="container">
+
+<div class="modules">
+  <a class="module" href="01_por_que_microservicios.html">
+    <span class="num">1</span>
+    <span class="info"><h3>Por qué existen los microservicios</h3>
+    <p>El problema real detrás del nombre — qué duele en un monolito grande</p></span>
+  </a>
+  <a class="module" href="02_conceptos_clave.html">
+    <span class="num">2</span>
+    <span class="info"><h3>Los conceptos, desde cero</h3>
+    <p>Proceso, API, HTTP, contrato, síncrono vs asíncrono, gateway</p></span>
+  </a>
+  <a class="module" href="03_service_discovery.html">
+    <span class="num">3</span>
+    <span class="info"><h3>Service discovery — el problema del "¿dónde está?"</h3>
+    <p>Por qué existía Eureka, qué lo sustituye hoy, y qué usamos nosotros</p></span>
+  </a>
+  <a class="module" href="04_arquitectura.html">
+    <span class="num">4</span>
+    <span class="info"><h3>La arquitectura que vamos a montar</h3>
+    <p>3 servicios pequeños, con diagramas de la estructura y del flujo real</p></span>
+  </a>
+  <a class="module" href="05_construccion_paso_a_paso.html">
+    <span class="num">5</span>
+    <span class="info"><h3>Construcción paso a paso</h3>
+    <p>Código completo de los 3 servicios + docker-compose, explicado línea a línea</p></span>
+  </a>
+  <a class="module" href="06_probar_y_siguientes.html">
+    <span class="num">6</span>
+    <span class="info"><h3>Probarlo, romperlo, y qué falta para producción</h3>
+    <p>Levantar el sistema, verlo fallar a propósito, y los siguientes pasos reales</p></span>
+  </a>
+  <a class="module" href="07_consul_en_profundidad.html">
+    <span class="num">7</span>
+    <span class="info"><h3>Extra — Consul, desde cero y en marcha</h3>
+    <p>Instalarlo, registrar un servicio con curl, verlo fallar de verdad, e integrarlo en el sistema</p></span>
+  </a>
+</div>
+
+</div>
+
+<script>
+  // Soporte de rueda de ratón para scroll horizontal en la barra de navegación
+  const navLinks = document.querySelector('.nav-links');
+  if (navLinks) {
+    navLinks.addEventListener('wheel', (e) => {
+      if (e.deltaY !== 0) {
+        e.preventDefault();
+        navLinks.scrollLeft += e.deltaY;
+      }
+    }, { passive: false });
+    // Centrar automáticamente la pestaña activa al cargar
+    const activeTab = navLinks.querySelector('a.active');
+    if (activeTab) {
+      activeTab.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+    }
+  }
+</script>
+</body>
+</html>

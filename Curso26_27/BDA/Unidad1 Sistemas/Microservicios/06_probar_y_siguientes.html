@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>6. Probar y siguientes pasos | Microservicios</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="shared_styles.css">
+</head>
+<body>
+  <nav class="navbar" id="navbar">
+    <div class="nav-inner">
+      <a href="index.html" class="nav-brand" style="text-decoration:none;"><span class="brand-text">Microservicios</span></a>
+      <ul class="nav-links" id="navLinks">
+        <li><a href="index.html">Inicio</a></li>
+        <li><a href="01_por_que_microservicios.html">1. Por qué</a></li>
+        <li><a href="02_conceptos_clave.html">2. Conceptos</a></li>
+        <li><a href="03_service_discovery.html">3. Discovery</a></li>
+        <li><a href="04_arquitectura.html">4. Arquitectura</a></li>
+        <li><a href="05_construccion_paso_a_paso.html">5. Paso a Paso</a></li>
+        <li><a href="06_probar_y_siguientes.html" class="active">6. Pruebas</a></li>
+        <li><a href="07_consul_en_profundidad.html">7. Consul</a></li>
+      </ul>
+    </div>
+  </nav>
+
+<div class="container">
+<div class="breadcrumb"><a href="index.html">Índice</a> → Módulo 6</div>
+
+<h2>6. Probarlo, romperlo, y qué falta para producción</h2>
+
+<h3>Probarlo de verdad</h3>
+<pre><code># Ver usuarios (a través del gateway, puerto 8000 -- el único que "existe" para fuera)
+curl http://localhost:8000/users
+
+# Crear un pedido para un usuario que SÍ existe
+curl -X POST http://localhost:8000/orders \
+  -H "Content-Type: application/json" \
+  -d '{"user_id": 3, "item": "libro de causalidad"}'
+# -> 201, y por dentro orders-service llamó de verdad a users-service
+
+# Crear un pedido para un usuario que NO existe
+curl -X POST http://localhost:8000/orders \
+  -H "Content-Type: application/json" \
+  -d '{"user_id": 99, "item": "algo"}'
+# -> 400 "Ese usuario no existe" -- orders-service lo detectó preguntando a users-service
+</code></pre>
+
+<h3>El experimento que más enseña: romperlo a propósito</h3>
+<div class="box next">
+<strong>Haz esto en clase, en vivo:</strong>
+<ol>
+  <li>Con el sistema levantado, mira qué contenedores hay corriendo:
+  <code>docker compose ps</code></li>
+  <li>Para el contenedor de <code>users-service</code> a mano:
+  <code>docker compose stop users-service</code></li>
+  <li>Repite la creación de un pedido — va a fallar (un error 500, o un timeout tras
+  3 segundos, según el momento exacto).</li>
+</ol>
+Ese fallo es exactamente lo que en un sistema real hay que diseñar para tolerar. Un
+monolito no tiene esta clase de fallo — una función que llama a otra función no "se
+cae" a mitad de la llamada. Un microservicio que llama a otro, sí. Esto se llama
+<strong>fallo parcial</strong>, y es el problema central que distingue a los
+microservicios de un monolito.
+</div>
+
+<h3>Qué falta para un sistema real — con honestidad</h3>
+<p>Este demo es deliberadamente simple. Un sistema real añadiría, en este orden de
+importancia:</p>
+<ul>
+  <li><strong>Bases de datos de verdad.</strong> Cada servicio con su propia BD
+  (Postgres, por ejemplo) — nunca en memoria, nunca compartida entre servicios.</li>
+  <li><strong>Reintentos y circuit breaker.</strong> Si <code>users-service</code> tarda,
+  hoy <code>orders-service</code> se queda esperando sin más. Librerías como
+  <code>tenacity</code> (Python) añaden reintentos automáticos con espera creciente; un
+  <em>circuit breaker</em> corta las llamadas cuando un servicio lleva un rato fallando,
+  para no seguir esperando en vano una y otra vez.</li>
+  <li><strong>Health checks reales</strong> en <code>docker-compose.yml</code>, para que
+  <code>depends_on</code> espere de verdad a que un servicio esté listo, no solo
+  arrancado.</li>
+  <li><strong>Service discovery dinámico de verdad</strong> (Consul/Kubernetes) — solo
+  hace falta cuando hay docenas de servicios con instancias que suben y bajan solas
+  (auto-escalado). No antes.</li>
+  <li><strong>Observabilidad.</strong> Cuando un pedido falla en un sistema con muchos
+  servicios, hace falta ver el rastro completo (gateway → orders → users) en un solo
+  sitio — eso es <em>tracing distribuido</em> (ej. OpenTelemetry).</li>
+</ul>
+
+<div class="box check">
+<strong>Preguntas para comprobar que ha quedado claro (antes de cerrar la sesión):</strong>
+<ul>
+  <li>¿Por qué <code>orders-service</code> llama a <code>users-service</code> en vez de
+  tener su propia copia de la lista de usuarios?</li>
+  <li>¿Qué pasaría si quitáramos el <code>timeout=3.0</code> de la llamada a
+  <code>users-service</code>?</li>
+  <li>¿Por qué el cliente nunca llama directamente a <code>users-service</code> o
+  <code>orders-service</code>, solo al gateway?</li>
+</ul>
+</div>
+
+<p>La regla de oro de todo el curso: cada pieza de la lista de arriba se añade cuando el
+dolor que resuelve ya existe de verdad — igual que la propia decisión de partir un
+monolito en microservicios, del módulo 1.</p>
+
+<nav class="pager">
+  <a href="05_construccion_paso_a_paso.html">← Construcción paso a paso</a>
+  <a href="07_consul_en_profundidad.html">Extra: Consul, desde cero y en marcha →</a>
+</nav>
+</div>
+
+<script>
+  // Soporte de rueda de ratón para scroll horizontal en la barra de navegación
+  const navLinks = document.querySelector('.nav-links');
+  if (navLinks) {
+    navLinks.addEventListener('wheel', (e) => {
+      if (e.deltaY !== 0) {
+        e.preventDefault();
+        navLinks.scrollLeft += e.deltaY;
+      }
+    }, { passive: false });
+    // Centrar automáticamente la pestaña activa al cargar
+    const activeTab = navLinks.querySelector('a.active');
+    if (activeTab) {
+      activeTab.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+    }
+  }
+</script>
+</body>
+</html>

@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>2. Conceptos clave | Microservicios</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="shared_styles.css">
+</head>
+<body>
+  <nav class="navbar" id="navbar">
+    <div class="nav-inner">
+      <a href="index.html" class="nav-brand" style="text-decoration:none;"><span class="brand-text">Microservicios</span></a>
+      <ul class="nav-links" id="navLinks">
+        <li><a href="index.html">Inicio</a></li>
+        <li><a href="01_por_que_microservicios.html">1. Por qué</a></li>
+        <li><a href="02_conceptos_clave.html" class="active">2. Conceptos</a></li>
+        <li><a href="03_service_discovery.html">3. Discovery</a></li>
+        <li><a href="04_arquitectura.html">4. Arquitectura</a></li>
+        <li><a href="05_construccion_paso_a_paso.html">5. Paso a Paso</a></li>
+        <li><a href="06_probar_y_siguientes.html">6. Pruebas</a></li>
+        <li><a href="07_consul_en_profundidad.html">7. Consul</a></li>
+      </ul>
+    </div>
+  </nav>
+
+<div class="container">
+<div class="breadcrumb"><a href="index.html">Índice</a> → Módulo 2</div>
+
+<h2>2. Los conceptos que hay que tener claros antes de tocar código</h2>
+
+<h3>2.1 — Qué es HTTP, en cristiano</h3>
+<p>Ya usas HTTP aunque no lo sepas: cada vez que abres una URL en el navegador, el
+navegador manda una <strong>petición</strong> HTTP a un servidor, y el servidor responde
+con una <strong>respuesta</strong>. Una petición tiene un <strong>método</strong> (qué
+quieres hacer: <code>GET</code> = leer, <code>POST</code> = crear algo nuevo,
+<code>PUT</code>/<code>DELETE</code> = actualizar/borrar), una <strong>ruta</strong>
+(<code>/users/3</code> = "el usuario número 3"), y opcionalmente un
+<strong>cuerpo</strong> (los datos que mandas, normalmente en formato JSON). La respuesta
+lleva un <strong>código de estado</strong> (<code>200</code> = todo bien,
+<code>404</code> = no existe, <code>500</code> = el servidor petó) y normalmente también
+un cuerpo con los datos pedidos.</p>
+<p>Eso es literalmente todo lo que necesitas para seguir: microservicios que hablan por
+HTTP simplemente se mandan peticiones entre ellos, igual que un navegador se las manda a
+un servidor — la diferencia es que aquí el "cliente" también es un programa, no una
+persona con un navegador.</p>
+
+<h3>2.2 — Servicio</h3>
+<p>Un <strong>servicio</strong> (o microservicio) es un programa independiente, con un
+único trabajo claro, que expone ese trabajo mediante una API — normalmente HTTP. Se
+puede desplegar, reiniciar y escalar por separado del resto.</p>
+
+<h3>2.3 — Contrato / API</h3>
+<p>El <strong>contrato</strong> es lo que un servicio promete hacia fuera: qué rutas
+expone, qué espera recibir, qué va a devolver. Mientras el contrato no cambie, lo que hay
+<em>dentro</em> del servicio se puede reescribir entero (cambiar de base de datos, de
+lenguaje, de algoritmo) sin que ningún otro servicio se entere ni se rompa. Esa es la
+razón de fondo por la que esto soluciona el problema de "equipos grandes se pisan" del
+módulo anterior: cada equipo solo necesita conocer el contrato de los servicios ajenos,
+nunca su código interno.</p>
+
+<h3>2.4 — Comunicación síncrona vs asíncrona</h3>
+<table>
+<tr><th>Síncrona</th><th>Asíncrona</th></tr>
+<tr>
+<td>Un servicio llama a otro por HTTP y <strong>espera</strong> la respuesta antes de
+continuar. Simple de razonar (se parece a llamar a una función normal), pero si el otro
+servicio está caído o lento, tú también te ves afectado.</td>
+<td>Un servicio publica un mensaje en una cola (ej. RabbitMQ, Kafka) y sigue sin esperar
+respuesta — otro servicio la recogerá cuando pueda. Más resiliente ante caídas
+temporales, pero más difícil de razonar (¿y si el mensaje se procesa dos veces? ¿y si
+nunca se procesa?).</td>
+</tr>
+</table>
+<p>Hoy nos quedamos en <strong>síncrona</strong> — es donde hay que empezar a entender el
+patrón antes de complicarlo con colas de mensajes.</p>
+
+<h3>2.5 — API Gateway</h3>
+<p>Un <strong>API Gateway</strong> es un servicio especial: el único punto de entrada de
+cara al exterior. El cliente final (una app móvil, un navegador) solo conoce la dirección
+del gateway — nunca habla directamente con los servicios internos. El gateway recibe la
+petición y decide a qué servicio interno reenviarla.</p>
+<div class="box">
+<strong>¿Por qué no dejar que el cliente hable directo con cada servicio?</strong>
+Porque entonces el cliente tendría que saber cuántos servicios hay y dónde está cada uno
+— y eso cambiaría cada vez que añades o mueves un servicio. Con el gateway, el cliente ve
+una sola dirección estable, y todo lo que cambie por dentro es invisible desde fuera.
+</div>
+
+<nav class="pager">
+  <a href="01_por_que_microservicios.html">← Por qué existen</a>
+  <a href="03_service_discovery.html">Siguiente: Service discovery →</a>
+</nav>
+</div>
+
+<script>
+  // Soporte de rueda de ratón para scroll horizontal en la barra de navegación
+  const navLinks = document.querySelector('.nav-links');
+  if (navLinks) {
+    navLinks.addEventListener('wheel', (e) => {
+      if (e.deltaY !== 0) {
+        e.preventDefault();
+        navLinks.scrollLeft += e.deltaY;
+      }
+    }, { passive: false });
+    // Centrar automáticamente la pestaña activa al cargar
+    const activeTab = navLinks.querySelector('a.active');
+    if (activeTab) {
+      activeTab.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+    }
+  }
+</script>
+</body>
+</html>

@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>5. Construcción paso a paso | Microservicios</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="shared_styles.css">
+</head>
+<body>
+  <nav class="navbar" id="navbar">
+    <div class="nav-inner">
+      <a href="index.html" class="nav-brand" style="text-decoration:none;"><span class="brand-text">Microservicios</span></a>
+      <ul class="nav-links" id="navLinks">
+        <li><a href="index.html">Inicio</a></li>
+        <li><a href="01_por_que_microservicios.html">1. Por qué</a></li>
+        <li><a href="02_conceptos_clave.html">2. Conceptos</a></li>
+        <li><a href="03_service_discovery.html">3. Discovery</a></li>
+        <li><a href="04_arquitectura.html">4. Arquitectura</a></li>
+        <li><a href="05_construccion_paso_a_paso.html" class="active">5. Paso a Paso</a></li>
+        <li><a href="06_probar_y_siguientes.html">6. Pruebas</a></li>
+        <li><a href="07_consul_en_profundidad.html">7. Consul</a></li>
+      </ul>
+    </div>
+  </nav>
+
+<div class="container">
+<div class="breadcrumb"><a href="index.html">Índice</a> → Módulo 5</div>
+
+<h2>5. Construcción paso a paso</h2>
+<p>Vamos a construir los tres servicios en orden: primero el más simple
+(<code>users-service</code>, sin dependencias de nadie), luego el que depende de él
+(<code>orders-service</code>), y por último el que los une de cara a fuera
+(<code>gateway</code>). Al Docker en sí ya lo conoces de otro de nuestros cursos — aquí
+nos centramos en cómo se usa para <em>varios</em> servicios que colaboran entre sí,
+que es la parte nueva.</p>
+
+<h3>Paso 1 — el servicio de usuarios</h3>
+<p>Este es el servicio más simple: no llama a nadie más, solo responde con datos que
+guarda en memoria.</p>
+<span class="file-tag">users-service/main.py</span>
+<pre><code>from fastapi import FastAPI, HTTPException
+
+app = FastAPI(title="users-service")
+
+# "Base de datos" en memoria -- suficiente para aprender el patrón.
+# En un sistema real, cada microservicio tendría su propia BD de verdad
+# (Postgres, por ejemplo), nunca compartida con otro servicio.
+USERS = {
+    1: {"id": 1, "name": "David"},
+    2: {"id": 2, "name": "Marta"},
+    3: {"id": 3, "name": "Ana"},
+}
+
+@app.get("/users")
+def list_users():
+    return list(USERS.values())
+
+@app.get("/users/{user_id}")
+def get_user(user_id: int):
+    user = USERS.get(user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado")
+    return user
+</code></pre>
+<span class="file-tag">users-service/Dockerfile</span>
+<pre><code>FROM python:3.12-slim
+WORKDIR /app
+RUN pip install fastapi uvicorn
+COPY main.py .
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8001"]
+</code></pre>
+<div class="box">
+<strong>Un detalle que se pasa por alto la primera vez:</strong> el host es
+<code>0.0.0.0</code>, no <code>127.0.0.1</code>. Dentro de un contenedor,
+<code>127.0.0.1</code> significa "solo accesible desde dentro de este mismo
+contenedor" — otros contenedores (como <code>orders-service</code>) no podrían llegar a
+él. <code>0.0.0.0</code> significa "escucha en cualquier interfaz de red", que es lo que
+hace falta para que otros servicios lo alcancen.
+</div>
+
+<h3>Paso 2 — el servicio de pedidos (la pieza importante de verdad)</h3>
+<p><code>orders-service</code> no confía a ciegas en que el <code>user_id</code> que le
+mandan existe — se lo pregunta a <code>users-service</code> por HTTP, usando su
+<strong>nombre de servicio</strong> como si fuera un hostname normal
+(<code>http://users-service:8001</code>). Ese nombre lo resuelve automáticamente la red
+que crea <code>docker-compose</code> — es el service discovery del módulo 3 en acción.</p>
+<span class="file-tag">orders-service/main.py</span>
+<pre><code>import httpx
+from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel
+
+app = FastAPI(title="orders-service")
+
+ORDERS = []
+NEXT_ID = 1
+USERS_SERVICE_URL = "http://users-service:8001"  # nombre del servicio en docker-compose
+
+class OrderIn(BaseModel):
+    user_id: int
+    item: str
+
+@app.get("/orders")
+def list_orders():
+    return ORDERS
+
+@app.post("/orders", status_code=201)
+def create_order(order: OrderIn):
+    global NEXT_ID
+
+    # Llamada real a otro microservicio, por HTTP, igual que haría un navegador.
+    # httpx es como "requests" pero soporta también llamadas asíncronas.
+    resp = httpx.get(f"{USERS_SERVICE_URL}/users/{order.user_id}", timeout=3.0)
+    if resp.status_code == 404:
+        raise HTTPException(status_code=400, detail="Ese usuario no existe")
+    resp.raise_for_status()  # lanza error si la respuesta es un fallo (5xx)
+    user = resp.json()
+
+    new_order = {"id": NEXT_ID, "user": user, "item": order.item}
+    ORDERS.append(new_order)
+    NEXT_ID += 1
+    return new_order
+</code></pre>
+<span class="file-tag">orders-service/Dockerfile</span>
+<pre><code>FROM python:3.12-slim
+WORKDIR /app
+RUN pip install fastapi uvicorn httpx pydantic
+COPY main.py .
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8002"]
+</code></pre>
+<div class="box warn">
+<strong>Por qué esto importa más de lo que parece:</strong> aquí acaba de aparecer el
+problema central de los microservicios que un monolito no tiene — <code>timeout=3.0</code>
+existe porque esta llamada puede fallar o tardar. Si <code>users-service</code> estuviera
+caído, esta línea lanzaría una excepción de red. En un monolito, una llamada a otra parte
+del código nunca "falla por la red" — aquí sí, siempre. El módulo 6 lo demuestra en vivo.
+</div>
+
+<h3>Paso 3 — el gateway</h3>
+<p>El cliente nunca habla directamente con <code>users-service</code> ni con
+<code>orders-service</code> — solo con el gateway. El gateway mira la ruta que le piden
+y reenvía la petición al servicio correcto, devolviendo la respuesta tal cual.</p>
+<span class="file-tag">gateway/main.py</span>
+<pre><code>import httpx
+from fastapi import FastAPI, Request, Response
+
+app = FastAPI(title="gateway")
+
+ROUTES = {
+    "users":  "http://users-service:8001",
+    "orders": "http://orders-service:8002",
+}
+
+@app.api_route("/{service}/{path:path}", methods=["GET", "POST"])
+async def proxy(service: str, path: str, request: Request):
+    base_url = ROUTES.get(service)
+    if not base_url:
+        return Response(content=f'{{"error":"servicio {service} desconocido"}}',
+                         status_code=404, media_type="application/json")
+
+    target_url = f"{base_url}/{service}/{path}" if path else f"{base_url}/{service}"
+    body = await request.body()
+
+    async with httpx.AsyncClient() as client:
+        resp = await client.request(
+            request.method, target_url, content=body,
+            params=request.query_params, timeout=5.0,
+        )
+    return Response(content=resp.content, status_code=resp.status_code,
+                     media_type=resp.headers.get("content-type"))
+</code></pre>
+<span class="file-tag">gateway/Dockerfile</span>
+<pre><code>FROM python:3.12-slim
+WORKDIR /app
+RUN pip install fastapi uvicorn httpx
+COPY main.py .
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+</code></pre>
+
+<h3>Uniéndolo todo: docker-compose</h3>
+<p>Este es el fichero que convierte tres carpetas sueltas en un sistema — levanta los
+tres servicios en la misma red, con nombres resolubles entre ellos (el
+<code>users-service:8001</code> de los ficheros de arriba existe gracias a esto).</p>
+<span class="file-tag">docker-compose.yml (en la raíz, junto a las 3 carpetas)</span>
+<pre><code>services:
+  users-service:
+    build: ./users-service
+    ports:
+      - "8001:8001"
+
+  orders-service:
+    build: ./orders-service
+    ports:
+      - "8002:8002"
+    depends_on:
+      - users-service
+
+  gateway:
+    build: ./gateway
+    ports:
+      - "8000:8000"
+    depends_on:
+      - users-service
+      - orders-service
+</code></pre>
+<div class="box check">
+<strong>¿Qué hace <code>depends_on</code>?</strong>
+Le dice a Docker en qué orden arrancar los contenedores — <code>orders-service</code>
+no arranca hasta que <code>users-service</code> ha empezado. <strong>Ojo:</strong> esto
+NO garantiza que <code>users-service</code> ya esté listo para recibir peticiones,
+solo que el contenedor ha arrancado. Es una limitación real de docker-compose simple;
+en sistemas de verdad se añaden comprobaciones de salud (<em>health checks</em>) para
+esto — lo dejamos fuera hoy para no complicar el primer ejemplo.
+</div>
+
+<p>Para levantarlo todo:</p>
+<pre><code>docker compose up --build</code></pre>
+
+<nav class="pager">
+  <a href="04_arquitectura.html">← Arquitectura</a>
+  <a href="06_probar_y_siguientes.html">Siguiente: Probarlo y qué falta →</a>
+</nav>
+</div>
+
+<script>
+  // Soporte de rueda de ratón para scroll horizontal en la barra de navegación
+  const navLinks = document.querySelector('.nav-links');
+  if (navLinks) {
+    navLinks.addEventListener('wheel', (e) => {
+      if (e.deltaY !== 0) {
+        e.preventDefault();
+        navLinks.scrollLeft += e.deltaY;
+      }
+    }, { passive: false });
+    // Centrar automáticamente la pestaña activa al cargar
+    const activeTab = navLinks.querySelector('a.active');
+    if (activeTab) {
+      activeTab.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+    }
+  }
+</script>
+</body>
+</html>

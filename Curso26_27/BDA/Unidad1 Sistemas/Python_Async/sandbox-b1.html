@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bloque 1: El Despertar del Event Loop — Python Async</title>
+    <link rel="stylesheet" href="../shared/styles.css"/>
+  <link rel="stylesheet" href="styles.css"/>
+  <!-- Anti-flash: aplica el tema antes de pintar la página -->
+  <script>!function(){var t=localStorage.getItem('lucentia-theme')||'dark';'light'===t&&document.documentElement.setAttribute('data-theme','light')}()</script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+
+</head>
+<body>
+<!-- Botón hamburguesa — visible en tablet/móvil -->
+<button class="sidebar-toggle" id="sidebarToggle" onclick="toggleSidebar()" aria-label="Abrir menú" aria-expanded="true">&#9776;</button>
+<div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
+
+    <header class="page-hero">
+        <span class="page-hero-icon">🧪</span>
+        <h1>Bloque 1: El Despertar del <span class="gradient-text">Event Loop</span></h1>
+        <p>Antes de diseñar arquitecturas (M2), hay que entender qué significa ceder el control. Ejecuta estos scripts para entender la diferencia fundamental entre bloquear el mundo y pausar una tarea.</p>
+    </header>
+
+    <main class="content">
+            <!-- EJERCICIO 1.0 -->
+            <div class="section-header">
+                <h2>E1.0: El Falso Asincronismo (time.sleep)</h2>
+            </div>
+            <p><strong>Objetivo:</strong> Ver con tus propios ojos cómo funciones síncronas bloquean el Event Loop y rompen la concurrencia. No hay magia, si bloqueas el "hilo de eventos", nada avanza.</p>
+            
+            <div class="code-block">
+                <div class="code-header">
+                    <span><i class="icon">🐍</i> E1_0_falso_async.py</span>
+                    <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+                </div>
+                <pre><code>import asyncio
+import time
+
+async def tarea_lenta_falsa(id_tarea):
+    print(f"[Tarea {id_tarea}] Empezando trabajo...")
+    # ❌ ESTO BLOQUEA TODO EL EVENT LOOP
+    time.sleep(2) 
+    print(f"[Tarea {id_tarea}] Trabajo terminado.")
+
+async def main():
+    print("Iniciando Event Loop...")
+    # Intentamos ejecutar dos tareas "al mismo tiempo"
+    await asyncio.gather(
+        tarea_lenta_falsa(1),
+        tarea_lenta_falsa(2)
+    )
+    print("Todo listo.")
+
+if __name__ == "__main__":
+    tiempo_inicio = time.time()
+    asyncio.run(main())
+    print(f"Tiempo total: {time.time() - tiempo_inicio:.2f} segundos")
+</code></pre>
+            </div>
+            <div class="info-box warning">
+                <div class="info-box-text"><strong>Prueba esto:</strong> Ejecuta el código. Aunque uses `asyncio.gather()`, la ejecución tardará <strong>4 segundos</strong>. El hilo principal se congela en `time.sleep()`, impidiendo que la Tarea 2 arranque mientras la Tarea 1 duerme.</div>
+            </div>
+
+            <!-- EJERCICIO 1.1 -->
+            <div style="margin-top: 4rem;">
+                <div class="section-header">
+                    <h2>E1.1: El Asincronismo Real (asyncio.sleep)</h2>
+                </div>
+                <p><strong>Objetivo:</strong> Reemplazar el bloqueo con "ceder el paso". Entender el uso fundamental de `await`.</p>
+                
+                <div class="code-block">
+                    <div class="code-header">
+                        <span><i class="icon">🐍</i> E1_1_verdadero_async.py</span>
+                        <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+                    </div>
+                    <pre><code>import asyncio
+import time
+
+async def tarea_lenta_real(id_tarea):
+    print(f"[Tarea {id_tarea}] Empezando trabajo...")
+    # ✅ ESTO CEDE EL CONTROL AL EVENT LOOP
+    await asyncio.sleep(2) 
+    print(f"[Tarea {id_tarea}] Trabajo terminado.")
+
+async def main():
+    print("Iniciando Event Loop...")
+    await asyncio.gather(
+        tarea_lenta_real(1),
+        tarea_lenta_real(2)
+    )
+    print("Todo listo.")
+
+if __name__ == "__main__":
+    tiempo_inicio = time.time()
+    asyncio.run(main())
+    print(f"Tiempo total: {time.time() - tiempo_inicio:.2f} segundos")
+</code></pre>
+                </div>
+                <div class="info-box success">
+                    <div class="info-box-text"><strong>Resultado:</strong> Ejecuta el código. Ahora tarda <strong>solo 2 segundos</strong>. Cuando la Tarea 1 hace `await asyncio.sleep(2)`, <strong>le devuelve el volante al Event Loop</strong>, que inmediatamente arranca la Tarea 2.</div>
+                </div>
+            </div>
+
+            <!-- EJERCICIO 1.2 -->
+            <div style="margin-top: 4rem;">
+                <div class="section-header">
+                    <h2>E1.2: El Bucle de Vida (Simulación de I/O)</h2>
+                </div>
+                <p><strong>Objetivo:</strong> Ver cómo se comportan 3 tareas de duraciones distintas cuando concurren.</p>
+                
+                <div class="code-block">
+                    <div class="code-header">
+                        <span><i class="icon">🐍</i> E1_2_multi_tiempos.py</span>
+                        <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+                    </div>
+                    <pre><code>import asyncio
+
+async def descargar_archivo(nombre, segundos):
+    print(f"[{nombre}] Empezando descarga...")
+    await asyncio.sleep(segundos)
+    print(f"[{nombre}] Descarga finalizada! ({segundos}s)")
+    return f"Contenido_{nombre}"
+
+async def main():
+    print("Iniciando descargas concurrentes...")
+    resultados = await asyncio.gather(
+        descargar_archivo("Video", 3),
+        descargar_archivo("Imagen", 1),
+        descargar_archivo("Texto", 0.5)
+    )
+    print(f"Resultados recolectados en el mismo orden: {resultados}")
+
+asyncio.run(main())
+</code></pre>
+                </div>
+                <div class="info-box info">
+                    <div class="info-box-text"><strong>Observa:</strong> El "Texto" termina primero, luego "Imagen", y por último "Video". Sin embargo, `asyncio.gather` te devuelve la lista de resultados <code>['Contenido_Video', 'Contenido_Imagen', 'Contenido_Texto']</code> en el orden que le pasaste inicialmente, agrupando mágicamente el desorden del I/O concurrent.</div>
+                </div>
+            </div>
+
+            <div style="display:flex; justify-content:space-between; margin-top:4rem;">
+                <a href="index.html" class="btn btn-outline">← Volver al Inicio</a>
+                <a href="sandbox-b2.html" class="btn btn-primary" style="background-color:#10b981; color:#fff;">Siguiente: B2 Tasks →</a>
+            </div>
+
+        </main>
+
+    <footer style="text-align:center;padding:2rem;color:var(--text3);font-size:0.8rem;border-top:1px solid var(--border);">
+        &copy; 2026 LucentIA Research · Python Async TDD-First
+    </footer>
+
+    
+<script src="../shared/lucentia.js" defer></script>
+
+<!-- ── Sidebar inyectada por inject_gen1_sidebar.py ────────────────────────── -->
+<nav id="sidebar" class="sidebar">
+  <div class="sidebar-logo">LucentIA</div>
+  <div class="sidebar-course">Python Async</div>
+  <ul class="sidebar-nav">
+    <li class="sidebar-section">Índice del curso</li>
+    <li><a href="index.html">Python Async</a></li>
+    <li><a href="sandbox-b1.html">Bloque 1: El Despertar del Event Loop</a></li>
+    <li><a href="sandbox-b2.html">Bloque 2: Controlando Tareas</a></li>
+    <li><a href="sandbox-b3.html">Bloque 3: Sincronización</a></li>
+    <li><a href="sandbox-b4.html">Bloque 4: Productor-Consumidor</a></li>
+    <li><a href="sandbox-b5.html">Bloque 5: Mini Proyectos</a></li>
+  </ul>
+  <div class="theme-toggle">
+    <button class="theme-btn" id="themeBtn" onclick="toggleTheme()">
+      <span id="themeIcon">&#9728;</span>
+      <span id="themeLabel">Modo claro</span>
+    </button>
+  </div>
+</nav>
+
+</body>
+</html>

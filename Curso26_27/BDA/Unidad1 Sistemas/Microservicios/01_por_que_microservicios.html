@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>1. Por qué existen | Microservicios</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="shared_styles.css">
+</head>
+<body>
+  <nav class="navbar" id="navbar">
+    <div class="nav-inner">
+      <a href="index.html" class="nav-brand" style="text-decoration:none;"><span class="brand-text">Microservicios</span></a>
+      <ul class="nav-links" id="navLinks">
+        <li><a href="index.html">Inicio</a></li>
+        <li><a href="01_por_que_microservicios.html" class="active">1. Por qué</a></li>
+        <li><a href="02_conceptos_clave.html">2. Conceptos</a></li>
+        <li><a href="03_service_discovery.html">3. Discovery</a></li>
+        <li><a href="04_arquitectura.html">4. Arquitectura</a></li>
+        <li><a href="05_construccion_paso_a_paso.html">5. Paso a Paso</a></li>
+        <li><a href="06_probar_y_siguientes.html">6. Pruebas</a></li>
+        <li><a href="07_consul_en_profundidad.html">7. Consul</a></li>
+      </ul>
+    </div>
+  </nav>
+
+<div class="container">
+<div class="breadcrumb"><a href="index.html">Índice</a> → Módulo 1</div>
+
+<h2>1. Por qué existen los microservicios</h2>
+
+<p>Antes de tocar la palabra "microservicio", hablemos de lo que ya conoces: cuando
+escribes un programa en Python, normalmente todo vive en <strong>un solo proceso</strong>.
+Un proceso es, literalmente, un programa en ejecución con su propia memoria — cuando
+ejecutas <code>python app.py</code>, el sistema operativo arranca un proceso, y todo lo
+que ese script hace (leer un fichero, calcular algo, responder a un usuario) pasa por
+ahí dentro.</p>
+
+<p>Una aplicación tradicional — un <strong>monolito</strong> — es exactamente eso a mayor
+escala: un único proceso (o varias copias idénticas del mismo proceso) que contiene
+<em>todo</em> el negocio. Si es una tienda online: la gestión de usuarios, el catálogo,
+los pedidos, los pagos, las notificaciones — todo vive junto, en el mismo código fuente,
+se despliega junto, se reinicia junto.</p>
+
+<p>Y esto no es un error de diseño. Para la inmensa mayoría de proyectos, es la opción
+<strong>correcta</strong>: es más simple de escribir, de depurar (todo el flujo de una
+petición pasa por el mismo proceso, con una sola pila de llamadas) y de desplegar (subes
+una cosa, no diez).</p>
+
+<h3>El problema aparece cuando el monolito crece</h3>
+<p>El dolor no es "es viejo" o "es feo" — son cuatro problemas concretos y medibles:</p>
+<ul>
+  <li><strong>Desplegar da miedo.</strong> Si tocas el módulo de notificaciones y metes
+  un bug, tumbas también pagos — es el mismo proceso, un fallo no controlado (una
+  excepción que mata el proceso, una fuga de memoria) afecta a todo lo que vive dentro.</li>
+  <li><strong>Escalar es todo o nada.</strong> Escalar significa "levantar más copias
+  para aguantar más tráfico". Si solo el módulo de pedidos recibe mucho tráfico (Black
+  Friday), no puedes escalar solo esa parte — tienes que levantar copias enteras de todo
+  el monolito, gastando recursos en partes que no lo necesitan.</li>
+  <li><strong>Equipos grandes se pisan.</strong> Diez personas tocando el mismo repositorio
+  de código significa conflictos de Git constantes, y un único pipeline de despliegue que
+  todo el mundo tiene que esperar — si alguien rompe algo, nadie más puede desplegar hasta
+  que se arregle.</li>
+  <li><strong>Estás atado a una sola tecnología por proceso.</strong> Todo lo que vive en
+  el mismo proceso normalmente tiene que estar en el mismo lenguaje y las mismas
+  dependencias. Si el módulo de recomendaciones necesitaría una librería de Python que
+  choca con una versión que usa el resto del sistema, no hay una forma limpia de mezclar
+  dentro de un único proceso.</li>
+</ul>
+
+<h3>La respuesta: partir el proceso, no solo el código</h3>
+<p>Los <strong>microservicios</strong> resuelven esto partiendo esa única aplicación en
+varios programas <strong>independientes</strong> — no solo carpetas distintas dentro del
+mismo proceso, sino <strong>procesos de verdad separados</strong>, cada uno con:</p>
+<ul>
+  <li><strong>Una sola responsabilidad</strong> (ej. "todo lo de usuarios", nada más).</li>
+  <li><strong>Su propio ciclo de vida</strong> — se puede reiniciar, actualizar o escalar
+  sin tocar los demás.</li>
+  <li><strong>Su propia base de datos</strong>, si la necesita — nunca compartida
+  directamente con otro servicio.</li>
+</ul>
+<div class="box">
+<strong>¿Por qué cada servicio necesita su propia base de datos?</strong>
+Porque si dos microservicios leen y escriben en las mismas tablas, has recreado el
+acoplamiento que querías eliminar — solo que ahora vive en la base de datos en vez de
+en el código. El equipo de pedidos no podría cambiar una columna sin arriesgarse a
+romper al equipo de usuarios, que también la usa. Cada servicio debe ser el único dueño
+de sus propios datos; si otro servicio necesita esa información, la pide por su API
+(como hace <code>orders-service</code> con <code>users-service</code> más adelante en
+este curso) — nunca leyendo su base de datos por detrás.
+</div>
+<p>Como ahora son procesos distintos (posiblemente en máquinas distintas), ya no pueden
+"llamarse" entre ellos como funciones de Python normales — tienen que hablar por la red.
+De eso trata el resto del curso.</p>
+
+<div class="box warn">
+<strong>La trampa que hay que evitar desde el primer día:</strong>
+No se montan microservicios porque "es lo moderno" o porque las empresas grandes lo
+hacen. Se montan cuando el dolor de arriba es real y medible. Empezar un proyecto nuevo
+y pequeño directamente en microservicios suele ser un error: añades toda la complejidad
+de la red (una llamada puede fallar a medias, hay que pensar en latencia, hay que
+mantener varias bases de datos consistentes entre sí) sin tener todavía el problema de
+escala/equipo que lo justifica. Un monolito bien organizado por dentro (módulos
+separados dentro del mismo proceso) aguanta mucho antes de necesitar este salto.
+</div>
+
+<nav class="pager">
+  <a href="index.html">← Índice</a>
+  <a href="02_conceptos_clave.html">Siguiente: Los conceptos, desde cero →</a>
+</nav>
+</div>
+
+<script>
+  // Soporte de rueda de ratón para scroll horizontal en la barra de navegación
+  const navLinks = document.querySelector('.nav-links');
+  if (navLinks) {
+    navLinks.addEventListener('wheel', (e) => {
+      if (e.deltaY !== 0) {
+        e.preventDefault();
+        navLinks.scrollLeft += e.deltaY;
+      }
+    }, { passive: false });
+    // Centrar automáticamente la pestaña activa al cargar
+    const activeTab = navLinks.querySelector('a.active');
+    if (activeTab) {
+      activeTab.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+    }
+  }
+</script>
+</body>
+</html>

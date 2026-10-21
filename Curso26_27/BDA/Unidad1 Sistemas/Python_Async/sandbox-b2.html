@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bloque 2: Controlando Tareas — Python Async</title>
+    <link rel="stylesheet" href="../shared/styles.css"/>
+  <link rel="stylesheet" href="styles.css"/>
+  <!-- Anti-flash: aplica el tema antes de pintar la página -->
+  <script>!function(){var t=localStorage.getItem('lucentia-theme')||'dark';'light'===t&&document.documentElement.setAttribute('data-theme','light')}()</script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+
+</head>
+<body>
+<!-- Botón hamburguesa — visible en tablet/móvil -->
+<button class="sidebar-toggle" id="sidebarToggle" onclick="toggleSidebar()" aria-label="Abrir menú" aria-expanded="true">&#9776;</button>
+<div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
+
+    <header class="page-hero">
+        <span class="page-hero-icon">🧪</span>
+        <h1>Bloque 2: <span class="gradient-text">Controlando Tareas</span></h1>
+        <p>Hasta ahora hemos esperado que todas las tareas terminen (`gather`). ¿Pero qué pasa si queremos lanzarlas en segundo plano (Fire & Forget), o cancelarlas si tardan demasiado?</p>
+    </header>
+
+    <main class="content">
+            <!-- EJERCICIO 2.0 -->
+            <div class="section-header">
+                <h2>E2.0: Disparar y olvidar (create_task)</h2>
+            </div>
+            <p><strong>Objetivo:</strong> Ver cómo planificar una tarea sin tener que usar `await` inmediatamente sobre ella. Muy útil para iniciar procesamiento en "background".</p>
+            
+            <div class="code-block">
+                <div class="code-header">
+                    <span><i class="icon">🐍</i> E2_0_create_task.py</span>
+                    <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+                </div>
+                <pre><code>import asyncio
+
+async def tarea_fondo():
+    print("[Background] Tarea iniciada.")
+    await asyncio.sleep(2)
+    print("[Background] Tarea terminada. (No verás esto si el main termina primero)")
+
+async def main():
+    print("[Main] Planificando tarea en segundo plano...")
+    # Creamos la tarea, se encola en el Event Loop
+    tarea = asyncio.create_task(tarea_fondo())
+    
+    print("[Main] Haciendo otras cosas por 1 segundo...")
+    await asyncio.sleep(1)
+    
+    print("[Main] Main a punto de terminar.")
+    # Si terminamos main() el Event Loop se cierra. 
+    # Comenta la línea de abajo para ver la diferencia.
+    # await tarea  
+
+asyncio.run(main())
+</code></pre>
+            </div>
+            <div class="info-box info">
+                <div class="info-box-text"><strong>Juega:</strong> Si ejecutas el código como está, verás "Main a punto de terminar" y el script morirá antes de imprimir que el Background ha terminado. `create_task()` planifica, pero si el loop principal muere, la tarea muere.</div>
+            </div>
+
+            <!-- EJERCICIO 2.1 -->
+            <div style="margin-top: 4rem;">
+                <div class="section-header">
+                    <h2>E2.1: El Cronómetro Implacable (Timeouts)</h2>
+                </div>
+                <p><strong>Objetivo:</strong> Las APIs fallan y las bases de datos se cuelgan. Aprenderemos a imponer límites de tiempo con `asyncio.wait_for()`.</p>
+                
+                <div class="code-block">
+                    <div class="code-header">
+                        <span><i class="icon">🐍</i> E2_1_timeouts.py</span>
+                        <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+                    </div>
+                    <pre><code>import asyncio
+
+async def peticion_api_lenta():
+    print("[Petición] Consultando API externa...")
+    await asyncio.sleep(5)  # El servidor no responde rápido
+    return "Datos de la API"
+
+async def main():
+    try:
+        print("Lanzando petición con límite de 2 segundos...")
+        # Imponemos un timeout. Si pasa 2 segundos, lanza TimeoutError
+        resultado = await asyncio.wait_for(peticion_api_lenta(), timeout=2.0)
+        print(f"Resultado: {resultado}")
+    except asyncio.TimeoutError:
+        print("🚨 CRÍTICO: La petición a la API excedió el tiempo máximo. Cancelando...")
+
+asyncio.run(main())
+</code></pre>
+                </div>
+                <div class="info-box success">
+                    <div class="info-box-text"><strong>Observa:</strong> La corrutina `peticion_api_lenta` se interrumpe de forma limpia al llegar a los 2 segundos. Python se encarga de inyectar una excepción en el punto de `await asyncio.sleep()` para matarla.</div>
+                </div>
+            </div>
+
+            <!-- EJERCICIO 2.2 -->
+            <div style="margin-top: 4rem;">
+                <div class="section-header">
+                    <h2>E2.2: Cancelación Fina y Limpieza (Graceful Shutdown)</h2>
+                </div>
+                <p><strong>Objetivo:</strong> Qué hacer cuando una tarea es cancelada por Timeout (o manualmente). A veces necesitas asegurar que cierras la conexión a la red antes de morir.</p>
+                
+                <div class="code-block">
+                    <div class="code-header">
+                        <span><i class="icon">🐍</i> E2_2_cancelacion.py</span>
+                        <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+                    </div>
+                    <pre><code>import asyncio
+
+async def trabajo_delicado():
+    print("▶️ [Worker] Abriendo conexión a base de datos...")
+    try:
+        print("▶️ [Worker] Trabajando (podría tardar 10 segundos)...")
+        await asyncio.sleep(10)
+        print("▶️ [Worker] Trabajo completado.")
+    except asyncio.CancelledError:
+        print("⚠️ [Worker] ME HAN CANCELADO! Limpiando sesión...")
+        await asyncio.sleep(0.5) # Tiempo para limpiar
+        print("✅ [Worker] Sesión cerrada de forma segura.")
+        raise  # Es buena práctica relanzar la cancelación si se intercepta
+
+async def main():
+    tarea = asyncio.create_task(trabajo_delicado())
+    
+    await asyncio.sleep(2)
+    print("🛑 [Main] El usuario ha pulsado el botón de cancelar. Cancelando trabajador.")
+    tarea.cancel()
+    
+    try:
+        await tarea
+    except asyncio.CancelledError:
+        print("🛑 [Main] Tarea confirmada como cancelada.")
+
+asyncio.run(main())
+</code></pre>
+                </div>
+                <div class="info-box warning">
+                    <div class="info-box-text">Capturar `asyncio.CancelledError` es vital en arquitecturas robustas. Te da la oportunidad final de cerrar archivos, conexiones TCP o deshacer transacciones antes de que la función sea destruida del stack de ejecución.</div>
+                </div>
+            </div>
+
+            <div style="display:flex; justify-content:space-between; margin-top:4rem;">
+                <a href="sandbox-b1.html" class="btn btn-outline">← Anterior: B1</a>
+                <a href="sandbox-b3.html" class="btn btn-primary" style="background-color:#f59e0b; color:#fff;">Siguiente: B3 Sincronización →</a>
+            </div>
+
+        </main>
+
+    <footer style="text-align:center;padding:2rem;color:var(--text3);font-size:0.8rem;border-top:1px solid var(--border);">
+        &copy; 2026 LucentIA Research · Python Async TDD-First
+    </footer>
+
+    
+<script src="../shared/lucentia.js" defer></script>
+
+<!-- ── Sidebar inyectada por inject_gen1_sidebar.py ────────────────────────── -->
+<nav id="sidebar" class="sidebar">
+  <div class="sidebar-logo">LucentIA</div>
+  <div class="sidebar-course">Python Async</div>
+  <ul class="sidebar-nav">
+    <li class="sidebar-section">Índice del curso</li>
+    <li><a href="index.html">Python Async</a></li>
+    <li><a href="sandbox-b1.html">Bloque 1: El Despertar del Event Loop</a></li>
+    <li><a href="sandbox-b2.html">Bloque 2: Controlando Tareas</a></li>
+    <li><a href="sandbox-b3.html">Bloque 3: Sincronización</a></li>
+    <li><a href="sandbox-b4.html">Bloque 4: Productor-Consumidor</a></li>
+    <li><a href="sandbox-b5.html">Bloque 5: Mini Proyectos</a></li>
+  </ul>
+  <div class="theme-toggle">
+    <button class="theme-btn" id="themeBtn" onclick="toggleTheme()">
+      <span id="themeIcon">&#9728;</span>
+      <span id="themeLabel">Modo claro</span>
+    </button>
+  </div>
+</nav>
+
+</body>
+</html>
