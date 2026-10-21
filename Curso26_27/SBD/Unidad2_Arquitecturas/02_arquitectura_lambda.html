@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>2. Arquitectura Lambda — Arquitecturas Big Data</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+
+    <!-- Prism.js Syntax Highlighting -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/themes/prism-tomorrow.min.css">
+</head>
+
+<body>
+
+    <!-- NAVBAR PRINCIPAL -->
+    <nav class="navbar" id="navbar">
+        <div class="nav-inner">
+            <div class="nav-brand">
+                <span class="brand-text">SBD · Arquitecturas Big Data</span>
+            </div>
+            <ul class="nav-links" id="navLinks">
+                <li><a href="index.html">Inicio</a></li>
+                <li><a href="01_fundamentos_y_dilema.html">1. Fundamentos &amp; CAP</a></li>
+                <li><a href="02_arquitectura_lambda.html" class="active">2. Lambda</a></li>
+                <li><a href="03_arquitectura_kappa.html">3. Kappa</a></li>
+                <li><a href="04_evolucion_centralizada_lakehouse.html">4. Lakehouse</a></li>
+                <li><a href="05_data_mesh.html">5. Data Mesh</a></li>
+                <li><a href="06_casos_reales_y_evaluacion.html">6. Casos &amp; Quiz</a></li>
+            </ul>
+            <button class="nav-mobile-btn" id="navToggle" onclick="toggleNav()">MENÚ</button>
+        </div>
+    </nav>
+
+    <!-- BREADCRUMB -->
+    <div class="breadcrumb">
+        <div class="breadcrumb-inner">
+            <a href="index.html">Inicio</a>
+            <span class="breadcrumb-sep">›</span>
+            <span>2. Arquitectura Lambda: El Enfoque Híbrido</span>
+        </div>
+    </div>
+
+    <!-- HERO SECTION -->
+    <header class="page-hero">
+        <div class="hero-badge">
+            <span class="badge-dot"></span>
+            Capítulo 02 · El Patrón Clásico de Doble Carril
+        </div>
+        <h1>Arquitectura <span class="gradient-text">Lambda</span></h1>
+        <p>Aprende cómo Nathan Marz diseñó el primer gran patrón para unificar el procesamiento masivo por lotes con el streaming en tiempo real, sus tres capas maestras y el doloroso peaje de mantener dos bases de código en producción.</p>
+    </header>
+
+    <!-- MAIN CONTENT -->
+    <main class="content">
+
+        <!-- 1. ORIGEN DE LAMBDA -->
+        <h2>1. Origen y Filosofía: Dividir para Vencer</h2>
+        <p>A principios de la década de 2010, empresas como Twitter y LinkedIn se enfrentaban a una paradoja técnica: los motores de tiempo real de la época (como Apache Storm) eran rápidos pero propensos a perder mensajes o fallar ante cálculos con estado complejo, mientras que los motores batch (Hadoop MapReduce) eran indestructibles y exactos pero tardaban horas en completar un job.</p>
+        <p><strong>Nathan Marz</strong> planteó una solución pragmática: <em>si ninguna tecnología por sí sola puede ser simultáneamente hiper-rápida y 100% infalible sobre petabytes de historia, dividamos el flujo de datos en dos carriles paralelos</em>.</p>
+
+        <!-- DIAGRAMA SVG ARQUITECTURA LAMBDA -->
+        <div class="diagram-container">
+            <div class="diagram-title">Topología de la Arquitectura Lambda: Batch Layer, Speed Layer y Serving Layer</div>
+            <svg viewBox="0 0 900 440" width="100%" height="auto" style="max-width: 860px; display: block; margin: 0 auto;">
+                <defs>
+                    <linearGradient id="lambdaBatch" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stop-color="#1e3a8a" />
+                        <stop offset="100%" stop-color="#172554" />
+                    </linearGradient>
+                    <linearGradient id="lambdaSpeed" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stop-color="#7c2d12" />
+                        <stop offset="100%" stop-color="#451a03" />
+                    </linearGradient>
+                    <linearGradient id="lambdaServing" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stop-color="#064e3b" />
+                        <stop offset="100%" stop-color="#022c22" />
+                    </linearGradient>
+                    <linearGradient id="lambdaData" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stop-color="#581c87" />
+                        <stop offset="100%" stop-color="#3b0764" />
+                    </linearGradient>
+                </defs>
+
+                <!-- FUENTE DE DATOS / EVENTOS -->
+                <g transform="translate(40, 160)">
+                    <rect x="0" y="0" width="160" height="110" rx="12" fill="url(#lambdaData)" stroke="#a855f7" stroke-width="2" />
+                    <text x="80" y="32" fill="#f3e8ff" font-family="Inter, sans-serif" font-size="13" font-weight="800" text-anchor="middle">NUEVOS EVENTOS</text>
+                    <text x="80" y="55" fill="#e9d5ff" font-family="Inter, sans-serif" font-size="11" text-anchor="middle">Logs, IoT, Clics, APIs</text>
+                    <rect x="15" y="70" width="130" height="26" rx="4" fill="#3b0764" />
+                    <text x="80" y="87" fill="#c084fc" font-family="JetBrains Mono, monospace" font-size="10" text-anchor="middle">Inyección Dual</text>
+                </g>
+
+                <!-- FLECHAS INGESTIÓN DUAL -->
+                <!-- Hacia Batch -->
+                <path d="M 200 190 L 260 190 L 260 85 L 290 85" stroke="#38bdf8" stroke-width="2.5" fill="none" />
+                <polygon points="290,80 300,85 290,90" fill="#38bdf8" />
+                
+                <!-- Hacia Speed -->
+                <path d="M 200 240 L 260 240 L 260 345 L 290 345" stroke="#f97316" stroke-width="2.5" fill="none" />
+                <polygon points="290,340 300,345 290,350" fill="#f97316" />
+
+                <!-- 1. BATCH LAYER (ARRIBA) -->
+                <g transform="translate(300, 30)">
+                    <rect x="0" y="0" width="280" height="110" rx="12" fill="url(#lambdaBatch)" stroke="#38bdf8" stroke-width="2" />
+                    <text x="140" y="28" fill="#38bdf8" font-family="Inter, sans-serif" font-size="14" font-weight="800" text-anchor="middle">1. BATCH LAYER</text>
+                    <text x="140" y="50" fill="#93c5fd" font-family="Inter, sans-serif" font-size="11" text-anchor="middle">HDFS / S3 / Spark Core / MapReduce</text>
+                    <text x="140" y="72" fill="#e2e8f0" font-family="Inter, sans-serif" font-size="11" text-anchor="middle">• Master Dataset (Inmutable, Append-Only)</text>
+                    <text x="140" y="92" fill="#e2e8f0" font-family="Inter, sans-serif" font-size="11" text-anchor="middle">• Precomputa Vistas Batch (Precisión Total)</text>
+                </g>
+
+                <!-- 2. SPEED LAYER (ABAJO) -->
+                <g transform="translate(300, 290)">
+                    <rect x="0" y="0" width="280" height="110" rx="12" fill="url(#lambdaSpeed)" stroke="#f97316" stroke-width="2" />
+                    <text x="140" y="28" fill="#fb923c" font-family="Inter, sans-serif" font-size="14" font-weight="800" text-anchor="middle">2. SPEED LAYER</text>
+                    <text x="140" y="50" fill="#fed7aa" font-family="Inter, sans-serif" font-size="11" text-anchor="middle">Apache Storm / Flink / Spark Streaming</text>
+                    <text x="140" y="72" fill="#e2e8f0" font-family="Inter, sans-serif" font-size="11" text-anchor="middle">• Procesa únicamente datos recientes</text>
+                    <text x="140" y="92" fill="#e2e8f0" font-family="Inter, sans-serif" font-size="11" text-anchor="middle">• Baja latencia (Milisegundos)</text>
+                </g>
+
+                <!-- FLECHAS HACIA SERVING LAYER -->
+                <path d="M 580 85 L 630 85 L 630 190 L 650 190" stroke="#38bdf8" stroke-width="2.5" fill="none" />
+                <polygon points="650,185 660,190 650,195" fill="#38bdf8" />
+
+                <path d="M 580 345 L 630 345 L 630 240 L 650 240" stroke="#f97316" stroke-width="2.5" fill="none" />
+                <polygon points="650,235 660,240 650,245" fill="#f97316" />
+
+                <!-- 3. SERVING LAYER (DERECHA) -->
+                <g transform="translate(660, 160)">
+                    <rect x="0" y="0" width="200" height="110" rx="12" fill="url(#lambdaServing)" stroke="#34d399" stroke-width="2" />
+                    <text x="100" y="28" fill="#34d399" font-family="Inter, sans-serif" font-size="14" font-weight="800" text-anchor="middle">3. SERVING LAYER</text>
+                    <text x="100" y="48" fill="#a7f3d0" font-family="Inter, sans-serif" font-size="11" text-anchor="middle">Cassandra / HBase / ES</text>
+                    <rect x="15" y="62" width="170" height="36" rx="6" fill="#022c22" stroke="#10b981" />
+                    <text x="100" y="78" fill="#ffffff" font-family="JetBrains Mono, monospace" font-size="10" font-weight="700" text-anchor="middle">query = batch_view</text>
+                    <text x="100" y="92" fill="#fbbf24" font-family="JetBrains Mono, monospace" font-size="10" font-weight="700" text-anchor="middle">+ speed_view</text>
+                </g>
+            </svg>
+        </div>
+
+        <!-- 2. LAS TRES CAPAS EN DETALLE -->
+        <h2>2. Desglose Técnico de las Tres Capas</h2>
+
+        <div class="steps">
+            <div class="step">
+                <div class="step-num">1</div>
+                <div class="step-body">
+                    <h4>Capa de Lotes (Batch Layer): El Guardián de la Verdad Histórica</h4>
+                    <p>Tiene dos responsabilidades fundamentales:</p>
+                    <ul>
+                        <li><strong>Almacenar el Master Dataset:</strong> Un almacén inmutable, sólo de adición (<em>Append-Only</em>), donde los datos crudos se preservan intactos sin modificar jamás el pasado (normalmente en Apache Hadoop HDFS o Amazon S3).</li>
+                        <li><strong>Precomputar las Vistas Batch:</strong> Jobs periódicos en Apache Spark o MapReduce escanean toda la historia, aplican deduplicación pesada, corigen inconsistencias y generan vistas pre-agregadas altamente optimizadas para lectura.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="step">
+                <div class="step-num">2</div>
+                <div class="step-body">
+                    <h4>Capa de Velocidad (Speed Layer): El Puente de Tiempo Real</h4>
+                    <p>Mientras el Batch Layer tarda 3 o 4 horas en calcular las vistas de ayer, los eventos de los últimos minutos siguen llegando. La misión de la Speed Layer (ejecutada en Apache Flink, Storm o Spark Streaming) es procesar <strong>únicamente los datos recientes que aún no han sido procesados por el último job batch</strong>.</p>
+                    <p>Las vistas en tiempo real son efímeras: en cuanto el Batch Layer finaliza su cálculo y publica las nuevas vistas, los datos correspondientes en la Speed Layer <strong>se descartan</strong> para evitar duplicados.</p>
+                </div>
+            </div>
+
+            <div class="step">
+                <div class="step-num">3</div>
+                <div class="step-body">
+                    <h4>Capa de Servicio (Serving Layer): La Fusión Transparente</h4>
+                    <p>Los usuarios y aplicaciones analíticas nunca consultan los datos crudos. Envían sus peticiones a la Serving Layer (implementada en bases de datos NoSQL ultra-rápidas como Apache Cassandra, HBase o Elasticsearch). La respuesta final se obtiene combinando ambas fuentes:</p>
+                    <div class="code-block">
+                        <div class="code-header">
+                            <span class="code-lang">python — Pseudocódigo de resolución en la Serving Layer</span>
+                        </div>
+                        <pre><code class="language-python">def obtener_metrica_usuario(user_id):
+    # 1. Recupera la agregación consolidada histórica (hasta las 02:00 AM)
+    vista_batch = db_cassandra.get_batch_view(user_id)
+    
+    # 2. Recupera las compras/eventos de los últimos minutos desde la capa de velocidad
+    vista_speed = db_redis.get_realtime_view(user_id)
+    
+    # 3. Fusiona ambas vistas en una respuesta única e instantánea para el cliente
+    return combinar_vistas(vista_batch, vista_speed)
+</code></pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. EL PROBLEMA DE LA DOBLE BASE DE CÓDIGO -->
+        <h2>3. El Gran Problema de Lambda: El "Infierno del Doble Código"</h2>
+        <p>Durante años, Lambda fue la arquitectura estándar de facto recomendada por todas las grandes consultoras. Sin embargo, en entornos de producción reales reveló tres debilidades operativas críticas:</p>
+
+        <div class="two-col">
+            <div class="mini-card">
+                <h5>💥 1. Doble Base de Código (Dual-Codebase)</h5>
+                <p>Para calcular la misma métrica (ej. <em>"sesiones de usuario activas y volumen de compras"</em>), el equipo de datos debe escribir y mantener <strong>dos programas completamente distintos</strong>:</p>
+                <ul>
+                    <li>Un algoritmo en PySpark/Scala optimizado para el clúster Batch.</li>
+                    <li>Otro algoritmo en Java/Python optimizado para Flink/Storm en Streaming.</li>
+                </ul>
+                <p style="margin-top: 0.5rem; color: var(--danger); font-size: 0.88rem;">Si el negocio cambia una regla de cálculo de impuestos, hay que coordinar dos despliegues idénticos en dos tecnologías distintas. Un error de sincronización provoca que los datos en tiempo real no cuadren con los históricos.</p>
+            </div>
+
+            <div class="mini-card">
+                <h5>💸 2. Doble Coste y Complejidad Operativa</h5>
+                <ul>
+                    <li><strong>Dos clústeres que mantener:</strong> Gestionar la infraestructura, monitorización y dependencias de dos tecnologías radicalmente distintas.</li>
+                    <li><strong>Lógica de Fusión Compleja:</strong> Combinar vistas batch con vistas de velocidad cuando hay solapamiento temporal o eventos que llegan tarde (<em>late-arriving data</em>) es una fuente inagotable de bugs matemáticos.</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="info-box tip">
+            <span class="info-box-icon">💡</span>
+            <div class="info-box-text">
+                <strong>¿Sigue teniendo sentido Lambda hoy en día?</strong><br>
+                Sí, en casos donde el algoritmo de tiempo real <strong>utiliza un modelo heurístico o probabilístico</strong> (ej. HyperLogLog para conteo aproximado de millones de usuarios en segundos) mientras que el batch nocturno ejecuta el cálculo determinista exacto. Sin embargo, para flujos analíticos estándar, la industria comenzó a buscar una simplificación radical... lo que dio origen a la <strong>Arquitectura Kappa</strong>.
+            </div>
+        </div>
+
+        <!-- CHECKLIST INTERACTIVA -->
+        <div class="checklist-card">
+            <h4>✓ Checklist de Comprensión de Lambda</h4>
+            <ul class="checklist-items">
+                <li class="check-item" onclick="toggleCheck(this)">
+                    <input type="checkbox">
+                    <span>Identificadas las 3 capas fundamentales: Batch Layer, Speed Layer y Serving Layer.</span>
+                </li>
+                <li class="check-item" onclick="toggleCheck(this)">
+                    <input type="checkbox">
+                    <span>Comprendido por qué el Master Dataset es inmutable y cómo garantiza la tolerancia a fallos humanos.</span>
+                </li>
+                <li class="check-item" onclick="toggleCheck(this)">
+                    <input type="checkbox">
+                    <span>Entendido cómo se descartan los datos de la Speed Layer en cuanto el job Batch los absorbe.</span>
+                </li>
+                <li class="check-item" onclick="toggleCheck(this)">
+                    <input type="checkbox">
+                    <span>Asimilado el problema del mantenimiento de la doble base de código (Dual-Codebase) y la complejidad de fusión.</span>
+                </li>
+            </ul>
+        </div>
+
+        <!-- NAVEGACIÓN ENTRE CAPÍTULOS -->
+        <div class="chapter-nav">
+            <a href="01_fundamentos_y_dilema.html" class="chapter-nav-btn">← 1. Fundamentos &amp; CAP</a>
+            <a href="index.html" class="chapter-nav-btn">Índice General</a>
+            <a href="03_arquitectura_kappa.html" class="chapter-nav-btn primary">3. Arquitectura Kappa →</a>
+        </div>
+
+    </main>
+
+    <!-- FOOTER -->
+    <footer class="footer">
+        <div class="footer-inner">
+            <div class="footer-brand">
+                <div class="brand-logo"><span class="brand-text">IES San Vicente</span> · Sistemas Big Data &amp; Analytics</div>
+                <p>Material docente de Arquitecturas y Patrones para Big Data (Curso 2026-2027).</p>
+            </div>
+            <div class="footer-brand" style="text-align: right;">
+                <p>Especialización en Big Data &amp; IA · <strong>Módulo Sistemas Big Data (SBD)</strong></p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- PRISM.JS PARA RESALTADO DE CÓDIGO -->
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/prism.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-python.min.js"></script>
+
+    <!-- SCRIPTS -->
+    <script>
+        function toggleNav() {
+            const links = document.getElementById('navLinks');
+            links.classList.toggle('open');
+        }
+
+        function toggleCheck(item) {
+            const checkbox = item.querySelector('input[type="checkbox"]');
+            if (event.target !== checkbox) {
+                checkbox.checked = !checkbox.checked;
+            }
+            if (checkbox.checked) {
+                item.classList.add('completed');
+            } else {
+                item.classList.remove('completed');
+            }
+        }
+    </script>
+</body>
+
+</html>

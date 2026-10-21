@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>6. Casos Reales y Matriz de Decisión — Arquitecturas Big Data</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        .quiz-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 1.6rem;
+            margin-bottom: 1.5rem;
+        }
+        .quiz-question {
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: #fff;
+            margin-bottom: 1rem;
+        }
+        .quiz-options {
+            display: flex;
+            flex-direction: column;
+            gap: 0.6rem;
+        }
+        .quiz-option {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 0.75rem 1rem;
+            cursor: pointer;
+            font-size: 0.92rem;
+            color: var(--text2);
+            transition: all 0.2s;
+        }
+        .quiz-option:hover {
+            background: rgba(139, 92, 246, 0.1);
+            border-color: var(--primary-light);
+            color: #fff;
+        }
+        .quiz-option.correct {
+            background: rgba(16, 185, 129, 0.15) !important;
+            border-color: var(--secondary) !important;
+            color: #34d399 !important;
+            font-weight: 600;
+        }
+        .quiz-option.incorrect {
+            background: rgba(239, 68, 68, 0.15) !important;
+            border-color: var(--danger) !important;
+            color: #f87171 !important;
+        }
+        .quiz-feedback {
+            margin-top: 0.9rem;
+            font-size: 0.88rem;
+            line-height: 1.5;
+            display: none;
+            padding: 0.75rem 1rem;
+            border-radius: 6px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- NAVBAR PRINCIPAL -->
+    <nav class="navbar" id="navbar">
+        <div class="nav-inner">
+            <div class="nav-brand">
+                <span class="brand-text">SBD · Arquitecturas Big Data</span>
+            </div>
+            <ul class="nav-links" id="navLinks">
+                <li><a href="index.html">Inicio</a></li>
+                <li><a href="01_fundamentos_y_dilema.html">1. Fundamentos &amp; CAP</a></li>
+                <li><a href="02_arquitectura_lambda.html">2. Lambda</a></li>
+                <li><a href="03_arquitectura_kappa.html">3. Kappa</a></li>
+                <li><a href="04_evolucion_centralizada_lakehouse.html">4. Lakehouse</a></li>
+                <li><a href="05_data_mesh.html">5. Data Mesh</a></li>
+                <li><a href="06_casos_reales_y_evaluacion.html" class="active">6. Casos &amp; Quiz</a></li>
+            </ul>
+            <button class="nav-mobile-btn" id="navToggle" onclick="toggleNav()">MENÚ</button>
+        </div>
+    </nav>
+
+    <!-- BREADCRUMB -->
+    <div class="breadcrumb">
+        <div class="breadcrumb-inner">
+            <a href="index.html">Inicio</a>
+            <span class="breadcrumb-sep">›</span>
+            <span>6. Taller de Decisión Arquitectural y Casos Reales</span>
+        </div>
+    </div>
+
+    <!-- HERO SECTION -->
+    <header class="page-hero">
+        <div class="hero-badge">
+            <span class="badge-dot"></span>
+            Capítulo 06 · Síntesis Práctica y Evaluación
+        </div>
+        <h1>Casos Reales y <span class="gradient-text">Matriz de Decisión</span></h1>
+        <p>Aprende a elegir la arquitectura exacta para cada problema de negocio, analiza cómo operan gigantes como Netflix, Uber y Spotify, y pon a prueba tus conocimientos con el cuestionario de certificación de la unidad.</p>
+    </header>
+
+    <!-- MAIN CONTENT -->
+    <main class="content">
+
+        <!-- 1. MATRIZ DE DECISIÓN ARQUITECTURAL -->
+        <h2>1. Matriz de Decisión del Arquitecto de Datos</h2>
+        <p>No existe la "mejor" arquitectura universal: existe la arquitectura adecuada para un conjunto específico de requisitos de latencia, presupuesto y madurez de equipo. Utiliza esta guía para orientar tus decisiones:</p>
+
+        <div class="table-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Escenario de Negocio</th>
+                        <th>Requisito de Latencia</th>
+                        <th>Naturaleza de Datos</th>
+                        <th>Arquitectura Recomendada</th>
+                        <th>Justificación Técnica</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Alertas IoT y Detección de Fraude Bancario</strong></td>
+                        <td>Sub-segundo (&lt; 100 ms)</td>
+                        <td>Streams continuos infinitos</td>
+                        <td><strong style="color: #38bdf8;">Kappa (Kafka + Flink)</strong></td>
+                        <td>Evita la duplicidad de Lambda; permite reaccionar evento a evento sin esperar batches.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Modelos ML Complejos + Dashboard en Vivo</strong></td>
+                        <td>Híbrida (Segundos + Horas)</td>
+                        <td>Cálculos aproximados en streaming + exactos batch</td>
+                        <td><strong style="color: #a78bfa;">Lambda (Spark + Flink + ES)</strong></td>
+                        <td>El algoritmo de ML pesado requiere escanear grafos históricos mientras el streaming da alertas rápidas.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Business Intelligence y Analítica Empresarial</strong></td>
+                        <td>Minutos / Horas</td>
+                        <td>Tabular, Parquet estructurado</td>
+                        <td><strong style="color: #34d399;">Data Lakehouse (Delta / Iceberg)</strong></td>
+                        <td>Transacciones ACID garantizadas sobre S3 barato, soporte SQL total y Time Travel para auditorías.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Corporación Multinacional con Múltiples Negocios</strong></td>
+                        <td>Heterogénea</td>
+                        <td>Silos departamentales descoordinados</td>
+                        <td><strong style="color: #f472b6;">Data Mesh (DaaP + Plataforma)</strong></td>
+                        <td>Descentraliza la propiedad hacia los dominios para eliminar el cuello de botella del equipo central.</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- 2. CASOS DE ESTUDIO EN LA INDUSTRIA -->
+        <h2>2. Casos Reales en la Gran Industria</h2>
+
+        <div class="cards-grid">
+            <div class="card">
+                <span class="card-icon">🍿</span>
+                <h3>Netflix: El Nacimiento de Apache Iceberg</h3>
+                <p>Netflix gestiona más de 100 petabytes en Amazon S3. Al intentar realizar listados de particiones en directorios con millones de archivos, el S3 API colapsaba por latencia. Para solucionarlo, crearon <strong>Apache Iceberg</strong>, que rastrea los ficheros mediante árboles de metadatos jerárquicos independientes de la estructura de carpetas.</p>
+            </div>
+
+            <div class="card">
+                <span class="card-icon">🚗</span>
+                <h3>Uber: La Reinvención con Kappa+</h3>
+                <p>Con millones de viajes y conductores simultáneos, Uber sufría retrasos e inconsistencias contables con su arquitectura Lambda. Su migración hacia <strong>Kappa+</strong> con Apache Kafka como log persistente y Apache Flink como motor unificado les permitió procesar más de 40 millones de eventos por segundo en tiempo real.</p>
+            </div>
+
+            <div class="card">
+                <span class="card-icon">🎵</span>
+                <h3>Spotify: Recomendaciones y Discover Weekly</h3>
+                <p>Spotify combina una arquitectura event-driven con Kafka para capturar cada reproducción de canción, alimentando modelos de recomendación que ajustan la lista de reproducción en tiempo real, mientras que pipelines batch de Lakehouse computan resúmenes anuales como el célebre <em>Spotify Wrapped</em>.</p>
+            </div>
+        </div>
+
+        <!-- 3. TALLER DE DISEÑO -->
+        <h2>3. Taller Práctico: Resuelve estos Escenarios de Examen</h2>
+
+        <div class="two-col">
+            <div class="mini-card">
+                <h5>📋 Caso A: La Startup Fintech</h5>
+                <p><strong>Situación:</strong> Una startup de 25 empleados lanza una app de pagos móviles. Tienen 2 ingenieros de datos y el CEO sugiere implementar <em>Data Mesh</em> porque lo leyó en un blog.</p>
+                <p style="margin-top: 0.6rem; color: var(--cyan); font-size: 0.9rem;"><strong>Tu dictamen como Arquitecto:</strong> Rotundamente <strong>NO</strong>. Data Mesh exige decenas de desarrolladores y múltiples dominios. Para 2 ingenieros, introducir Data Mesh creará una sobrecarga burocrática letal. Deben usar un <strong>Lakehouse centralizado</strong> (ej. DuckDB o Databricks sobre S3) que les dará valor inmediato con coste mínimo.</p>
+            </div>
+
+            <div class="mini-card">
+                <h5>📋 Caso B: Cadena de Supermercados con Fraude en Cajas</h5>
+                <p><strong>Situación:</strong> Quieren bloquear cobros irregulares en menos de 500 ms y a la vez generar el informe fiscal consolidado de cierre contable a las 23:59 con exactitud de céntimos.</p>
+                <p style="margin-top: 0.6rem; color: var(--secondary); font-size: 0.9rem;"><strong>Tu dictamen como Arquitecto:</strong> Arquitectura <strong>Kappa con Serving Layer Dual</strong> o Lakehouse Streaming. Un topic de Kafka captura los tickets; un motor de streaming (Flink) evalúa reglas de fraude en 50 ms, y vuelca los eventos a tablas Iceberg/Delta Lake para el cuadre contable.</p>
+            </div>
+        </div>
+
+        <!-- 4. CUESTIONARIO AUTOEVALUACIÓN -->
+        <h2>4. Cuestionario de Autoevaluación de la Unidad</h2>
+        <p>Selecciona la opción correcta en cada pregunta para comprobar tu asimilación técnica de los conceptos:</p>
+
+        <!-- PREGUNTA 1 -->
+        <div class="quiz-card" id="q1">
+            <div class="quiz-question">1. Según el Teorema CAP de Eric Brewer, ¿por qué ningún sistema Big Data distribuido puede ser clasificado como puramente "CA"?</div>
+            <div class="quiz-options">
+                <div class="quiz-option" onclick="checkAnswer(this, false, 'q1', 'Incorrecto. La latencia no anula la tolerancia a fallos de red.')">A) Porque el hardware moderno no soporta discos de alta velocidad.</div>
+                <div class="quiz-option" onclick="checkAnswer(this, true, 'q1', '¡Correcto! En redes distribuidas los fallos de comunicación entre servidores son inevitables; por tanto, la Tolerancia a Particiones (P) es obligatoria y se debe elegir entre Consistencia (CP) o Disponibilidad (AP).')">B) Porque en una red real los cortes y latencias son inevitables, haciendo que la Tolerancia a Particiones (P) sea obligatoria.</div>
+                <div class="quiz-option" onclick="checkAnswer(this, false, 'q1', 'Incorrecto. Codd formuló el modelo relacional en 1970, no el Teorema CAP.')">C) Porque el modelo relacional de Codd prohíbe el particionamiento de datos.</div>
+            </div>
+            <div class="quiz-feedback" id="q1-fb"></div>
+        </div>
+
+        <!-- PREGUNTA 2 -->
+        <div class="quiz-card" id="q2">
+            <div class="quiz-question">2. ¿Cuál es el principal inconveniente que llevó a la industria a buscar alternativas a la Arquitectura Lambda?</div>
+            <div class="quiz-options">
+                <div class="quiz-option" onclick="checkAnswer(this, false, 'q2', 'Incorrecto. Lambda soporta streaming mediante su Speed Layer.')">A) Que no permite procesar datos en tiempo real.</div>
+                <div class="quiz-option" onclick="checkAnswer(this, true, 'q2', '¡Correcto! El problema de la doble base de código (Dual-Codebase): tener que escribir y sincronizar la misma lógica de negocio en dos lenguajes y motores distintos (Batch y Streaming).')">B) El "Infierno del Doble Código": mantener dos bases de código separadas para batch y streaming con la misma lógica.</div>
+                <div class="quiz-option" onclick="checkAnswer(this, false, 'q2', 'Incorrecto. El Master Dataset es inmutable y muy seguro frente a pérdidas.')">C) Que el Master Dataset en HDFS pierde datos constantemente.</div>
+            </div>
+            <div class="quiz-feedback" id="q2-fb"></div>
+        </div>
+
+        <!-- PREGUNTA 3 -->
+        <div class="quiz-card" id="q3">
+            <div class="quiz-question">3. En la Arquitectura Kappa propuesta por Jay Kreps, ¿cómo se recalcula la historia si se introduce una corrección en el código?</div>
+            <div class="quiz-options">
+                <div class="quiz-option" onclick="checkAnswer(this, false, 'q3', 'Incorrecto. Kappa precisamente eliminó la capa batch de Hadoop.')">A) Lanzando un trabajo nocturno de MapReduce sobre Hadoop.</div>
+                <div class="quiz-option" onclick="checkAnswer(this, true, 'q3', '¡Correcto! Se despliega una nueva instancia del motor de streaming arrancando desde el inicio del log en Kafka (offset: 0) hasta ponerse al día con el tiempo real y conmutar vistas.')">B) Desplegando una nueva versión del trabajo de streaming desde el offset 0 del log de Kafka (Replay) hacia una nueva vista.</div>
+                <div class="quiz-option" onclick="checkAnswer(this, false, 'q3', 'Incorrecto. El log en Kafka es inmutable y no se edita directamente.')">C) Editando manualmente los mensajes erróneos dentro de los topics de Kafka.</div>
+            </div>
+            <div class="quiz-feedback" id="q3-fb"></div>
+        </div>
+
+        <!-- PREGUNTA 4 -->
+        <div class="quiz-card" id="q4">
+            <div class="quiz-question">4. ¿Qué ventaja fundamental aporta un Data Lakehouse (Delta Lake / Apache Iceberg) frente a un Data Lake clásico en S3?</div>
+            <div class="quiz-options">
+                <div class="quiz-option" onclick="checkAnswer(this, false, 'q4', 'Incorrecto. Ambos pueden almacenar archivos Parquet.')">A) Que sustituye el formato Parquet por bases de datos relacionales SQLite.</div>
+                <div class="quiz-option" onclick="checkAnswer(this, true, 'q4', '¡Correcto! Añade una capa de metadatos que proporciona transacciones ACID, Time Travel para consultar snapshots del pasado y schema enforcement sobre almacenamiento masivo barato.')">B) Transacciones ACID, prevención de datos corruptos, Time Travel (viaje en el tiempo) y cumplimiento de esquemas.</div>
+                <div class="quiz-option" onclick="checkAnswer(this, false, 'q4', 'Incorrecto. El Lakehouse precisamente permite consultas SQL analíticas de alto rendimiento.')">C) Que prohíbe el uso de sentencias SQL para forzar el uso de C++.</div>
+            </div>
+            <div class="quiz-feedback" id="q4-fb"></div>
+        </div>
+
+        <!-- PREGUNTA 5 -->
+        <div class="quiz-card" id="q5">
+            <div class="quiz-question">5. En el paradigma Data Mesh de Zhamak Dehghani, ¿qué significa el principio de "El Dato como Producto" (Data as a Product)?</div>
+            <div class="quiz-options">
+                <div class="quiz-option" onclick="checkAnswer(this, false, 'q5', 'Incorrecto. Data Mesh no trata sobre vender datos comercialmente, sino de gobernanza interna.')">A) Que la empresa debe vender sus datos en un marketplace de internet para obtener beneficios.</div>
+                <div class="quiz-option" onclick="checkAnswer(this, true, 'q5', '¡Correcto! Los datos dejan de ser un subproducto accidental: tienen propietarios responsables, SLAs explícitos de calidad, documentación y contratos de interfaz.')">B) Que los datos se tratan con la misma seriedad que un producto de software: con SLAs, documentación, propietario y calidad garantizada.</div>
+                <div class="quiz-option" onclick="checkAnswer(this, false, 'q5', 'Incorrecto. El principio 1 traslada la propiedad a los dominios, no al equipo central.')">C) Que el equipo central de ingenieros de datos es el único responsable de la calidad de todas las tablas.</div>
+            </div>
+            <div class="quiz-feedback" id="q5-fb"></div>
+        </div>
+
+        <!-- CHECKLIST FINAL -->
+        <div class="checklist-card">
+            <h4>✓ Checklist de Cierre de la Unidad 2</h4>
+            <ul class="checklist-items">
+                <li class="check-item" onclick="toggleCheck(this)">
+                    <input type="checkbox">
+                    <span>Comprendida la evolución histórica completa desde los sistemas OLTP hasta Data Mesh.</span>
+                </li>
+                <li class="check-item" onclick="toggleCheck(this)">
+                    <input type="checkbox">
+                    <span>Capaz de argumentar los pros y contras entre una arquitectura Lambda y una arquitectura Kappa.</span>
+                </li>
+                <li class="check-item" onclick="toggleCheck(this)">
+                    <input type="checkbox">
+                    <span>Entendida la propuesta de valor del Data Lakehouse y los formatos Delta Lake y Apache Iceberg.</span>
+                </li>
+                <li class="check-item" onclick="toggleCheck(this)">
+                    <input type="checkbox">
+                    <span>Completadas las preguntas del cuestionario de autoevaluación con éxito.</span>
+                </li>
+            </ul>
+        </div>
+
+        <!-- NAVEGACIÓN FINAL -->
+        <div class="chapter-nav">
+            <a href="05_data_mesh.html" class="chapter-nav-btn">← 5. Paradigma Data Mesh</a>
+            <a href="index.html" class="chapter-nav-btn primary">Volver al Portal Principal ⌂</a>
+        </div>
+
+    </main>
+
+    <!-- FOOTER -->
+    <footer class="footer">
+        <div class="footer-inner">
+            <div class="footer-brand">
+                <div class="brand-logo"><span class="brand-text">IES San Vicente</span> · Sistemas Big Data &amp; Analytics</div>
+                <p>Material docente de Arquitecturas y Patrones para Big Data (Curso 2026-2027).</p>
+            </div>
+            <div class="footer-brand" style="text-align: right;">
+                <p>Especialización en Big Data &amp; IA · <strong>Módulo Sistemas Big Data (SBD)</strong></p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- SCRIPTS -->
+    <script>
+        function toggleNav() {
+            const links = document.getElementById('navLinks');
+            links.classList.toggle('open');
+        }
+
+        function toggleCheck(item) {
+            const checkbox = item.querySelector('input[type="checkbox"]');
+            if (event.target !== checkbox) {
+                checkbox.checked = !checkbox.checked;
+            }
+            if (checkbox.checked) {
+                item.classList.add('completed');
+            } else {
+                item.classList.remove('completed');
+            }
+        }
+
+        function checkAnswer(btn, isCorrect, qId, feedbackText) {
+            const card = document.getElementById(qId);
+            const options = card.querySelectorAll('.quiz-option');
+            const fb = document.getElementById(qId + '-fb');
+
+            // Quitar estilos previos
+            options.forEach(opt => {
+                opt.classList.remove('correct', 'incorrect');
+            });
+
+            if (isCorrect) {
+                btn.classList.add('correct');
+                fb.style.display = 'block';
+                fb.style.background = 'rgba(16, 185, 129, 0.15)';
+                fb.style.border = '1px solid var(--secondary)';
+                fb.style.color = '#34d399';
+                fb.innerHTML = '<strong>✓ ' + feedbackText + '</strong>';
+            } else {
+                btn.classList.add('incorrect');
+                fb.style.display = 'block';
+                fb.style.background = 'rgba(239, 68, 68, 0.15)';
+                fb.style.border = '1px solid var(--danger)';
+                fb.style.color = '#f87171';
+                fb.innerHTML = '<strong>❌ ' + feedbackText + '</strong>';
+            }
+        }
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>5. Paradigma Data Mesh — Arquitecturas Big Data</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+
+    <!-- Prism.js Syntax Highlighting -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/themes/prism-tomorrow.min.css">
+</head>
+
+<body>
+
+    <!-- NAVBAR PRINCIPAL -->
+    <nav class="navbar" id="navbar">
+        <div class="nav-inner">
+            <div class="nav-brand">
+                <span class="brand-text">SBD · Arquitecturas Big Data</span>
+            </div>
+            <ul class="nav-links" id="navLinks">
+                <li><a href="index.html">Inicio</a></li>
+                <li><a href="01_fundamentos_y_dilema.html">1. Fundamentos &amp; CAP</a></li>
+                <li><a href="02_arquitectura_lambda.html">2. Lambda</a></li>
+                <li><a href="03_arquitectura_kappa.html">3. Kappa</a></li>
+                <li><a href="04_evolucion_centralizada_lakehouse.html">4. Lakehouse</a></li>
+                <li><a href="05_data_mesh.html" class="active">5. Data Mesh</a></li>
+                <li><a href="06_casos_reales_y_evaluacion.html">6. Casos &amp; Quiz</a></li>
+            </ul>
+            <button class="nav-mobile-btn" id="navToggle" onclick="toggleNav()">MENÚ</button>
+        </div>
+    </nav>
+
+    <!-- BREADCRUMB -->
+    <div class="breadcrumb">
+        <div class="breadcrumb-inner">
+            <a href="index.html">Inicio</a>
+            <span class="breadcrumb-sep">›</span>
+            <span>5. Paradigma Data Mesh: Descentralización y Datos como Producto</span>
+        </div>
+    </div>
+
+    <!-- HERO SECTION -->
+    <header class="page-hero">
+        <div class="hero-badge">
+            <span class="badge-dot"></span>
+            Capítulo 05 · La Revolución Socio-Técnica
+        </div>
+        <h1>El Paradigma <span class="gradient-text">Data Mesh</span></h1>
+        <p>Aprende cómo Zhamak Dehghani resolvió el gran cuello de botella del equipo de datos monolítico aplicando los principios de Microservicios y Domain-Driven Design (DDD) al mundo analítico.</p>
+    </header>
+
+    <!-- MAIN CONTENT -->
+    <main class="content">
+
+        <!-- 1. EL CUELLO DE BOTELLA CENTRAL -->
+        <h2>1. El Colapso del Equipo Central Monolítico</h2>
+        <p>Durante décadas, la ingeniería de datos asumió un dogma indiscutible: <em>"los datos deben almacenarse todos juntos en un único lugar centralizado (DWH o Data Lake), gestionado por un único equipo central de ingenieros de datos"</em>.</p>
+        <p>Sin embargo, a medida que las organizaciones crecen, este modelo centralizado sufre una <strong>falla de escala humana y organizativa</strong>:</p>
+
+        <div class="two-col">
+            <div class="mini-card">
+                <h5>❌ La Desconexión del Negocio</h5>
+                <p>El equipo central de datos recibe peticiones de Logística, Marketing, Finanzas y RRHH. Los ingenieros de datos son expertos en Spark y Kafka, pero <strong>no entienden la semántica profunda del negocio</strong> (ej. qué significa contablemente un "cliente activo" frente a un "cliente retenido").</p>
+            </div>
+            <div class="mini-card">
+                <h5>❌ El Cuello de Botella del Backlog</h5>
+                <p>Cada vez que un departamento necesita un nuevo campo o una corrección analítica, debe abrir un ticket al equipo central. La cola de peticiones tarda meses en resolverse, frenando la innovación de toda la empresa.</p>
+            </div>
+        </div>
+
+        <!-- 2. INTRODUCCIÓN A DATA MESH -->
+        <h2>2. La Solución de Zhamak Dehghani: De la Centralización al Data Mesh</h2>
+        <p>En 2019, <strong>Zhamak Dehghani</strong> (directora de tecnologías emergentes en ThoughtWorks) propuso un nuevo paradigma radical: <strong>Data Mesh</strong>. Inspirándose en cómo los <em>Microservicios</em> dividieron los monolitos de software en servicios independientes por dominio, Data Mesh divide el monolito de datos en <strong>nodos de datos descentralizados</strong>.</p>
+        <p>Data Mesh no es una simple tecnología de software (no es una base de datos que se descargue con <code>apt install</code>), sino un <strong>paradigma socio-técnico</strong> estructurado sobre cuatro pilares inseparables:</p>
+
+        <!-- DIAGRAMA SVG DATA MESH -->
+        <div class="diagram-container">
+            <div class="diagram-title">Los Cuatro Pilares del Paradigma Data Mesh</div>
+            <svg viewBox="0 0 880 400" width="100%" height="auto" style="max-width: 840px; display: block; margin: 0 auto;">
+                <defs>
+                    <linearGradient id="dmDomain1" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stop-color="#1e1b4b" />
+                        <stop offset="100%" stop-color="#312e81" />
+                    </linearGradient>
+                    <linearGradient id="dmDomain2" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stop-color="#064e3b" />
+                        <stop offset="100%" stop-color="#022c22" />
+                    </linearGradient>
+                    <linearGradient id="dmDomain3" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stop-color="#701a75" />
+                        <stop offset="100%" stop-color="#4a044e" />
+                    </linearGradient>
+                </defs>
+
+                <!-- CAPA SUPERIOR: GOBIERNO COMPUTACIONAL FEDERADO -->
+                <g transform="translate(40, 20)">
+                    <rect x="0" y="0" width="800" height="50" rx="8" fill="#141d2e" stroke="#10b981" stroke-width="1.5" />
+                    <text x="400" y="25" fill="#34d399" font-family="Inter, sans-serif" font-size="12" font-weight="800" text-anchor="middle">PRINCIPIO 4: GOBIERNO COMPUTACIONAL FEDERADO</text>
+                    <text x="400" y="42" fill="#94a3b8" font-family="Inter, sans-serif" font-size="10" text-anchor="middle">Políticas globales de seguridad, RGPD y calidad codificadas como software (Policy-as-Code)</text>
+                </g>
+
+                <!-- DOMINIO 1: VENTAS -->
+                <g transform="translate(40, 90)">
+                    <rect x="0" y="0" width="245" height="180" rx="12" fill="url(#dmDomain1)" stroke="#818cf8" stroke-width="1.5" />
+                    <text x="122" y="28" fill="#c7d2fe" font-family="Inter, sans-serif" font-size="13" font-weight="800" text-anchor="middle">DOMINIO DE VENTAS</text>
+                    <text x="122" y="48" fill="#94a3b8" font-family="Inter, sans-serif" font-size="10" text-anchor="middle">Equipo propio de negocio + datos</text>
+                    
+                    <rect x="15" y="65" width="215" height="100" rx="8" fill="#0f172a" stroke="#4f46e5" />
+                    <text x="122" y="85" fill="#38bdf8" font-family="JetBrains Mono, monospace" font-size="11" font-weight="700" text-anchor="middle">Producto de Datos:</text>
+                    <text x="122" y="103" fill="#ffffff" font-family="Inter, sans-serif" font-size="11" text-anchor="middle">"Pedidos y Facturas"</text>
+                    <text x="122" y="125" fill="#94a3b8" font-family="Inter, sans-serif" font-size="9" text-anchor="middle">• Esquema Parquet documentado</text>
+                    <text x="122" y="140" fill="#94a3b8" font-family="Inter, sans-serif" font-size="9" text-anchor="middle">• SLA: Frescura &lt; 5 min</text>
+                    <text x="122" y="155" fill="#10b981" font-family="Inter, sans-serif" font-size="9" font-weight="700" text-anchor="middle">API SQL &amp; Stream expuestos</text>
+                </g>
+
+                <!-- DOMINIO 2: LOGÍSTICA -->
+                <g transform="translate(315, 90)">
+                    <rect x="0" y="0" width="250" height="180" rx="12" fill="url(#dmDomain2)" stroke="#34d399" stroke-width="1.5" />
+                    <text x="125" y="28" fill="#a7f3d0" font-family="Inter, sans-serif" font-size="13" font-weight="800" text-anchor="middle">DOMINIO LOGÍSTICA</text>
+                    <text x="125" y="48" fill="#94a3b8" font-family="Inter, sans-serif" font-size="10" text-anchor="middle">Equipo propio de negocio + datos</text>
+                    
+                    <rect x="15" y="65" width="220" height="100" rx="8" fill="#022c22" stroke="#059669" />
+                    <text x="125" y="85" fill="#34d399" font-family="JetBrains Mono, monospace" font-size="11" font-weight="700" text-anchor="middle">Producto de Datos:</text>
+                    <text x="125" y="103" fill="#ffffff" font-family="Inter, sans-serif" font-size="11" text-anchor="middle">"Trazabilidad de Envíos"</text>
+                    <text x="125" y="125" fill="#94a3b8" font-family="Inter, sans-serif" font-size="9" text-anchor="middle">• Telemetría GPS en tiempo real</text>
+                    <text x="125" y="140" fill="#94a3b8" font-family="Inter, sans-serif" font-size="9" text-anchor="middle">• SLA: 99.9% uptime</text>
+                    <text x="125" y="155" fill="#38bdf8" font-family="Inter, sans-serif" font-size="9" font-weight="700" text-anchor="middle">Topic Kafka + Iceberg</text>
+                </g>
+
+                <!-- DOMINIO 3: MARKETING -->
+                <g transform="translate(595, 90)">
+                    <rect x="0" y="0" width="245" height="180" rx="12" fill="url(#dmDomain3)" stroke="#e879f9" stroke-width="1.5" />
+                    <text x="122" y="28" fill="#f5d0fe" font-family="Inter, sans-serif" font-size="13" font-weight="800" text-anchor="middle">DOMINIO CLIENTES</text>
+                    <text x="122" y="48" fill="#94a3b8" font-family="Inter, sans-serif" font-size="10" text-anchor="middle">Equipo propio de negocio + datos</text>
+                    
+                    <rect x="15" y="65" width="215" height="100" rx="8" fill="#2e1065" stroke="#9333ea" />
+                    <text x="122" y="85" fill="#e879f9" font-family="JetBrains Mono, monospace" font-size="11" font-weight="700" text-anchor="middle">Producto de Datos:</text>
+                    <text x="122" y="103" fill="#ffffff" font-family="Inter, sans-serif" font-size="11" text-anchor="middle">"Perfil 360 y Comportamiento"</text>
+                    <text x="122" y="125" fill="#94a3b8" font-family="Inter, sans-serif" font-size="9" text-anchor="middle">• Segmentación analítica</text>
+                    <text x="122" y="140" fill="#94a3b8" font-family="Inter, sans-serif" font-size="9" text-anchor="middle">• Cumplimiento estricto RGPD</text>
+                    <text x="122" y="155" fill="#fbbf24" font-family="Inter, sans-serif" font-size="9" font-weight="700" text-anchor="middle">Consumo cruzado federado</text>
+                </g>
+
+                <!-- CAPA INFERIOR: PLATAFORMA SELF-SERVICE -->
+                <g transform="translate(40, 295)">
+                    <rect x="0" y="0" width="800" height="85" rx="12" fill="#141d2e" stroke="#38bdf8" stroke-width="2" />
+                    <text x="400" y="28" fill="#38bdf8" font-family="Inter, sans-serif" font-size="13" font-weight="800" text-anchor="middle">PRINCIPIO 3: PLATAFORMA DE DATOS SELF-SERVICE (AUTOSERVICIO)</text>
+                    <text x="400" y="50" fill="#f8fafc" font-family="Inter, sans-serif" font-size="11" text-anchor="middle">El equipo de infraestructura provee plantillas automatizadas con 1 clic:</text>
+                    <text x="400" y="70" fill="#94a3b8" font-family="JetBrains Mono, monospace" font-size="11" text-anchor="middle">Clústeres Kubernetes | Despliegue CI/CD | Catálogo de Datos | Almacenamiento S3 / Delta</text>
+                </g>
+            </svg>
+        </div>
+
+        <!-- 3. LOS CUATRO PRINCIPIOS -->
+        <h2>3. Los Cuatro Principios de Data Mesh</h2>
+
+        <div class="steps">
+            <div class="step">
+                <div class="step-num">1</div>
+                <div class="step-body">
+                    <h4>Principio 1: Propiedad Orientada al Dominio (Domain Ownership)</h4>
+                    <p>La responsabilidad del ciclo de vida del dato se traslada a los equipos que mejor lo conocen. El equipo de Logística no solo programa la app del almacén: también es el propietario de sus pipelines analíticos y de sus tablas históricas. Desaparece el equipo central que hacía de intermediario ciego.</p>
+                </div>
+            </div>
+
+            <div class="step">
+                <div class="step-num">2</div>
+                <div class="step-body">
+                    <h4>Principio 2: El Dato como Producto (Data as a Product - DaaP)</h4>
+                    <p>Los datos dejan de ser un subproducto accidental que se "tira" a un Data Lake. Un <strong>Producto de Datos</strong> es un artefacto de ingeniería de primer nivel que debe cumplir 6 propiedades esenciales:</p>
+                    <ul>
+                        <li><strong>Descubrible (Discoverable):</strong> Registrado en un catálogo corporativo donde cualquiera pueda buscarlo.</li>
+                        <li><strong>Direccionable (Addressable):</strong> Tiene un URI o endpoint único y permanente (ej. <code>s3://data-mesh/ventas/v2/</code>).</li>
+                        <li><strong>Confiable (Trustworthy):</strong> Respaldado por Acuerdos de Nivel de Servicio (SLAs) explícitos sobre frescura, completitud y tasa de error.</li>
+                        <li><strong>Autodescriptivo (Self-describing):</strong> Incluye esquema, semántica y ejemplos de consulta sin necesidad de llamar al creador.</li>
+                        <li><strong>Interoperable:</strong> Usa estándares abiertos (Parquet, SQL, Avro) para conectarse con otros dominios.</li>
+                        <li><strong>Seguro:</strong> Acceso gobernado mediante políticas de encriptación y control de identidad.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="step">
+                <div class="step-num">3</div>
+                <div class="step-body">
+                    <h4>Principio 3: Plataforma de Datos de Autoservicio (Self-Serve Platform)</h4>
+                    <p>¿Qué hace ahora el antiguo equipo central de datos? <strong>Se convierte en un equipo de plataforma</strong>. Su misión no es hacer informes ni ETLs para otros, sino construir y mantener la infraestructura que permite a cualquier desarrollador de negocio levantar un producto de datos en minutos mediante plantillas de Terraform, Kubernetes y catálogos de metadatos.</p>
+                </div>
+            </div>
+
+            <div class="step">
+                <div class="step-num">4</div>
+                <div class="step-body">
+                    <h4>Principio 4: Gobierno Computacional Federado (Federated Governance)</h4>
+                    <p>Para evitar que la autonomía de los dominios se convierta en una anarquía inmanejable con 20 formatos incompatibles, se crea un consejo federado con representantes de cada dominio. Este equipo define las <strong>reglas de juego globales</strong> (formato estándar Parquet, encriptación TLS, anonimización de DNI/tarjetas) y las automatiza mediante <em>Policy-as-Code</em> en los pipelines de despliegue continuo.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- 4. MANIFIESTO DE UN DATA PRODUCT -->
+        <h2>4. Especificación Real de un Data Product (YAML)</h2>
+        <p>En organizaciones que implementan Data Mesh, cada producto de datos se declara como un manifiesto de código que define sus SLAs, esquemas y endpoints de acceso:</p>
+
+        <div class="code-block">
+            <div class="code-header">
+                <span class="code-lang">yaml — data-product-ventas.yaml</span>
+                <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+            </div>
+            <pre><code class="language-yaml">name: pedidos_confirmados
+domain: ventas
+owner: equipo-core-ventas@empresa.com
+version: 2.1.0
+
+# Acuerdos de Nivel de Servicio (SLAs de Calidad)
+sla:
+  latency: "< 3 minutos"
+  availability: "99.95%"
+  completeness: "100% de pedidos facturados"
+
+# Puertos de Salida (Output Ports) disponibles para consumidores
+output_ports:
+  - type: sql_lakehouse
+    endpoint: "trino.data-mesh.internal/ventas.pedidos"
+    format: "Apache Iceberg"
+  - type: event_stream
+    topic: "ventas.pedidos.v2"
+    format: "Apache Kafka (Avro)"
+
+# Políticas de Gobierno Computacional Federado
+governance:
+  confidentiality: "interna"
+  pii_masking:
+    - field: "email_cliente"
+      strategy: "sha256_salted"
+</code></pre>
+        </div>
+
+        <!-- 5. CUÁNDO USAR DATA MESH -->
+        <h2>5. Criterio de Arquitecto: ¿Cuándo SÍ y cuándo NO utilizar Data Mesh?</h2>
+
+        <div class="two-col">
+            <div class="mini-card">
+                <h5>🚫 Cuándo EVITARLO (Sobreingeniería)</h5>
+                <ul>
+                    <li>Empresas pequeñas o medianas con menos de 10-15 personas trabajando en datos.</li>
+                    <li>Organizaciones con un único dominio de negocio claro.</li>
+                    <li>Equipos sin madurez previa en DevOps, CI/CD e Infraestructura como Código.</li>
+                </ul>
+                <p style="margin-top: 0.5rem; color: var(--danger); font-size: 0.88rem;"><strong>Veredicto:</strong> En estos casos, un <strong>Data Lakehouse centralizado</strong> (Databricks, Snowflake o MinIO+Trino) es infinitamente más barato, rápido y sencillo de gestionar.</p>
+            </div>
+            <div class="mini-card">
+                <h5>✅ Cuándo ES LA SOLUCIÓN IDEAL</h5>
+                <ul>
+                    <li>Grandes empresas con múltiples unidades de negocio independientes (ej. bancos, retail global, aerolíneas).</li>
+                    <li>El equipo central de datos se ha convertido en el cuello de botella que bloquea al negocio.</li>
+                    <li>Existe suficiente talento técnico en los departamentos para asumir la propiedad de sus productos.</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- CHECKLIST INTERACTIVA -->
+        <div class="checklist-card">
+            <h4>✓ Checklist de Comprensión de Data Mesh</h4>
+            <ul class="checklist-items">
+                <li class="check-item" onclick="toggleCheck(this)">
+                    <input type="checkbox">
+                    <span>Comprendida la falla de escala organizativa del equipo de datos monolítico centralizado.</span>
+                </li>
+                <li class="check-item" onclick="toggleCheck(this)">
+                    <input type="checkbox">
+                    <span>Identificados los 4 principios de Zhamak Dehghani: Dominios, Data as Product, Self-Serve Platform y Gobierno Federado.</span>
+                </li>
+                <li class="check-item" onclick="toggleCheck(this)">
+                    <input type="checkbox">
+                    <span>Analizadas las 6 propiedades que definen un Producto de Datos (DaaP) frente a una tabla ordinaria.</span>
+                </li>
+                <li class="check-item" onclick="toggleCheck(this)">
+                    <input type="checkbox">
+                    <span>Desarrollado criterio maduro para saber cuándo implementar Data Mesh y cuándo quedarse en un Lakehouse centralizado.</span>
+                </li>
+            </ul>
+        </div>
+
+        <!-- NAVEGACIÓN ENTRE CAPÍTULOS -->
+        <div class="chapter-nav">
+            <a href="04_evolucion_centralizada_lakehouse.html" class="chapter-nav-btn">← 4. Del DWH al Lakehouse</a>
+            <a href="index.html" class="chapter-nav-btn">Índice General</a>
+            <a href="06_casos_reales_y_evaluacion.html" class="chapter-nav-btn primary">6. Casos Reales &amp; Matriz de Decisión →</a>
+        </div>
+
+    </main>
+
+    <!-- FOOTER -->
+    <footer class="footer">
+        <div class="footer-inner">
+            <div class="footer-brand">
+                <div class="brand-logo"><span class="brand-text">IES San Vicente</span> · Sistemas Big Data &amp; Analytics</div>
+                <p>Material docente de Arquitecturas y Patrones para Big Data (Curso 2026-2027).</p>
+            </div>
+            <div class="footer-brand" style="text-align: right;">
+                <p>Especialización en Big Data &amp; IA · <strong>Módulo Sistemas Big Data (SBD)</strong></p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- PRISM.JS PARA RESALTADO DE CÓDIGO -->
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/prism.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-yaml.min.js"></script>
+
+    <!-- SCRIPTS -->
+    <script>
+        function copyCode(btn) {
+            const pre = btn.closest('.code-block').querySelector('pre code');
+            if (!pre) return;
+            const text = pre.innerText || pre.textContent;
+            navigator.clipboard.writeText(text).then(() => {
+                const originalText = btn.innerText;
+                btn.innerText = '✓ Copiado';
+                btn.classList.add('copied');
+                setTimeout(() => {
+                    btn.innerText = originalText;
+                    btn.classList.remove('copied');
+                }, 2000);
+            }).catch(err => {
+                console.error('Error al copiar:', err);
+            });
+        }
+
+        function toggleNav() {
+            const links = document.getElementById('navLinks');
+            links.classList.toggle('open');
+        }
+
+        function toggleCheck(item) {
+            const checkbox = item.querySelector('input[type="checkbox"]');
+            if (event.target !== checkbox) {
+                checkbox.checked = !checkbox.checked;
+            }
+            if (checkbox.checked) {
+                item.classList.add('completed');
+            } else {
+                item.classList.remove('completed');
+            }
+        }
+    </script>
+</body>
+
+</html>

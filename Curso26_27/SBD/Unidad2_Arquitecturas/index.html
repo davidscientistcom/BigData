@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UD2: Arquitecturas y Patrones para Big Data — SBD Bootcamp</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+
+    <!-- NAVBAR PRINCIPAL -->
+    <nav class="navbar" id="navbar">
+        <div class="nav-inner">
+            <div class="nav-brand">
+                <span class="brand-text">SBD · Arquitecturas Big Data</span>
+            </div>
+            <ul class="nav-links" id="navLinks">
+                <li><a href="index.html" class="active">Inicio</a></li>
+                <li><a href="01_fundamentos_y_dilema.html">1. Fundamentos &amp; CAP</a></li>
+                <li><a href="02_arquitectura_lambda.html">2. Lambda</a></li>
+                <li><a href="03_arquitectura_kappa.html">3. Kappa</a></li>
+                <li><a href="04_evolucion_centralizada_lakehouse.html">4. Lakehouse</a></li>
+                <li><a href="05_data_mesh.html">5. Data Mesh</a></li>
+                <li><a href="06_casos_reales_y_evaluacion.html">6. Casos &amp; Quiz</a></li>
+            </ul>
+            <button class="nav-mobile-btn" id="navToggle" onclick="toggleNav()">MENÚ</button>
+        </div>
+    </nav>
+
+    <!-- BREADCRUMB -->
+    <div class="breadcrumb">
+        <div class="breadcrumb-inner">
+            <span>Sistemas Big Data (Curso 2026-2027)</span>
+            <span class="breadcrumb-sep">›</span>
+            <span>Unidad 02: Arquitecturas y Patrones de Datos</span>
+        </div>
+    </div>
+
+    <!-- HERO SECTION -->
+    <header class="page-hero">
+        <div class="hero-badge">
+            <span class="badge-dot"></span>
+            Unidad Didáctica 02 · Diseño de Sistemas a Gran Escala
+        </div>
+        <h1>Arquitecturas y Patrones para <span class="gradient-text">Big Data</span></h1>
+        <p>Domina los fundamentos de ingeniería que sostienen los mayores sistemas de datos del mundo: del dilema entre latencia y completitud a las arquitecturas Lambda y Kappa, la maduración hacia el Data Lakehouse y el paradigma socio-técnico Data Mesh.</p>
+    </header>
+
+    <!-- MAIN CONTENT -->
+    <main class="content">
+
+        <!-- 1. INTRODUCCIÓN A LA UNIDAD -->
+        <h2>1. La Columna Vertebral de los Sistemas de Datos</h2>
+        <p>En el universo de los macrodatos, la <strong>arquitectura</strong> no es un mero plano teórico de consultoría: es la estructura física y lógica que determina si una organización puede explotar sus datos o se ahoga en costes operativos, cuellos de botella y consultas que tardan horas.</p>
+        <p>Toda arquitectura moderna nace de una tensión ineludible: equilibrar los requisitos de negocio (baja latencia para alertas en milisegundos, exactitud analítica y escalabilidad masiva) frente a las restricciones físicas del hardware, la red y el <strong>Teorema CAP</strong>.</p>
+
+        <!-- DIAGRAMA SVG EVOLUTIVO -->
+        <div class="diagram-container">
+            <div class="diagram-title">Evolución Histórica de los Paradigmas de Arquitectura de Datos (1970 - 2026)</div>
+            <svg viewBox="0 0 920 320" width="100%" height="auto" style="max-width: 880px; display: block; margin: 0 auto;">
+                <defs>
+                    <linearGradient id="lineGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                        <stop offset="0%" stop-color="#3b82f6" />
+                        <stop offset="30%" stop-color="#8b5cf6" />
+                        <stop offset="70%" stop-color="#ec4899" />
+                        <stop offset="100%" stop-color="#38bdf8" />
+                    </linearGradient>
+                    <linearGradient id="cardGrad1" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stop-color="#1e293b" />
+                        <stop offset="100%" stop-color="#0f172a" />
+                    </linearGradient>
+                </defs>
+
+                <!-- LÍNEA TEMPORAL CENTRAL -->
+                <line x1="60" y1="160" x2="860" y2="160" stroke="url(#lineGrad)" stroke-width="4" stroke-dasharray="2 0" />
+
+                <!-- HITOS TEMPORALES -->
+                <!-- 1970s: OLTP -->
+                <g transform="translate(60, 50)">
+                    <rect x="-45" y="0" width="110" height="75" rx="8" fill="url(#cardGrad1)" stroke="#3b82f6" stroke-width="1.5" />
+                    <text x="10" y="25" fill="#60a5fa" font-family="Inter, sans-serif" font-size="12" font-weight="800" text-anchor="middle">AÑOS 70</text>
+                    <text x="10" y="45" fill="#f8fafc" font-family="Inter, sans-serif" font-size="11" font-weight="700" text-anchor="middle">Sistemas OLTP</text>
+                    <text x="10" y="62" fill="#94a3b8" font-family="Inter, sans-serif" font-size="9" text-anchor="middle">BBDD Relacionales</text>
+                    <circle cx="10" cy="110" r="7" fill="#3b82f6" stroke="#fff" stroke-width="2" />
+                    <line x1="10" y1="75" x2="10" y2="110" stroke="#3b82f6" stroke-width="2" stroke-dasharray="3 2" />
+                </g>
+
+                <!-- 1980s: DWH -->
+                <g transform="translate(220, 185)">
+                    <rect x="-45" y="35" width="115" height="75" rx="8" fill="url(#cardGrad1)" stroke="#8b5cf6" stroke-width="1.5" />
+                    <text x="12" y="60" fill="#c084fc" font-family="Inter, sans-serif" font-size="12" font-weight="800" text-anchor="middle">AÑOS 80-90</text>
+                    <text x="12" y="80" fill="#f8fafc" font-family="Inter, sans-serif" font-size="11" font-weight="700" text-anchor="middle">Data Warehouse</text>
+                    <text x="12" y="97" fill="#94a3b8" font-family="Inter, sans-serif" font-size="9" text-anchor="middle">Inmon vs Kimball</text>
+                    <circle cx="12" cy="-25" r="7" fill="#8b5cf6" stroke="#fff" stroke-width="2" />
+                    <line x1="12" y1="35" x2="12" y2="-25" stroke="#8b5cf6" stroke-width="2" stroke-dasharray="3 2" />
+                </g>
+
+                <!-- 2010s: DATA LAKE & LAMBDA/KAPPA -->
+                <g transform="translate(390, 50)">
+                    <rect x="-55" y="0" width="135" height="75" rx="8" fill="url(#cardGrad1)" stroke="#ec4899" stroke-width="1.5" />
+                    <text x="12" y="25" fill="#f472b6" font-family="Inter, sans-serif" font-size="12" font-weight="800" text-anchor="middle">AÑOS 2010</text>
+                    <text x="12" y="45" fill="#f8fafc" font-family="Inter, sans-serif" font-size="11" font-weight="700" text-anchor="middle">Data Lake &amp; Lambda</text>
+                    <text x="12" y="62" fill="#94a3b8" font-family="Inter, sans-serif" font-size="9" text-anchor="middle">Hadoop, S3, Kafka</text>
+                    <circle cx="12" cy="110" r="7" fill="#ec4899" stroke="#fff" stroke-width="2" />
+                    <line x1="12" y1="75" x2="12" y2="110" stroke="#ec4899" stroke-width="2" stroke-dasharray="3 2" />
+                </g>
+
+                <!-- 2020s: LAKEHOUSE -->
+                <g transform="translate(580, 185)">
+                    <rect x="-55" y="35" width="135" height="75" rx="8" fill="url(#cardGrad1)" stroke="#38bdf8" stroke-width="1.5" />
+                    <text x="12" y="60" fill="#38bdf8" font-family="Inter, sans-serif" font-size="12" font-weight="800" text-anchor="middle">AÑOS 2020</text>
+                    <text x="12" y="80" fill="#f8fafc" font-family="Inter, sans-serif" font-size="11" font-weight="700" text-anchor="middle">Data Lakehouse</text>
+                    <text x="12" y="97" fill="#94a3b8" font-family="Inter, sans-serif" font-size="9" text-anchor="middle">Delta Lake &amp; Iceberg</text>
+                    <circle cx="12" cy="-25" r="7" fill="#38bdf8" stroke="#fff" stroke-width="2" />
+                    <line x1="12" y1="35" x2="12" y2="-25" stroke="#38bdf8" stroke-width="2" stroke-dasharray="3 2" />
+                </g>
+
+                <!-- PRESENTE: DATA MESH -->
+                <g transform="translate(760, 50)">
+                    <rect x="-50" y="0" width="130" height="75" rx="8" fill="url(#cardGrad1)" stroke="#10b981" stroke-width="2" />
+                    <text x="15" y="25" fill="#34d399" font-family="Inter, sans-serif" font-size="12" font-weight="800" text-anchor="middle">ACTUALIDAD</text>
+                    <text x="15" y="45" fill="#ffffff" font-family="Inter, sans-serif" font-size="11" font-weight="700" text-anchor="middle">Data Mesh</text>
+                    <text x="15" y="62" fill="#a7f3d0" font-family="Inter, sans-serif" font-size="9" text-anchor="middle">DaaP &amp; Descentralización</text>
+                    <circle cx="15" cy="110" r="8" fill="#10b981" stroke="#fff" stroke-width="2" />
+                    <line x1="15" y1="75" x2="15" y2="110" stroke="#10b981" stroke-width="2" stroke-dasharray="3 2" />
+                </g>
+            </svg>
+        </div>
+
+        <!-- 2. MAPA DE MÓDULOS DE LA UNIDAD -->
+        <h2>2. Módulos Temáticos de la Unidad</h2>
+        <p>Haz clic en cualquiera de los temas para acceder al contenido interactivo con diagramas arquitecturales, casos reales y análisis comparativo:</p>
+
+        <div class="cards-grid">
+            <div class="card">
+                <span class="card-icon">⚖️</span>
+                <h3>1. Fundamentos &amp; Teorema CAP</h3>
+                <p>El dilema entre latencia y completitud. Por qué no existe la base de datos perfecta, límites de la consistencia y el procesamiento Batch vs Streaming.</p>
+                <a href="01_fundamentos_y_dilema.html" class="card-link">Entrar al tema →</a>
+            </div>
+
+            <div class="card">
+                <span class="card-icon">⚡</span>
+                <h3>2. Arquitectura Lambda</h3>
+                <p>El enfoque híbrido de Nathan Marz: Batch Layer (HDFS/Spark), Speed Layer (Storm/Flink) y Serving Layer. Fortalezas y el infierno del doble código.</p>
+                <a href="02_arquitectura_lambda.html" class="card-link">Entrar al tema →</a>
+            </div>
+
+            <div class="card">
+                <span class="card-icon">🌊</span>
+                <h3>3. Arquitectura Kappa</h3>
+                <p>La simplificación radical de Jay Kreps: "Todo es un Stream". Apache Kafka como log inmutable y reprocesamiento por replay sin capa batch duplicada.</p>
+                <a href="03_arquitectura_kappa.html" class="card-link">Entrar al tema →</a>
+            </div>
+
+            <div class="card">
+                <span class="card-icon">🏛️</span>
+                <h3>4. Del DWH al Lakehouse</h3>
+                <p>Evolución centralizada: OLTP, Kimball vs Inmon, la trampa del Data Swamp en Hadoop y el auge del Lakehouse con ACID, Parquet y Time Travel.</p>
+                <a href="04_evolucion_centralizada_lakehouse.html" class="card-link">Entrar al tema →</a>
+            </div>
+
+            <div class="card">
+                <span class="card-icon">🕸️</span>
+                <h3>5. Paradigma Data Mesh</h3>
+                <p>El fin del cuello de botella central: Zhamak Dehghani y los 4 principios socio-técnicos: Dominios, Data as a Product, Self-Serve Platform y Gobierno Federado.</p>
+                <a href="05_data_mesh.html" class="card-link">Entrar al tema →</a>
+            </div>
+
+            <div class="card">
+                <span class="card-icon">🏆</span>
+                <h3>6. Casos Reales &amp; Matriz de Decisión</h3>
+                <p>Análisis de ingeniería real en Netflix, Uber (Kappa+) y LinkedIn. Matriz comparativa para saber qué arquitectura elegir según presupuesto y SLAs.</p>
+                <a href="06_casos_reales_y_evaluacion.html" class="card-link">Entrar al tema →</a>
+            </div>
+        </div>
+
+        <!-- 3. OBJETIVOS DE APRENDIZAJE -->
+        <h2>3. Objetivos Clave de la Unidad</h2>
+        <div class="two-col">
+            <div class="mini-card">
+                <h5>✦ Competencias Técnicas</h5>
+                <ul>
+                    <li>Comprender por qué las arquitecturas de streaming y batch resuelven problemas diferentes de latencia y consistencia.</li>
+                    <li>Saber justificar el uso de formatos de tabla abierta modernos (Delta Lake, Apache Iceberg) frente a lagos crudos.</li>
+                    <li>Diseñar flujos de datos tolerantes a fallos con logs inmutables particionados.</li>
+                </ul>
+            </div>
+            <div class="mini-card">
+                <h5>✦ Criterio de Arquitecto de Datos</h5>
+                <ul>
+                    <li>Reconocer las trampas de la sobreingeniería: cuándo NO necesitas Lambda ni Data Mesh.</li>
+                    <li>Evaluar el coste operativo y la complejidad del mantenimiento de múltiples bases de código en producción.</li>
+                    <li>Alinear la arquitectura técnica con la estructura organizativa de la empresa (Ley de Conway).</li>
+                </ul>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- FOOTER -->
+    <footer class="footer">
+        <div class="footer-inner">
+            <div class="footer-brand">
+                <div class="brand-logo"><span class="brand-text">IES San Vicente</span> · Sistemas Big Data &amp; Analytics</div>
+                <p>Material docente de Arquitecturas y Patrones para Big Data (Curso 2026-2027).</p>
+            </div>
+            <div class="footer-brand" style="text-align: right;">
+                <p>Especialización en Big Data &amp; IA · <strong>Módulo Sistemas Big Data (SBD)</strong></p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- SCRIPTS -->
+    <script>
+        function toggleNav() {
+            const links = document.getElementById('navLinks');
+            links.classList.toggle('open');
+        }
+    </script>
+</body>
+
+</html>
