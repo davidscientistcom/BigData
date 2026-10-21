@@ -231,8 +231,153 @@ systemctl enable --now nginx
             </div>
         </div>
 
-        <!-- 4. CASO DE ESTUDIO COMPLETO -->
-        <h2>4. Caso Práctico: Aprovisionamiento de Pila de Datos (Python + PostgreSQL + Docker)</h2>
+        <!-- 4. APROVISIONAMIENTO CON PYTHON -->
+        <h2>4. ¿Se puede Aprovisionar con Scripts de Python en lugar de Bash?</h2>
+        <p><strong>¡Absolutamente sí!</strong> Aunque el provisionador nativo de Vagrant se define con el tipo <code>"shell"</code>, Vagrant no está limitado a scripts de Bash. Cualquier script que contenga un <strong>shebang UNIX</strong> válido (como <code>#!/usr/bin/env python3</code>) o cualquier comando invocado a través del intérprete de Python se ejecuta de forma totalmente nativa.</p>
+
+        <div class="two-col">
+            <div class="mini-card">
+                <h5>✦ ¿Por qué usar Python frente a Bash en Big Data?</h5>
+                <ul>
+                    <li><strong>Manejo de Errores Profesional:</strong> Bloques <code>try...except</code> y rollbacks limpios en lugar de crípticos códigos de salida <code>$?</code>.</li>
+                    <li><strong>Parseo nativo de JSON y YAML:</strong> Manipular configuraciones de Spark, Kafka o Docker sin tuberías frágiles de <code>jq</code>, <code>sed</code> o <code>awk</code>.</li>
+                    <li><strong>Lógica y APIs:</strong> Consultar APIs REST, descargar metadatos o calcular rangos de IPs con librerías nativas (<code>urllib</code>, <code>ipaddress</code>).</li>
+                </ul>
+            </div>
+            <div class="mini-card">
+                <h5>✦ Requisito: Intérprete Disponible</h5>
+                <p>Las cajas oficiales modernas como <code>ubuntu/jammy64</code> y <code>ubuntu/noble64</code> incluyen <strong>Python 3 preinstalado de fábrica</strong> en el sistema base de Canonical. Tus scripts de Python funcionarán desde el primer segundo sin necesidad de instalar nada previo.</p>
+            </div>
+        </div>
+
+        <h3>Método 1: Script de Python Autónomo con Shebang (El más limpio)</h3>
+        <p>Crea un archivo <code>provision.py</code> en la carpeta de tu proyecto. Al incluir <code>#!/usr/bin/env python3</code> en la primera línea, Vagrant le otorgará permisos de ejecución y el kernel de Linux llamará automáticamente al intérprete de Python:</p>
+
+        <div class="code-block">
+            <div class="code-header">
+                <span class="code-lang">python — provision.py (Script de aprovisionamiento en Python)</span>
+                <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+            </div>
+            <pre><code class="language-python">#!/usr/bin/env python3
+import os
+import sys
+import subprocess
+
+print("==> [Python Provisioner] Iniciando configuración de la máquina...")
+
+def run_cmd(cmd):
+    """Ejecuta un comando del sistema de forma segura comprobando errores."""
+    print(f"--> Ejecutando: {' '.join(cmd)}")
+    res = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    if res.returncode != 0:
+        print(f"❌ Error al ejecutar {cmd}:\n{res.stderr}", file=sys.stderr)
+        sys.exit(res.returncode)
+    return res.stdout
+
+# 1. Actualización e instalación desatendida
+env = os.environ.copy()
+env["DEBIAN_FRONTEND"] = "noninteractive"
+
+subprocess.run(["apt-get", "update", "-y"], env=env, check=True)
+subprocess.run(["apt-get", "install", "-y", "nginx", "htop"], env=env, check=True)
+
+# 2. Generación dinámica de configuración o HTML
+pagina_html = """<!DOCTYPE html>
+<html>
+<head><title>Aprovisionado con Python</title></head>
+<body style='font-family: sans-serif; background: #0f172a; color: white; padding: 2rem;'>
+  <h1>✓ Servidor Aprovisionado con Python 3</h1>
+  <p>Generado dinámicamente desde un script Python ejecutado por Vagrant.</p>
+</body>
+</html>"""
+
+with open("/var/www/html/index.html", "w", encoding="utf-8") as f:
+    f.write(pagina_html)
+
+# 3. Reinicio de servicio
+run_cmd(["systemctl", "restart", "nginx"])
+print("==> [Python Provisioner] ¡Aprovisionamiento finalizado con éxito!")
+</code></pre>
+        </div>
+
+        <p>En tu <code>Vagrantfile</code>, solo tienes que llamarlo con la directiva habitual <code>path</code>:</p>
+
+        <div class="code-block">
+            <div class="code-header">
+                <span class="code-lang">ruby — Vagrantfile ejecutando script de Python</span>
+                <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+            </div>
+            <pre><code class="language-ruby">Vagrant.configure("2") do |config|
+  config.vm.box = "ubuntu/jammy64"
+  config.vm.network "forwarded_port", guest: 80, host: 8080, host_ip: "127.0.0.1"
+
+  # Vagrant sube provision.py a la VM y lo ejecuta con Python 3
+  config.vm.provision "shell", path: "provision.py"
+end
+</code></pre>
+        </div>
+
+        <h3>Método 2: Pasando Argumentos desde Vagrantfile a Python</h3>
+        <p>Puedes parametrizar tu script de Python desde el <code>Vagrantfile</code> utilizando el array <code>args</code>. Tu script de Python recibirá estos valores a través del módulo <code>argparse</code>:</p>
+
+        <div class="code-block">
+            <div class="code-header">
+                <span class="code-lang">ruby — Paso de parámetros al script Python</span>
+                <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+            </div>
+            <pre><code class="language-ruby">Vagrant.configure("2") do |config|
+  config.vm.box = "ubuntu/jammy64"
+
+  config.vm.provision "shell",
+    path: "setup_cluster.py",
+    args: ["--ambiente", "desarrollo", "--puerto", "8080"]
+end
+</code></pre>
+        </div>
+
+        <div class="code-block">
+            <div class="code-header">
+                <span class="code-lang">python — setup_cluster.py recibiendo argumentos</span>
+                <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+            </div>
+            <pre><code class="language-python">#!/usr/bin/env python3
+import argparse
+
+parser = argparse.ArgumentParser(description="Aprovisionamiento de Clúster")
+parser.add_argument("--ambiente", default="desarrollo", help="Entorno de ejecución")
+parser.add_argument("--puerto", type=int, default=80, help="Puerto de escucha")
+args = parser.parse_args()
+
+print(f"==> Configurando servidor para entorno: {args.ambiente} en puerto: {args.puerto}")
+# Continuar con la lógica del aprovisionamiento...
+</code></pre>
+        </div>
+
+        <h3>Método 3: Inyección de Python Inline (Directo en Vagrantfile)</h3>
+        <p>Si solo necesitas ejecutar unas pocas líneas de comprobación sin crear un archivo separado, puedes invocar <code>python3 -c</code> en un bloque inline:</p>
+
+        <div class="code-block">
+            <div class="code-header">
+                <span class="code-lang">ruby — Python inline en Vagrantfile</span>
+                <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+            </div>
+            <pre><code class="language-ruby">Vagrant.configure("2") do |config|
+  config.vm.box = "ubuntu/jammy64"
+
+  config.vm.provision "shell", inline: <<-SHELL
+    python3 -c "
+import platform
+import socket
+print('==> Aprovisionando en nodo:', socket.gethostname())
+print('==> Kernel y Arquitectura:', platform.platform())
+    "
+  SHELL
+end
+</code></pre>
+        </div>
+
+        <!-- 5. CASO DE ESTUDIO COMPLETO -->
+        <h2>5. Caso Práctico: Aprovisionamiento de Pila de Datos (Python + PostgreSQL + Docker)</h2>
         <p>A continuación creamos una infraestructura completa con un script externo modular:</p>
 
         <div class="code-block">
@@ -295,9 +440,9 @@ echo "==> ¡Aprovisionamiento completado con éxito!"
 </code></pre>
         </div>
 
-        <!-- 5. COMANDOS CLI DE PROVISIONING -->
-        <h2>5. Gestión de Aprovisionamiento en Terminal (CLI)</h2>
-        <p>¿Qué pasa si modificas tu script <code>bootstrap.sh</code> y quieres aplicarlo a una máquina que ya está funcionando sin destruirla?</p>
+        <!-- 6. COMANDOS CLI DE PROVISIONING -->
+        <h2>6. Gestión de Aprovisionamiento en Terminal (CLI)</h2>
+        <p>¿Qué pasa si modificas tu script <code>bootstrap.sh</code> o <code>provision.py</code> y quieres aplicarlo a una máquina que ya está funcionando sin destruirla?</p>
 
         <div class="code-block">
             <div class="code-header">
@@ -325,7 +470,11 @@ vagrant up --provision
                 </li>
                 <li class="check-item" onclick="toggleCheck(this)">
                     <input type="checkbox">
-                    <span>Incluido <code>export DEBIAN_FRONTEND=noninteractive</code> y el flag <code>-y</code> en comandos apt.</span>
+                    <span>Dominado el aprovisionamiento nativo con <strong>scripts de Python</strong> usando shebang <code>#!/usr/bin/env python3</code> o inline.</span>
+                </li>
+                <li class="check-item" onclick="toggleCheck(this)">
+                    <input type="checkbox">
+                    <span>Incluido <code>export DEBIAN_FRONTEND=noninteractive</code> y el flag <code>-y</code> en comandos de instalación de paquetes.</span>
                 </li>
                 <li class="check-item" onclick="toggleCheck(this)">
                     <input type="checkbox">
@@ -364,6 +513,7 @@ vagrant up --provision
     <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/prism.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-ruby.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-bash.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-python.min.js"></script>
 
     <!-- SCRIPTS -->
     <script>
