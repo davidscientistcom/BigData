@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>02. Anatomía de Configuración y Enrutamiento | IES San Vicente</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <!-- NAVBAR -->
+  <nav class="navbar">
+    <div class="nav-inner">
+      <a href="index.html" class="nav-brand">
+        <svg viewBox="0 0 24 24">
+          <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+        </svg>
+        <span class="brand-text">NGINX Masterclass</span>
+      </a>
+      <ul class="nav-links">
+        <li><a href="01_arquitectura_y_fundamentos.html">01. Arquitectura</a></li>
+        <li><a href="02_configuracion_y_directivas.html" class="active">02. Configuración</a></li>
+        <li><a href="03_servidor_web_y_estaticos.html">03. Servidor Web</a></li>
+        <li><a href="04_reverse_proxy_y_arquitectura.html">04. Reverse Proxy</a></li>
+        <li><a href="05_balanceo_de_carga.html">05. Load Balancing</a></li>
+        <li><a href="06_seguridad_ssl_y_optimizacion.html">06. Seguridad & SSL</a></li>
+        <li><a href="07_laboratorios_practicos.html" style="color: var(--primary-light); font-weight:700;">07. Labs Prácticos</a></li>
+      </ul>
+      <div class="nav-actions">
+        <span class="btn-nav-repo">BDA 2026/27</span>
+      </div>
+    </div>
+  </nav>
+
+  <!-- BREADCRUMB -->
+  <div class="breadcrumb">
+    <div class="breadcrumb-inner">
+      <a href="index.html">NGINX Masterclass</a>
+      <span class="breadcrumb-sep">/</span>
+      <span style="color: var(--primary-light);">02. Configuración &amp; Enrutamiento</span>
+    </div>
+  </div>
+
+  <!-- HERO -->
+  <header class="page-hero">
+    <div class="hero-badge">
+      <span class="badge-dot"></span>
+      MÓDULO 02 &bull; SINTAXIS Y GRAMÁTICA
+    </div>
+    <h1>Anatomía de Configuración &amp; <span class="gradient-text">Enrutamiento</span></h1>
+    <p>
+      Estructura jerárquica de contextos, directivas esenciales de producción y el algoritmo de coincidencia y precedencia de <code>location</code>.
+    </p>
+  </header>
+
+  <!-- CONTENT -->
+  <main class="content">
+
+    <h2>1. Jerarquía de Contextos (Context Hierarchy)</h2>
+    <p>
+      El archivo de configuración de NGINX se organiza de forma arbórea en bloques anidados denominados <strong>Contextos</strong>. Cada contexto define el alcance de las directivas que contiene, aplicando reglas de herencia desde los niveles superiores hacia los inferiores:
+    </p>
+
+    <div class="diagram-card">
+      <h4>Árbol de Contextos en NGINX</h4>
+      <p class="caption">Las directivas del contexto superior se heredan en los hijos, salvo que se sobrescriban explícitamente</p>
+      <div class="diagram-svg-container">
+        <svg viewBox="0 0 820 340" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <!-- Background -->
+          <rect x="5" y="5" width="810" height="330" rx="14" fill="#0b1324" stroke="rgba(255,255,255,0.08)" stroke-width="1.5"/>
+
+          <!-- MAIN CONTEXT -->
+          <rect x="25" y="20" width="770" height="300" rx="10" fill="#111c30" stroke="#38bdf8" stroke-width="1.5" stroke-dasharray="5 5"/>
+          <text x="45" y="45" fill="#38bdf8" font-size="12" font-weight="800" font-family="JetBrains Mono">MAIN CONTEXT (Global: worker_processes, user, error_log)</text>
+
+          <!-- EVENTS CONTEXT -->
+          <rect x="45" y="65" width="220" height="85" rx="8" fill="#162542" stroke="rgba(255,255,255,0.15)"/>
+          <text x="55" y="90" fill="#f1f5f9" font-size="11" font-weight="700" font-family="JetBrains Mono">events { ... }</text>
+          <text x="55" y="115" fill="#94a3b8" font-size="10" font-family="Inter">&bull; worker_connections 1024;</text>
+          <text x="55" y="135" fill="#94a3b8" font-size="10" font-family="Inter">&bull; use epoll;</text>
+
+          <!-- HTTP CONTEXT -->
+          <rect x="285" y="65" width="490" height="240" rx="8" fill="#0e231b" stroke="#10b981" stroke-width="1.5"/>
+          <text x="300" y="90" fill="#34d399" font-size="12" font-weight="800" font-family="JetBrains Mono">http { ... } (Capa Web, Gzip, MIME Types)</text>
+
+          <!-- UPSTREAM CONTEXT -->
+          <rect x="300" y="105" width="225" height="65" rx="6" fill="#143628" stroke="#10b981" stroke-opacity="0.4"/>
+          <text x="310" y="125" fill="#6ee7b7" font-size="10.5" font-weight="700" font-family="JetBrains Mono">upstream cluster {</text>
+          <text x="310" y="145" fill="#94a3b8" font-size="9.5" font-family="Inter">server 10.0.0.1:8000; ...</text>
+          <text x="310" y="160" fill="#6ee7b7" font-size="10" font-family="JetBrains Mono">}</text>
+
+          <!-- SERVER CONTEXT 1 -->
+          <rect x="540" y="105" width="220" height="185" rx="6" fill="#143628" stroke="#10b981" stroke-opacity="0.4"/>
+          <text x="550" y="125" fill="#6ee7b7" font-size="10.5" font-weight="700" font-family="JetBrains Mono">server { # Host Virtual</text>
+          <text x="550" y="145" fill="#94a3b8" font-size="9.5" font-family="Inter">listen 80; server_name ia.local;</text>
+
+          <!-- LOCATION 1 -->
+          <rect x="550" y="160" width="200" height="55" rx="4" fill="#0d241b"/>
+          <text x="560" y="180" fill="#a7f3d0" font-size="9.5" font-weight="700" font-family="JetBrains Mono">location / {</text>
+          <text x="560" y="200" fill="#94a3b8" font-size="9" font-family="Inter">root /var/www/html; }</text>
+
+          <!-- LOCATION 2 -->
+          <rect x="550" y="222" width="200" height="55" rx="4" fill="#0d241b"/>
+          <text x="560" y="242" fill="#a7f3d0" font-size="9.5" font-weight="700" font-family="JetBrains Mono">location /api/ {</text>
+          <text x="560" y="262" fill="#94a3b8" font-size="9" font-family="Inter">proxy_pass http://cluster; }</text>
+
+          <!-- SERVER FOOTER -->
+          <text x="300" y="295" fill="#94a3b8" font-size="10" font-family="Inter">Permite alojar cientos de dominios en la misma IP con bloques server {}</text>
+        </svg>
+      </div>
+    </div>
+
+    <h3>1.1 Desglose de Contextos Principales</h3>
+    <ul>
+      <li><strong><code>main</code>:</strong> Contexto raíz (sin llaves). Define la gestión del proceso global, usuario de ejecución (<code>user www-data;</code>), número de procesos worker y ubicación de logs de arranque.</li>
+      <li><strong><code>events</code>:</strong> Ajusta los parámetros de red a bajo nivel. La directiva <code>worker_connections 1024;</code> define cuántos sockets simultáneos puede gestionar cada worker.</li>
+      <li><strong><code>http</code>:</strong> Configura todo el comportamiento HTTP/HTTPS. Contiene directivas que aplican a todos los sitios web (compresión gzip, tipos MIME, logs de acceso, cabeceras globales).</li>
+      <li><strong><code>server</code>:</strong> Representa un <em>Virtual Host</em> (servidor virtual). Se activa en función de la IP, puerto de escucha (<code>listen 80;</code>) y nombre de dominio (<code>server_name midominio.com;</code>).</li>
+      <li><strong><code>location</code>:</strong> Se encuentra dentro de <code>server</code> y gestiona el enrutamiento de peticiones basándose en la URI solicitada (ej. <code>/api</code>, <code>/static/</code> o <code>/</code>).</li>
+      <li><strong><code>upstream</code>:</strong> Define un clúster de servidores de backend para balancear tráfico o actuar como proxy.</li>
+    </ul>
+
+    <h2>2. Reglas Sintácticas Fundamentales</h2>
+    <p>
+      La configuración de NGINX es rigurosa. Un error de sintaxis impedirá que el servicio arranque:
+    </p>
+
+    <ul>
+      <li><strong>El punto y coma obligatorio:</strong> Cada directiva simple DEBE finalizar con un punto y coma <code>;</code>. Olvidarlo es el error número 1 de configuración.</li>
+      <li><strong>Llaves para bloques:</strong> Los contextos se delimitan estrictamente con <code>{</code> y <code>}</code>.</li>
+      <li><strong>Comentarios:</strong> Cualquier texto precedido por una almohadilla <code>#</code> es ignorado por el analizador sintáctico.</li>
+      <li><strong>Unidades de medida:</strong> NGINX comprende sufijos amigables como <code>k</code>/<code>K</code> (Kilobytes), <code>m</code>/<code>M</code> (Megabytes), <code>ms</code> (milisegundos), <code>s</code> (segundos), <code>m</code> (minutos) o <code>d</code> (días). Ej: <code>client_max_body_size 50M;</code>.</li>
+    </ul>
+
+    <h2>3. Algoritmo de Precedencia y Coincidencia de `location`</h2>
+    <p>
+      Cuando llega una petición HTTP (por ejemplo <code>GET /api/v1/predict</code>), NGINX analiza todos los bloques <code>location</code> definidos dentro del <code>server</code> correspondiente. <strong>El orden en el que están escritos en el archivo NO siempre determina cuál se ejecuta</strong>. NGINX sigue un algoritmo de prioridad estricto:
+    </p>
+
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr>
+            <th>Prioridad</th>
+            <th>Modificador</th>
+            <th>Tipo de Coincidencia</th>
+            <th>Comportamiento y Regla de Parada</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>1 (Máxima)</strong></td>
+            <td><code>= /ruta</code></td>
+            <td><strong>Coincidencia Exacta</strong></td>
+            <td>Si la URI es exactamente igual, se detiene la búsqueda de inmediato y se ejecuta este bloque. Cero ambigüedad.</td>
+          </tr>
+          <tr>
+            <td><strong>2</strong></td>
+            <td><code>^~ /ruta</code></td>
+            <td><strong>Prefijo con Parada</strong></td>
+            <td>Si coincide con el prefijo más largo, NGINX <strong>NO evalúa ninguna expresión regular</strong> posterior. Detiene la búsqueda.</td>
+          </tr>
+          <tr>
+            <td><strong>3</strong></td>
+            <td><code>~ regex</code></td>
+            <td><strong>Expresión Regular (Case Sensitive)</strong></td>
+            <td>Sensible a mayúsculas y minúsculas. Se evalúan en el <strong>orden en el que aparecen</strong> escritas en el archivo. La primera que coincide, gana.</td>
+          </tr>
+          <tr>
+            <td><strong>3</strong></td>
+            <td><code>~* regex</code></td>
+            <td><strong>Expresión Regular (Case Insensitive)</strong></td>
+            <td>Insensible a mayúsculas/minúsculas (ej. <code>\.(jpg|png|gif)$</code>). Comparte prioridad con <code>~</code> según orden de aparición.</td>
+          </tr>
+          <tr>
+            <td><strong>4 (Fallback)</strong></td>
+            <td><code>/ruta</code> (sin modificador)</td>
+            <td><strong>Prefijo Convencional</strong></td>
+            <td>Busca el prefijo más largo que coincida. Si no coincide ninguna regex en el paso 3, se aplica este prefijo más largo almacenado.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>3.1 Caso Práctico: ¿Qué bloque gana ante cada URL?</h3>
+    <p>
+      Considera la siguiente configuración con múltiples bloques <code>location</code>:
+    </p>
+
+    <div class="code-block">
+      <div class="code-header">
+        <div class="code-dots"><span></span><span></span><span></span></div>
+        <div class="code-title">nginx &bull; Ejemplo de precedencia</div>
+        <button class="btn-copy">Copiar</button>
+      </div>
+      <pre><code>server {
+    listen 80;
+    server_name test.local;
+
+    # Bloque A: Coincidencia exacta
+    location = /login {
+        return 200 "Bloque A: Login Exacto\n";
+    }
+
+    # Bloque B: Prefijo con parada de regex
+    location ^~ /static/ {
+        return 200 "Bloque B: Archivo Estático con ^~\n";
+    }
+
+    # Bloque C: Expresión regular (imágenes)
+    location ~* \.(png|jpg|jpeg)$ {
+        return 200 "Bloque C: Imagen por Regex\n";
+    }
+
+    # Bloque D: Prefijo largo convencional
+    location /api/v1/ {
+        return 200 "Bloque D: API Prefijo Largo\n";
+    }
+
+    # Bloque E: Fallback raíz
+    location / {
+        return 200 "Bloque E: Fallback Raíz\n";
+    }
+}</code></pre>
+    </div>
+
+    <!-- TABLA DE RESOLUCIÓN -->
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr>
+            <th>Petición URI entrante</th>
+            <th>Bloque Ganador</th>
+            <th>Explicación Técnica</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>/login</code></td>
+            <td><strong style="color: var(--primary-light);">Bloque A</strong></td>
+            <td>Coincidencia exacta <code>=</code> (Prioridad 1). Se detiene de inmediato.</td>
+          </tr>
+          <tr>
+            <td><code>/login?redirect=dashboard</code></td>
+            <td><strong style="color: var(--primary-light);">Bloque A</strong></td>
+            <td>Los parámetros de query string (<code>?redirect=...</code>) se descartan al evaluar <code>location</code>; la URI pura es <code>/login</code>.</td>
+          </tr>
+          <tr>
+            <td><code>/login/two-factor</code></td>
+            <td><strong style="color: var(--text3);">Bloque E</strong></td>
+            <td>No coincide exactamente con <code>= /login</code>, por lo que cae en el fallback <code>/</code>.</td>
+          </tr>
+          <tr>
+            <td><code>/static/avatar.png</code></td>
+            <td><strong style="color: var(--primary-light);">Bloque B</strong></td>
+            <td>Aunque <code>.png</code> coincide con la regex del Bloque C, el modificador <code>^~</code> del Bloque B <strong>anula la evaluación de expresiones regulares</strong>.</td>
+          </tr>
+          <tr>
+            <td><code>/uploads/avatar.PNG</code></td>
+            <td><strong style="color: var(--secondary);">Bloque C</strong></td>
+            <td>No coincide con <code>^~</code>, se evalúan las regex y <code>~*</code> coincide ignorando mayúsculas.</td>
+          </tr>
+          <tr>
+            <td><code>/api/v1/users</code></td>
+            <td><strong style="color: var(--accent);">Bloque D</strong></td>
+            <td>Prefijo más largo convencional. Ninguna regex coincide, por lo que gana sobre el Bloque E (<code>/</code>).</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2>4. Variables de Entorno y Contexto de Petición</h2>
+    <p>
+      NGINX inyecta decenas de variables mágicas que permiten tomar decisiones dinámicas, registrar información en logs o reenviar cabeceras al backend:
+    </p>
+
+    <div class="two-col">
+      <div class="mini-card">
+        <h5>Variables de Conexión &amp; Cliente</h5>
+        <ul style="padding-left: 1.2rem; margin-bottom: 0;">
+          <li><code>$remote_addr</code>: Dirección IP real del cliente TCP.</li>
+          <li><code>$remote_port</code>: Puerto efímero del cliente.</li>
+          <li><code>$scheme</code>: Protocolo utilizado (<code>http</code> o <code>https</code>).</li>
+          <li><code>$request_method</code>: Método HTTP (<code>GET</code>, <code>POST</code>, etc.).</li>
+        </ul>
+      </div>
+
+      <div class="mini-card">
+        <h5>Variables de URI &amp; Cabeceras</h5>
+        <ul style="padding-left: 1.2rem; margin-bottom: 0;">
+          <li><code>$host</code>: Dominio solicitado en la cabecera <code>Host</code>.</li>
+          <li><code>$request_uri</code>: La URI completa original con parámetros (ej. <code>/api/item?id=12</code>).</li>
+          <li><code>$uri</code>: La URI actual normalizada (sin parámetros).</li>
+          <li><code>$http_user_agent</code>: Valor de la cabecera <code>User-Agent</code> del cliente.</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- NAVEGACIÓN -->
+    <div class="chapter-nav">
+      <a href="01_arquitectura_y_fundamentos.html" class="nav-card prev">
+        <span class="nav-card-label">&larr; Anterior</span>
+        <span class="nav-card-title">01. Arquitectura y Fundamentos</span>
+      </a>
+      <a href="03_servidor_web_y_estaticos.html" class="nav-card next">
+        <span class="nav-card-label">Siguiente &rarr;</span>
+        <span class="nav-card-title">03. Servidor Web y Archivos Estáticos</span>
+      </a>
+    </div>
+
+  </main>
+
+  <!-- FOOTER -->
+  <footer>
+    <p><strong>NGINX Masterclass &bull; Módulo 02</strong> &bull; IES San Vicente</p>
+    <p>Especialización en Big Data &amp; Inteligencia Artificial &bull; 2026/2027</p>
+  </footer>
+
+  <script src="main.js"></script>
+</body>
+</html>

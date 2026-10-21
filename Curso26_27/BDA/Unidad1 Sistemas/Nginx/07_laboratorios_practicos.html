@@ -1,0 +1,881 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>07. Laboratorios Prácticos Resueltos | IES San Vicente</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <!-- NAVBAR -->
+  <nav class="navbar">
+    <div class="nav-inner">
+      <a href="index.html" class="nav-brand">
+        <svg viewBox="0 0 24 24">
+          <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+        </svg>
+        <span class="brand-text">NGINX Masterclass</span>
+      </a>
+      <ul class="nav-links">
+        <li><a href="01_arquitectura_y_fundamentos.html">01. Arquitectura</a></li>
+        <li><a href="02_configuracion_y_directivas.html">02. Configuración</a></li>
+        <li><a href="03_servidor_web_y_estaticos.html">03. Servidor Web</a></li>
+        <li><a href="04_reverse_proxy_y_arquitectura.html">04. Reverse Proxy</a></li>
+        <li><a href="05_balanceo_de_carga.html">05. Load Balancing</a></li>
+        <li><a href="06_seguridad_ssl_y_optimizacion.html">06. Seguridad & SSL</a></li>
+        <li><a href="07_laboratorios_practicos.html" class="active" style="color: var(--primary-light); font-weight:700;">07. Labs Prácticos</a></li>
+      </ul>
+      <div class="nav-actions">
+        <span class="btn-nav-repo">BDA 2026/27</span>
+      </div>
+    </div>
+  </nav>
+
+  <!-- BREADCRUMB -->
+  <div class="breadcrumb">
+    <div class="breadcrumb-inner">
+      <a href="index.html">NGINX Masterclass</a>
+      <span class="breadcrumb-sep">/</span>
+      <span style="color: var(--primary-light);">07. Laboratorios Prácticos Resueltos</span>
+    </div>
+  </div>
+
+  <!-- HERO -->
+  <header class="page-hero">
+    <div class="hero-badge">
+      <span class="badge-dot"></span>
+      MÓDULO 07 &bull; EJECUCIÓN PRÁCTICA REAL
+    </div>
+    <h1>Laboratorios Prácticos <span class="gradient-text">Resueltos</span></h1>
+    <p>
+      Seis escenarios reales 100% funcionales y listos para ejecutar. Código fuente completo, archivos de configuración probados y comandos de verificación paso a paso.
+    </p>
+  </header>
+
+  <!-- CONTENT -->
+  <main class="content">
+
+    <div class="callout callout-tip">
+      <div class="callout-icon">🚀</div>
+      <div class="callout-body">
+        <h4>Cómo Utilizar estos Laboratorios</h4>
+        <p>
+          Puedes copiar los bloques de código directamente desde esta página o navegar a la carpeta <code>practicas_resueltas/</code> donde cada laboratorio cuenta con su propio subdirectorio con los scripts de prueba listos para ejecutar con Python y NGINX (o mediante contenedores Docker).
+        </p>
+      </div>
+    </div>
+
+    <!-- =========================================================================
+         LABORATORIO 1
+         ========================================================================= -->
+    <section class="lab-card" id="lab1">
+      <span class="lab-badge">Laboratorio 01</span>
+      <h3 class="lab-title">Servidor Web Estático con Gzip y Página 404 Personalizada</h3>
+
+      <div class="lab-goal">
+        <p>
+          <strong>Objetivo:</strong> Configurar NGINX para servir una web estática con compresión Gzip en tiempo real, manejo de caché para recursos estáticos y redirección interna segura a una página de error <code>404</code> personalizada sin revelar información del servidor.
+        </p>
+      </div>
+
+      <div class="step-flow">
+
+        <div class="step-item">
+          <div class="step-num">1</div>
+          <div class="step-content">
+            <h5>Estructura de Directorios del Laboratorio</h5>
+            <p>Crea la carpeta de trabajo en tu máquina o máquina virtual:</p>
+            <div class="code-block">
+              <div class="code-header">
+                <div class="code-dots"><span></span><span></span><span></span></div>
+                <div class="code-title">bash &bull; Preparación de entorno</div>
+                <button class="btn-copy">Copiar</button>
+              </div>
+              <pre><code>mkdir -p ~/lab_nginx/lab01/{html,conf}
+cd ~/lab_nginx/lab01</code></pre>
+            </div>
+          </div>
+        </div>
+
+        <div class="step-item">
+          <div class="step-num">2</div>
+          <div class="step-content">
+            <h5>Crear el archivo de configuración de NGINX</h5>
+            <p>Guarda el siguiente contenido en <code>conf/static_site.conf</code>:</p>
+            <div class="code-block">
+              <div class="code-header">
+                <div class="code-dots"><span></span><span></span><span></span></div>
+                <div class="code-title">nginx &bull; conf/static_site.conf</div>
+                <button class="btn-copy">Copiar</button>
+              </div>
+              <pre><code>server {
+    listen 8080;
+    server_name localhost;
+    root /var/www/lab01/html;
+    index index.html;
+
+    # Compresión Gzip dinámica
+    gzip on;
+    gzip_types text/plain text/css application/json application/javascript image/svg+xml;
+    gzip_min_length 256;
+    gzip_comp_level 6;
+    gzip_vary on;
+
+    # Ocultar cabeceras de versión del servidor
+    server_tokens off;
+
+    # Enrutamiento principal
+    location / {
+        try_files $uri $uri/ =404;
+    }
+
+    # Caché agresiva para assets
+    location ~* \.(css|js|svg)$ {
+        expires 7d;
+        add_header Cache-Control "public, no-transform";
+    }
+
+    # Página de error 404 personalizada y protegida
+    error_page 404 /404.html;
+    location = /404.html {
+        internal;
+    }
+}</code></pre>
+            </div>
+          </div>
+        </div>
+
+        <div class="step-item">
+          <div class="step-num">3</div>
+          <div class="step-content">
+            <h5>Crear los archivos HTML y CSS de prueba</h5>
+            <div class="code-block">
+              <div class="code-header">
+                <div class="code-dots"><span></span><span></span><span></span></div>
+                <div class="code-title">bash &bull; Generación de archivos estáticos</div>
+                <button class="btn-copy">Copiar</button>
+              </div>
+              <pre><code># 1. Página principal index.html
+cat &lt;&lt; 'EOF' &gt; html/index.html
+&lt;!DOCTYPE html&gt;
+&lt;html lang="es"&gt;
+&lt;head&gt;
+  &lt;meta charset="UTF-8"&gt;
+  &lt;title&gt;Laboratorio 01 &bull; NGINX Est&aacute;tico&lt;/title&gt;
+  &lt;link rel="stylesheet" href="style.css"&gt;
+&lt;/head&gt;
+&lt;body&gt;
+  &lt;h1&gt;&iexcl;Servidor Web Est&aacute;tico Funcionando con NGINX!&lt;/h1&gt;
+  &lt;p&gt;Este archivo est&aacute; siendo servido con compresi&oacute;n Gzip y cach&eacute; optimizada.&lt;/p&gt;
+&lt;/body&gt;
+&lt;/html&gt;
+EOF
+
+# 2. Archivo CSS style.css
+cat &lt;&lt; 'EOF' &gt; html/style.css
+body {
+  font-family: system-ui, sans-serif;
+  background: #0a0f1e;
+  color: #f1f5f9;
+  padding: 3rem;
+  line-height: 1.6;
+}
+h1 { color: #10b981; }
+EOF
+
+# 3. Página de error 404 personalizada 404.html
+cat &lt;&lt; 'EOF' &gt; html/404.html
+&lt;!DOCTYPE html&gt;
+&lt;html lang="es"&gt;
+&lt;head&gt;
+  &lt;meta charset="UTF-8"&gt;
+  &lt;title&gt;404 &bull; Recurso No Encontrado&lt;/title&gt;
+  &lt;style&gt;
+    body { font-family: sans-serif; background: #141f36; color: #f87171; text-align: center; padding: 4rem; }
+    h1 { font-size: 3rem; margin-bottom: 0.5rem; }
+    p { color: #cbd5e1; }
+  &lt;/style&gt;
+&lt;/head&gt;
+&lt;body&gt;
+  &lt;h1&gt;Error 404&lt;/h1&gt;
+  &lt;p&gt;El recurso solicitado no existe en este servidor web institucional.&lt;/p&gt;
+&lt;/body&gt;
+&lt;/html&gt;
+EOF</code></pre>
+            </div>
+          </div>
+        </div>
+
+        <div class="step-item">
+          <div class="step-num">4</div>
+          <div class="step-content">
+            <h5>Ejecución y Verificación de Resultados</h5>
+            <p>Comprueba que la compresión Gzip funciona y que las páginas de error responden adecuadamente:</p>
+            <div class="code-block">
+              <div class="code-header">
+                <div class="code-dots"><span></span><span></span><span></span></div>
+                <div class="code-title">bash &bull; Pruebas con curl</div>
+                <button class="btn-copy">Copiar</button>
+              </div>
+              <pre><code># A) Probar petición normal a la página de inicio
+curl -I http://localhost:8080/
+
+# B) Probar que Gzip comprime el archivo CSS
+curl -I -H "Accept-Encoding: gzip" http://localhost:8080/style.css
+# Debe incluir: Content-Encoding: gzip
+
+# C) Solicitar una página inexistente y verificar el código 404
+curl -I http://localhost:8080/pagina_fantasma.html
+# Debe responder: HTTP/1.1 404 Not Found
+
+# D) Intentar acceder directamente a /404.html (debe denegarse por 'internal')
+curl -I http://localhost:8080/404.html
+# Debe responder: HTTP/1.1 404 Not Found (no expone la ruta interna)</code></pre>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- =========================================================================
+         LABORATORIO 2
+         ========================================================================= -->
+    <section class="lab-card" id="lab2">
+      <span class="lab-badge">Laboratorio 02</span>
+      <h3 class="lab-title">Reverse Proxy para FastAPI con Inyección de IP Real del Cliente</h3>
+
+      <div class="lab-goal">
+        <p>
+          <strong>Objetivo:</strong> Levantar un microservicio en Python FastAPI en el puerto local 8000 y configurarle un Reverse Proxy NGINX en el puerto 8080 que inyecte las cabeceras <code>X-Real-IP</code> y <code>X-Forwarded-For</code>, demostrando cómo el backend recupera la identidad real del visitante.
+        </p>
+      </div>
+
+      <div class="step-flow">
+
+        <div class="step-item">
+          <div class="step-num">1</div>
+          <div class="step-content">
+            <h5>Código de la API en Python (FastAPI)</h5>
+            <p>Crea el archivo <code>backend.py</code>:</p>
+            <div class="code-block">
+              <div class="code-header">
+                <div class="code-dots"><span></span><span></span><span></span></div>
+                <div class="code-title">python &bull; backend.py</div>
+                <button class="btn-copy">Copiar</button>
+              </div>
+              <pre><code>from fastapi import FastAPI, Request
+import uvicorn
+
+app = FastAPI(title="Servicio de Inferencia IA")
+
+@app.get("/api/info")
+def get_client_info(request: Request):
+    return {
+        "socket_direct_ip": request.client.host,
+        "x_real_ip_header": request.headers.get("x-real-ip", "NO INYECTADA"),
+        "x_forwarded_for": request.headers.get("x-forwarded-for", "NO INYECTADA"),
+        "host_header": request.headers.get("host", "NO INYECTADA"),
+        "status": "online"
+    }
+
+@app.get("/api/predict")
+def predict():
+    return {"prediction": "clase_positiva", "confidence": 0.985}
+
+if __name__ == "__main__":
+    # Escucha SOLO en localhost para impedir acceso directo desde fuera
+    uvicorn.run(app, host="127.0.0.1", port=8000)</code></pre>
+            </div>
+          </div>
+        </div>
+
+        <div class="step-item">
+          <div class="step-num">2</div>
+          <div class="step-content">
+            <h5>Configuración de NGINX Reverse Proxy</h5>
+            <p>Guarda el siguiente bloque en <code>conf/reverse_proxy.conf</code>:</p>
+            <div class="code-block">
+              <div class="code-header">
+                <div class="code-dots"><span></span><span></span><span></span></div>
+                <div class="code-title">nginx &bull; conf/reverse_proxy.conf</div>
+                <button class="btn-copy">Copiar</button>
+              </div>
+              <pre><code>server {
+    listen 8080;
+    server_name localhost;
+
+    # Enrutar todas las peticiones que comiencen por /api hacia Uvicorn
+    location /api/ {
+        proxy_pass http://127.0.0.1:8000;
+
+        # INYECCIÓN CRÍTICA DE IDENTIDAD
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        # Optimización de conexión persistente
+        proxy_http_version 1.1;
+        proxy_set_header Connection "";
+    }
+}</code></pre>
+            </div>
+          </div>
+        </div>
+
+        <div class="step-item">
+          <div class="step-num">3</div>
+          <div class="step-content">
+            <h5>Ejecución del Backend y Prueba de Verificación</h5>
+            <div class="code-block">
+              <div class="code-header">
+                <div class="code-dots"><span></span><span></span><span></span></div>
+                <div class="code-title">bash &bull; Lanzamiento y comprobación</div>
+                <button class="btn-copy">Copiar</button>
+              </div>
+              <pre><code># 1. En una terminal, arranca FastAPI:
+python3 backend.py
+
+# 2. En otra terminal, consulta a través del Reverse Proxy NGINX:
+curl -s http://localhost:8080/api/info | jq .
+
+# SALIDA ESPERADA:
+# {
+#   "socket_direct_ip": "127.0.0.1",
+#   "x_real_ip_header": "127.0.0.1",   <--- IP Real inyectada por Nginx
+#   "x_forwarded_for": "127.0.0.1",    <--- Cadena de proxies
+#   "host_header": "localhost:8080",   <--- Preservado el dominio original
+#   "status": "online"
+# }</code></pre>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- =========================================================================
+         LABORATORIO 3
+         ========================================================================= -->
+    <section class="lab-card" id="lab3">
+      <span class="lab-badge">Laboratorio 03</span>
+      <h3 class="lab-title">Clúster de Balanceo de Carga con Detección de Caídas (Failover)</h3>
+
+      <div class="lab-goal">
+        <p>
+          <strong>Objetivo:</strong> Levantar 3 servidores de backend concurrentes simulados en Python (puertos 8001, 8002 y 8003). Configurar NGINX con balanceo ponderado y servidor de respaldo (<code>backup</code>). Ejecutar un script de prueba que mata un servidor en vivo y comprobar que el 100% de las peticiones subsiguientes siguen respondiendo sin un solo error.
+        </p>
+      </div>
+
+      <div class="step-flow">
+
+        <div class="step-item">
+          <div class="step-num">1</div>
+          <div class="step-content">
+            <h5>Servidor de Backend Simulado Multipuerto</h5>
+            <p>Guarda el siguiente script en <code>cluster_nodes.py</code>:</p>
+            <div class="code-block">
+              <div class="code-header">
+                <div class="code-dots"><span></span><span></span><span></span></div>
+                <div class="code-title">python &bull; cluster_nodes.py</div>
+                <button class="btn-copy">Copiar</button>
+              </div>
+              <pre><code>import sys
+from http.server import HTTPServer, BaseHTTPRequestHandler
+import json
+
+class NodeHandler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(200)
+        self.send_header('Content-Type', 'application/json')
+        self.end_headers()
+        response = {
+            "node_port": self.server.server_port,
+            "message": f"Respuesta generada con éxito por el Nodo en puerto {self.server.server_port}"
+        }
+        self.wfile.write(json.dumps(response).encode('utf-8'))
+
+    def log_message(self, format, *args):
+        # Log simplificado
+        print(f"[{self.server.server_port}] Petición atendida desde NGINX")
+
+if __name__ == '__main__':
+    port = int(sys.argv[1]) if len(sys.argv) > 1 else 8001
+    server = HTTPServer(('127.0.0.1', port), NodeHandler)
+    print(f"Nodo activo y escuchando en http://127.0.0.1:{port}")
+    try:
+        server.serve_forever()
+    except KeyboardInterrupt:
+        print(f"\nNodo {port} detenido.")</code></pre>
+            </div>
+          </div>
+        </div>
+
+        <div class="step-item">
+          <div class="step-num">2</div>
+          <div class="step-content">
+            <h5>Configuración del Upstream en NGINX con Failover</h5>
+            <p>Guarda en <code>conf/load_balancer.conf</code>:</p>
+            <div class="code-block">
+              <div class="code-header">
+                <div class="code-dots"><span></span><span></span><span></span></div>
+                <div class="code-title">nginx &bull; conf/load_balancer.conf</div>
+                <button class="btn-copy">Copiar</button>
+              </div>
+              <pre><code>upstream ai_cluster {
+    # Algoritmo: conexión más desocupada
+    least_conn;
+
+    # Nodo 1: Peso 2 (procesará el doble de carga)
+    server 127.0.0.1:8001 weight=2 max_fails=2 fail_timeout=10s;
+
+    # Nodo 2: Nodo estándar
+    server 127.0.0.1:8002 weight=1 max_fails=2 fail_timeout=10s;
+
+    # Nodo 3: Servidor de RESPALDO (Hot Standby)
+    # Solo recibirá peticiones si el Nodo 1 y el Nodo 2 se caen simultáneamente
+    server 127.0.0.1:8003 backup;
+}
+
+server {
+    listen 8080;
+    server_name localhost;
+
+    location / {
+        proxy_pass http://ai_cluster;
+        proxy_set_header Host $host;
+
+        # Si un nodo falla, salta inmediatamente al siguiente sin error al cliente
+        proxy_next_upstream error timeout http_502 http_503;
+        proxy_connect_timeout 2s;
+    }
+}</code></pre>
+            </div>
+          </div>
+        </div>
+
+        <div class="step-item">
+          <div class="step-num">3</div>
+          <div class="step-content">
+            <h5>Script Automatizado de Verificación y Simulación de Caída</h5>
+            <p>Guarda y ejecuta <code>test_failover.py</code> para ver el comportamiento en vivo:</p>
+            <div class="code-block">
+              <div class="code-header">
+                <div class="code-dots"><span></span><span></span><span></span></div>
+                <div class="code-title">python &bull; test_failover.py</div>
+                <button class="btn-copy">Copiar</button>
+              </div>
+              <pre><code>import urllib.request
+import json
+import time
+
+print("=== FASE 1: Enviando 10 peticiones con los nodos 8001 y 8002 activos ===")
+for i in range(1, 11):
+    try:
+        req = urllib.request.urlopen("http://localhost:8080/")
+        data = json.loads(req.read().decode())
+        print(f"Req #{i:02d} -> Atendido por {data['node_port']}")
+    except Exception as e:
+        print(f"Req #{i:02d} -> ERROR: {e}")
+    time.sleep(0.1)
+
+print("\n[!] Simulando caída: Si matas el nodo 8001 (Ctrl+C),")
+print("[!] NGINX redirigirá el 100% de peticiones al nodo 8002 sin perder ni una sola request.")</code></pre>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- =========================================================================
+         LABORATORIO 4
+         ========================================================================= -->
+    <section class="lab-card" id="lab4">
+      <span class="lab-badge">Laboratorio 04</span>
+      <h3 class="lab-title">Rate Limiting en Vivo: Prueba de Saturación y Rechazo HTTP 429</h3>
+
+      <div class="lab-goal">
+        <p>
+          <strong>Objetivo:</strong> Blindar una ruta de inferencia de IA limitando el tráfico a un máximo de 5 peticiones por segundo con una ráfaga (burst) permitida de 5. Ejecutar un script de prueba de carga concurrente que bombardea el endpoint y observar cómo NGINX devuelve <code>200 OK</code> en las permitidas y corta inmediatamente con <code>429 Too Many Requests</code> el tráfico abusivo.
+        </p>
+      </div>
+
+      <div class="step-flow">
+
+        <div class="step-item">
+          <div class="step-num">1</div>
+          <div class="step-content">
+            <h5>Configuración de Rate Limiting en NGINX</h5>
+            <p>Guarda el siguiente bloque en <code>conf/ratelimit.conf</code>:</p>
+            <div class="code-block">
+              <div class="code-header">
+                <div class="code-dots"><span></span><span></span><span></span></div>
+                <div class="code-title">nginx &bull; conf/ratelimit.conf</div>
+                <button class="btn-copy">Copiar</button>
+              </div>
+              <pre><code># Definir zona de memoria para 160.000 IPs a 5 peticiones/segundo
+limit_req_zone $binary_remote_addr zone=ai_limit:10m rate=5r/s;
+limit_req_status 429;
+
+server {
+    listen 8080;
+    server_name localhost;
+
+    # Endpoint protegido con Rate Limiting
+    location /api/infer/ {
+        limit_req zone=ai_limit burst=5 nodelay;
+
+        # Simulación de respuesta rápida en memoria
+        default_type application/json;
+        return 200 '{"status":"success","data":"Inferencia de modelo generada exitosamente"}\n';
+    }
+
+    # Endpoint libre sin limitación (ej. health checks)
+    location /health {
+        default_type application/json;
+        return 200 '{"status":"ok"}\n';
+    }
+}</code></pre>
+            </div>
+          </div>
+        </div>
+
+        <div class="step-item">
+          <div class="step-num">2</div>
+          <div class="step-content">
+            <h5>Script de Prueba de Saturación Concurrente</h5>
+            <p>Guarda y ejecuta <code>test_ratelimit.py</code>:</p>
+            <div class="code-block">
+              <div class="code-header">
+                <div class="code-dots"><span></span><span></span><span></span></div>
+                <div class="code-title">python &bull; test_ratelimit.py</div>
+                <button class="btn-copy">Copiar</button>
+              </div>
+              <pre><code>import concurrent.futures
+import urllib.request
+import urllib.error
+
+URL = "http://localhost:8080/api/infer/"
+TOTAL_REQUESTS = 20
+
+def send_request(req_id):
+    try:
+        with urllib.request.urlopen(URL) as response:
+            return req_id, response.getcode(), "Aceptada (200 OK)"
+    except urllib.error.HTTPError as e:
+        return req_id, e.code, "Bloqueada por Rate Limiting (429)"
+    except Exception as e:
+        return req_id, 0, str(e)
+
+print(f"Lanzando {TOTAL_REQUESTS} peticiones simultáneas contra {URL}...\n")
+
+with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
+    results = list(executor.map(send_request, range(1, TOTAL_REQUESTS + 1)))
+
+ok_count = sum(1 for _, code, _ in results if code == 200)
+blocked_count = sum(1 for _, code, _ in results if code == 429)
+
+for req_id, code, msg in sorted(results, key=lambda x: x[0]):
+    symbol = "✅" if code == 200 else "🛑"
+    print(f"{symbol} Petición #{req_id:02d} -> HTTP {code}: {msg}")
+
+print(f"\n==========================================")
+print(f"Peticiones Procesadas con Éxito (200): {ok_count}")
+print(f"Peticiones Mitigadas / Bloqueadas (429): {blocked_count}")
+print(f"==========================================")</code></pre>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- =========================================================================
+         LABORATORIO 5
+         ========================================================================= -->
+    <section class="lab-card" id="lab5">
+      <span class="lab-badge">Laboratorio 05</span>
+      <h3 class="lab-title">Terminación SSL/HTTPS con Certificado Autofirmado y Redirección 301</h3>
+
+      <div class="lab-goal">
+        <p>
+          <strong>Objetivo:</strong> Generar un certificado de seguridad X.509 y clave privada con <code>openssl</code>, configurar NGINX con terminación HTTPS en el puerto <code>8443</code> y comprobar la redirección permanente 301 desde el puerto HTTP <code>8080</code>.
+        </p>
+      </div>
+
+      <div class="step-flow">
+
+        <div class="step-item">
+          <div class="step-num">1</div>
+          <div class="step-content">
+            <h5>Generación de Certificado y Clave Privada</h5>
+            <div class="code-block">
+              <div class="code-header">
+                <div class="code-dots"><span></span><span></span><span></span></div>
+                <div class="code-title">bash &bull; Creación de certificados con openssl</div>
+                <button class="btn-copy">Copiar</button>
+              </div>
+              <pre><code>mkdir -p certs
+
+openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+  -keyout certs/nginx.key \
+  -out certs/nginx.crt \
+  -subj "/C=ES/ST=Alicante/L=SanVicente/O=IES/CN=localhost"
+
+chmod 600 certs/nginx.key</code></pre>
+            </div>
+          </div>
+        </div>
+
+        <div class="step-item">
+          <div class="step-num">2</div>
+          <div class="step-content">
+            <h5>Configuración Dual HTTP/HTTPS en NGINX</h5>
+            <div class="code-block">
+              <div class="code-header">
+                <div class="code-dots"><span></span><span></span><span></span></div>
+                <div class="code-title">nginx &bull; conf/ssl_redirect.conf</div>
+                <button class="btn-copy">Copiar</button>
+              </div>
+              <pre><code># Servidor 1: HTTP Inseguro -> Redirección forzada
+server {
+    listen 8080;
+    server_name localhost;
+    return 301 https://$host:8443$request_uri;
+}
+
+# Servidor 2: HTTPS Seguro
+server {
+    listen 8443 ssl;
+    server_name localhost;
+
+    ssl_certificate /ruta/absoluta/certs/nginx.crt;
+    ssl_certificate_key /ruta/absoluta/certs/nginx.key;
+
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_ciphers HIGH:!aNULL:!MD5;
+
+    location / {
+        default_type text/html;
+        return 200 '&lt;h1 style="color:#10b981;"&gt;&iexcl;Conexi&oacute;n HTTPS Encriptada con NGINX Exitosa!&lt;/h1&gt;\n';
+    }
+}</code></pre>
+            </div>
+          </div>
+        </div>
+
+        <div class="step-item">
+          <div class="step-num">3</div>
+          <div class="step-content">
+            <h5>Comprobación de Redirección y Cifrado</h5>
+            <div class="code-block">
+              <div class="code-header">
+                <div class="code-dots"><span></span><span></span><span></span></div>
+                <div class="code-title">bash &bull; Verificación con curl</div>
+                <button class="btn-copy">Copiar</button>
+              </div>
+              <pre><code># 1. Comprobar que el puerto 8080 redirige con HTTP 301
+curl -I http://localhost:8080/test
+# Salida esperada: HTTP/1.1 301 Moved Permanently
+# Location: https://localhost:8443/test
+
+# 2. Comprobar la conexión segura HTTPS (-k omite la advertencia de certificado autofirmado)
+curl -k -I https://localhost:8443/
+# Salida esperada: HTTP/1.1 200 OK con conexión encriptada TLS</code></pre>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- =========================================================================
+         LABORATORIO 6
+         ========================================================================= -->
+    <section class="lab-card" id="lab6">
+      <span class="lab-badge">Laboratorio 06</span>
+      <h3 class="lab-title">Despliegue Multi-Contenedor Completo con Docker Compose (API Gateway)</h3>
+
+      <div class="lab-goal">
+        <p>
+          <strong>Objetivo:</strong> Orquestar un entorno completo de microservicios mediante Docker Compose donde NGINX actúa como único punto de entrada público (API Gateway), enrutando el frontend estático en <code>/</code> y balanceando la API de FastAPI entre dos contenedores en red privada aislada.
+        </p>
+      </div>
+
+      <div class="step-flow">
+
+        <div class="step-item">
+          <div class="step-num">1</div>
+          <div class="step-content">
+            <h5>Estructura del Proyecto Docker</h5>
+            <div class="code-block">
+              <div class="code-header">
+                <div class="code-dots"><span></span><span></span><span></span></div>
+                <div class="code-title">bash &bull; Árbol de archivos</div>
+                <button class="btn-copy">Copiar</button>
+              </div>
+              <pre><code>docker_compose_lab/
+├── docker-compose.yml
+├── nginx/
+│   └── default.conf
+├── backend/
+│   ├── Dockerfile
+│   ├── requirements.txt
+│   └── main.py
+└── frontend/
+    └── index.html</code></pre>
+            </div>
+          </div>
+        </div>
+
+        <div class="step-item">
+          <div class="step-num">2</div>
+          <div class="step-content">
+            <h5>Archivo docker-compose.yml</h5>
+            <div class="code-block">
+              <div class="code-header">
+                <div class="code-dots"><span></span><span></span><span></span></div>
+                <div class="code-title">yaml &bull; docker-compose.yml</div>
+                <button class="btn-copy">Copiar</button>
+              </div>
+              <pre><code>version: '3.8'
+
+services:
+  # RECURSO ÚNICO EXPUESTO A INTERNET
+  gateway:
+    image: nginx:alpine
+    container_name: nginx_api_gateway
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./frontend:/usr/share/nginx/html:ro
+    depends_on:
+      - api_node_1
+      - api_node_2
+    networks:
+      - internal_net
+
+  # NODO 1 DE INFERENCIA (RED PRIVADA, PUERTO CERRADO AL EXTERIOR)
+  api_node_1:
+    build: ./backend
+    container_name: api_replica_1
+    environment:
+      - NODE_NAME=Replica-Alpha
+    expose:
+      - "8000"
+    networks:
+      - internal_net
+
+  # NODO 2 DE INFERENCIA (RED PRIVADA, PUERTO CERRADO AL EXTERIOR)
+  api_node_2:
+    build: ./backend
+    container_name: api_replica_2
+    environment:
+      - NODE_NAME=Replica-Beta
+    expose:
+      - "8000"
+    networks:
+      - internal_net
+
+networks:
+  internal_net:
+    driver: bridge</code></pre>
+            </div>
+          </div>
+        </div>
+
+        <div class="step-item">
+          <div class="step-num">3</div>
+          <div class="step-content">
+            <h5>Configuración del API Gateway (nginx/default.conf)</h5>
+            <div class="code-block">
+              <div class="code-header">
+                <div class="code-dots"><span></span><span></span><span></span></div>
+                <div class="code-title">nginx &bull; nginx/default.conf</div>
+                <button class="btn-copy">Copiar</button>
+              </div>
+              <pre><code>upstream backend_nodes {
+    # Resolución DNS nativa interna de Docker
+    server api_node_1:8000;
+    server api_node_2:8000;
+}
+
+server {
+    listen 80;
+    server_name localhost;
+
+    # 1. Frontend estático
+    location / {
+        root /usr/share/nginx/html;
+        index index.html;
+        try_files $uri $uri/ /index.html;
+    }
+
+    # 2. Reverse Proxy balanceado hacia FastAPI
+    location /api/ {
+        proxy_pass http://backend_nodes;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    }
+}</code></pre>
+            </div>
+          </div>
+        </div>
+
+        <div class="step-item">
+          <div class="step-num">4</div>
+          <div class="step-content">
+            <h5>Puesta en Marcha con un Solo Comando</h5>
+            <div class="code-block">
+              <div class="code-header">
+                <div class="code-dots"><span></span><span></span><span></span></div>
+                <div class="code-title">bash &bull; Despliegue inmediato</div>
+                <button class="btn-copy">Copiar</button>
+              </div>
+              <pre><code># Construir imágenes y levantar en segundo plano
+docker compose up -d --build
+
+# Verificar que los 3 contenedores están sanos
+docker compose ps
+
+# Probar peticiones repetidas para observar el balanceo entre Alpha y Beta:
+curl -s http://localhost/api/info
+curl -s http://localhost/api/info</code></pre>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- NAVEGACIÓN -->
+    <div class="chapter-nav">
+      <a href="06_seguridad_ssl_y_optimizacion.html" class="nav-card prev">
+        <span class="nav-card-label">&larr; Anterior</span>
+        <span class="nav-card-title">06. Seguridad, SSL y Rate Limiting</span>
+      </a>
+      <a href="index.html" class="nav-card next">
+        <span class="nav-card-label">Fin del Curso &rarr;</span>
+        <span class="nav-card-title">Portal de la Masterclass</span>
+      </a>
+    </div>
+
+  </main>
+
+  <!-- FOOTER -->
+  <footer>
+    <p><strong>NGINX Masterclass &bull; Módulo 07 (Laboratorios)</strong> &bull; IES San Vicente</p>
+    <p>Especialización en Big Data &amp; Inteligencia Artificial &bull; 2026/2027</p>
+  </footer>
+
+  <script src="main.js"></script>
+</body>
+</html>

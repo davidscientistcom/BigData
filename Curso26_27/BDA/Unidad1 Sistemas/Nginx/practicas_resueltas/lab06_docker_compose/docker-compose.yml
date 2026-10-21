@@ -1,0 +1,51 @@
+version: '3.8'
+
+services:
+  # ----------------------------------------------------------------------------
+  # NGINX API GATEWAY (Único servicio con puertos expuestos hacia el Host/Internet)
+  # ----------------------------------------------------------------------------
+  gateway:
+    image: nginx:alpine
+    container_name: nginx_api_gateway
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./frontend:/usr/share/nginx/html:ro
+    depends_on:
+      - api_node_1
+      - api_node_2
+    networks:
+      - cluster_net
+
+  # ----------------------------------------------------------------------------
+  # NODO 1 DE INFERENCIA FASTAPI (Red privada, sin mapeo de puertos al host)
+  # ----------------------------------------------------------------------------
+  api_node_1:
+    build: ./backend
+    container_name: api_replica_1
+    environment:
+      - NODE_ID=Replica-Alpha
+      - COMPUTE_DEVICE=NVIDIA-A100-Simulated
+    expose:
+      - "8000"
+    networks:
+      - cluster_net
+
+  # ----------------------------------------------------------------------------
+  # NODO 2 DE INFERENCIA FASTAPI (Red privada, sin mapeo de puertos al host)
+  # ----------------------------------------------------------------------------
+  api_node_2:
+    build: ./backend
+    container_name: api_replica_2
+    environment:
+      - NODE_ID=Replica-Beta
+      - COMPUTE_DEVICE=NVIDIA-T4-Simulated
+    expose:
+      - "8000"
+    networks:
+      - cluster_net
+
+networks:
+  cluster_net:
+    driver: bridge

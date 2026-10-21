@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>03. Servidor Web y Archivos Estáticos | IES San Vicente</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <!-- NAVBAR -->
+  <nav class="navbar">
+    <div class="nav-inner">
+      <a href="index.html" class="nav-brand">
+        <svg viewBox="0 0 24 24">
+          <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+        </svg>
+        <span class="brand-text">NGINX Masterclass</span>
+      </a>
+      <ul class="nav-links">
+        <li><a href="01_arquitectura_y_fundamentos.html">01. Arquitectura</a></li>
+        <li><a href="02_configuracion_y_directivas.html">02. Configuración</a></li>
+        <li><a href="03_servidor_web_y_estaticos.html" class="active">03. Servidor Web</a></li>
+        <li><a href="04_reverse_proxy_y_arquitectura.html">04. Reverse Proxy</a></li>
+        <li><a href="05_balanceo_de_carga.html">05. Load Balancing</a></li>
+        <li><a href="06_seguridad_ssl_y_optimizacion.html">06. Seguridad & SSL</a></li>
+        <li><a href="07_laboratorios_practicos.html" style="color: var(--primary-light); font-weight:700;">07. Labs Prácticos</a></li>
+      </ul>
+      <div class="nav-actions">
+        <span class="btn-nav-repo">BDA 2026/27</span>
+      </div>
+    </div>
+  </nav>
+
+  <!-- BREADCRUMB -->
+  <div class="breadcrumb">
+    <div class="breadcrumb-inner">
+      <a href="index.html">NGINX Masterclass</a>
+      <span class="breadcrumb-sep">/</span>
+      <span style="color: var(--primary-light);">03. Servidor Web &amp; Estáticos</span>
+    </div>
+  </div>
+
+  <!-- HERO -->
+  <header class="page-hero">
+    <div class="hero-badge">
+      <span class="badge-dot"></span>
+      MÓDULO 03 &bull; ALTO RENDIMIENTO ESTÁTICO
+    </div>
+    <h1>Servidor Web &amp; <span class="gradient-text">Archivos Estáticos</span></h1>
+    <p>
+      Servir contenido a velocidad nativa con <code>sendfile</code>, la diferencia crítica entre <code>root</code> y <code>alias</code>, enrutamiento SPA con <code>try_files</code> y compresión dinámica Gzip.
+    </p>
+  </header>
+
+  <!-- CONTENT -->
+  <main class="content">
+
+    <h2>1. El Gran Dilema: `root` vs `alias`</h2>
+    <p>
+      Una de las fuentes de errores <code>404 Not Found</code> más repetidas en el desarrollo web es la confusión entre las directivas <code>root</code> y <code>alias</code>. Ambas indican en qué carpeta física del disco duro se encuentran los archivos, pero <strong>construyen la ruta final de manera totalmente diferente</strong>:
+    </p>
+
+    <div class="two-col">
+      <div class="mini-card" style="border-left: 4px solid var(--secondary);">
+        <h4 style="color: var(--secondary);">La Directiva `root` (Concatenación Pura)</h4>
+        <p>
+          NGINX toma la ruta definida en <code>root</code> y <strong>le añade la URI completa</strong> que pidió el cliente:
+        </p>
+        <div class="code-block" style="margin: 0.8rem 0 0;">
+          <pre><code>location /static/ {
+    root /var/www/app;
+}
+
+# Petición entrante:
+# GET /static/css/style.css
+#
+# Ruta física que busca NGINX en disco:
+# /var/www/app/static/css/style.css
+# (Concatena /var/www/app + /static/css/style.css)</code></pre>
+        </div>
+      </div>
+
+      <div class="mini-card" style="border-left: 4px solid var(--primary);">
+        <h4 style="color: var(--primary-light);">La Directiva `alias` (Sustitución de Prefijo)</h4>
+        <p>
+          NGINX <strong>reemplaza</strong> la parte coincidente de la <code>location</code> por la ruta del <code>alias</code>:
+        </p>
+        <div class="code-block" style="margin: 0.8rem 0 0;">
+          <pre><code>location /static/ {
+    alias /data/recursos/;
+}
+
+# Petición entrante:
+# GET /static/css/style.css
+#
+# Ruta física que busca NGINX en disco:
+# /data/recursos/css/style.css
+# (Sustituye /static/ por /data/recursos/)</code></pre>
+        </div>
+      </div>
+    </div>
+
+    <div class="callout callout-warning">
+      <div class="callout-icon">⚡</div>
+      <div class="callout-body">
+        <h4>Regla Crítica con `alias`: Cuidado con la barra final `/`</h4>
+        <p>
+          Si defines <code>location /static/</code> con una barra al final, la ruta en <code>alias</code> DEBE terminar también con una barra al final (<code>alias /data/recursos/;</code>). Si olvidas la barra, NGINX intentará concatenar cadenas de texto sin separador de carpetas (buscando <code>/data/recursoscss/style.css</code>), provocando errores 404 inesperados.
+        </p>
+      </div>
+    </div>
+
+    <h2>2. Enrutamiento Moderno de SPAs con `try_files`</h2>
+    <p>
+      En aplicaciones web modernas (Single Page Applications como React, Vue, Angular o dashboards de IA como Streamlit/Vite), el enrutamiento lo gestiona JavaScript en el navegador mediante el History API (por ejemplo <code>midominio.com/dashboard/analytics</code>).
+    </p>
+    <p>
+      Si el usuario recarga la página en esa URL, el servidor web intentará buscar un archivo físico llamado <code>/analytics</code> que no existe en disco. Para solucionar esto se utiliza <code>try_files</code>:
+    </p>
+
+    <div class="code-block">
+      <div class="code-header">
+        <div class="code-dots"><span></span><span></span><span></span></div>
+        <div class="code-title">nginx &bull; Configuración para SPA y Dashboard</div>
+        <button class="btn-copy">Copiar</button>
+      </div>
+      <pre><code>server {
+    listen 80;
+    server_name dashboard.ia.local;
+    root /var/www/dashboard/dist;
+    index index.html;
+
+    location / {
+        # 1. Comprueba si existe el archivo exacto ($uri)
+        # 2. Comprueba si existe una carpeta ($uri/)
+        # 3. Si no existe ninguno, entrega /index.html (para que React/Vue enruten)
+        try_files $uri $uri/ /index.html;
+    }
+
+    # Bloque de assets con expiración agresiva de caché
+    location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff2)$ {
+        expires 1y;
+        add_header Cache-Control "public, no-transform, immutable";
+        access_log off;
+    }
+}</code></pre>
+    </div>
+
+    <h2>3. Aceleración con Kernel Zero-Copy: `sendfile` y `tcp_nopush`</h2>
+    <p>
+      Tradicionalmente, para enviar un archivo desde el disco hacia la tarjeta de red, el sistema operativo leía los datos del disco al espacio del kernel, los copiaba al espacio de memoria del usuario (NGINX), y NGINX los volvía a copiar al socket del kernel:
+    </p>
+
+    <div class="code-block">
+      <div class="code-header">
+        <div class="code-dots"><span></span><span></span><span></span></div>
+        <div class="code-title">nginx &bull; Optimizaciones en el contexto http</div>
+        <button class="btn-copy">Copiar</button>
+      </div>
+      <pre><code>http {
+    # 1. Zero-Copy: El kernel transfiere datos directamente del disco a la tarjeta de red
+    #    sin pasar por la memoria de la aplicación. CPU prácticamente al 0%.
+    sendfile on;
+
+    # 2. Envía cabeceras HTTP y el inicio del fichero en un único paquete TCP
+    tcp_nopush on;
+
+    # 3. Desactiva el algoritmo de Nagle para enviar respuestas inmediatas sin latencia
+    tcp_nodelay on;
+
+    # 4. Mantiene la conexión TCP abierta durante 65 segundos para reutilizarla
+    keepalive_timeout 65;
+}</code></pre>
+    </div>
+
+    <h2>4. Compresión Dinámica con Gzip</h2>
+    <p>
+      El código HTML, CSS, JavaScript y las respuestas JSON de las APIs son texto plano altamente comprimible. Activar Gzip reduce el tamaño de transferencia entre un <strong>70% y un 80%</strong>, mejorando radicalmente la velocidad percibida y el consumo de ancho de banda:
+    </p>
+
+    <div class="code-block">
+      <div class="code-header">
+        <div class="code-dots"><span></span><span></span><span></span></div>
+        <div class="code-title">nginx &bull; Configuración de compresión Gzip</div>
+        <button class="btn-copy">Copiar</button>
+      </div>
+      <pre><code># Activar motor Gzip
+gzip on;
+
+# Nivel de compresión: 1 (rápido, menos compresión) a 9 (máxima compresión, más CPU)
+# El nivel 5 o 6 es el balance perfecto en producción:
+gzip_comp_level 6;
+
+# No comprimir archivos menores a 256 bytes (el overhead de gzip los haría más grandes)
+gzip_min_length 256;
+
+# Cabecera Vary: Accept-Encoding para que los proxies intermedios sepan qué versión cachear
+gzip_vary on;
+
+# Tipos MIME a comprimir (NUNCA incluyas jpg/png/mp4 porque ya están comprimidos)
+gzip_types
+    text/plain
+    text/css
+    text/xml
+    application/json
+    application/javascript
+    application/xml
+    image/svg+xml;</code></pre>
+    </div>
+
+    <h3>4.1 Cómo Verificar Gzip desde Terminal con `curl`</h3>
+    <div class="code-block">
+      <div class="code-header">
+        <div class="code-dots"><span></span><span></span><span></span></div>
+        <div class="code-title">bash &bull; Prueba de compresión</div>
+        <button class="btn-copy">Copiar</button>
+      </div>
+      <pre><code># Simular una petición de navegador anunciando soporte de compresión
+curl -I -H "Accept-Encoding: gzip" http://localhost/style.css
+
+# Si está funcionando correctamente, la respuesta incluirá:
+# HTTP/1.1 200 OK
+# Content-Type: text/css
+# Content-Encoding: gzip    <--- ¡COMPRESIÓN ACTIVA!
+# Vary: Accept-Encoding</code></pre>
+    </div>
+
+    <h2>5. Páginas de Error Personalizadas y Directiva `internal`</h2>
+    <p>
+      Mostrar los errores por defecto de NGINX revela la versión del servidor y ofrece una experiencia descuidada al usuario. NGINX permite definir páginas HTML elegantes para códigos <code>404</code>, <code>500</code> o <code>502</code>:
+    </p>
+
+    <div class="code-block">
+      <div class="code-header">
+        <div class="code-dots"><span></span><span></span><span></span></div>
+        <div class="code-title">nginx &bull; Gestión de páginas de error</div>
+        <button class="btn-copy">Copiar</button>
+      </div>
+      <pre><code>server {
+    listen 80;
+    server_name portal.local;
+    root /var/www/html;
+
+    # Mapeo de errores a ficheros
+    error_page 404 /custom_404.html;
+    error_page 500 502 503 504 /custom_50x.html;
+
+    # SEGURIDAD CRÍTICA: La directiva 'internal'
+    # Impide que un usuario acceda escribiendo en el navegador:
+    # http://portal.local/custom_404.html de forma directa
+    location = /custom_404.html {
+        internal;
+    }
+
+    location = /custom_50x.html {
+        internal;
+    }
+}</code></pre>
+    </div>
+
+    <!-- NAVEGACIÓN -->
+    <div class="chapter-nav">
+      <a href="02_configuracion_y_directivas.html" class="nav-card prev">
+        <span class="nav-card-label">&larr; Anterior</span>
+        <span class="nav-card-title">02. Configuración y Directivas</span>
+      </a>
+      <a href="04_reverse_proxy_y_arquitectura.html" class="nav-card next">
+        <span class="nav-card-label">Siguiente &rarr;</span>
+        <span class="nav-card-title">04. Reverse Proxy y Arquitectura</span>
+      </a>
+    </div>
+
+  </main>
+
+  <!-- FOOTER -->
+  <footer>
+    <p><strong>NGINX Masterclass &bull; Módulo 03</strong> &bull; IES San Vicente</p>
+    <p>Especialización en Big Data &amp; Inteligencia Artificial &bull; 2026/2027</p>
+  </footer>
+
+  <script src="main.js"></script>
+</body>
+</html>

@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>01. Arquitectura y Fundamentos de NGINX | IES San Vicente</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <!-- NAVBAR -->
+  <nav class="navbar">
+    <div class="nav-inner">
+      <a href="index.html" class="nav-brand">
+        <svg viewBox="0 0 24 24">
+          <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+        </svg>
+        <span class="brand-text">NGINX Masterclass</span>
+      </a>
+      <ul class="nav-links">
+        <li><a href="01_arquitectura_y_fundamentos.html" class="active">01. Arquitectura</a></li>
+        <li><a href="02_configuracion_y_directivas.html">02. Configuración</a></li>
+        <li><a href="03_servidor_web_y_estaticos.html">03. Servidor Web</a></li>
+        <li><a href="04_reverse_proxy_y_arquitectura.html">04. Reverse Proxy</a></li>
+        <li><a href="05_balanceo_de_carga.html">05. Load Balancing</a></li>
+        <li><a href="06_seguridad_ssl_y_optimizacion.html">06. Seguridad & SSL</a></li>
+        <li><a href="07_laboratorios_practicos.html" style="color: var(--primary-light); font-weight:700;">07. Labs Prácticos</a></li>
+      </ul>
+      <div class="nav-actions">
+        <span class="btn-nav-repo">BDA 2026/27</span>
+      </div>
+    </div>
+  </nav>
+
+  <!-- BREADCRUMB -->
+  <div class="breadcrumb">
+    <div class="breadcrumb-inner">
+      <a href="index.html">NGINX Masterclass</a>
+      <span class="breadcrumb-sep">/</span>
+      <span style="color: var(--primary-light);">01. Arquitectura &amp; Fundamentos</span>
+    </div>
+  </div>
+
+  <!-- HERO -->
+  <header class="page-hero">
+    <div class="hero-badge">
+      <span class="badge-dot"></span>
+      MÓDULO 01 &bull; CONCEPTOS FUNDACIONALES
+    </div>
+    <h1>Arquitectura Interna &amp; <span class="gradient-text">Fundamentos</span></h1>
+    <p>
+      El dilema de las diez mil conexiones concurrentes (C10K), el modelo de eventos asíncrono no bloqueante frente al modelo por hilos tradicional, y el ciclo de vida del Master y los Workers.
+    </p>
+  </header>
+
+  <!-- CONTENT -->
+  <main class="content">
+
+    <h2>1. El Gran Problema Histórico: El Reto C10K</h2>
+    <p>
+      A finales de los años 90 y principios de los 2000, los servidores web como <strong>Apache HTTP Server</strong> dominaban Internet utilizando una arquitectura basada en <em>procesos o hilos dedicados</em> (MPM Prefork o MPM Worker). En este modelo, cada vez que un cliente abre una conexión TCP para solicitar un recurso, el sistema operativo le asigna un hilo exclusivo:
+    </p>
+
+    <div class="callout callout-danger">
+      <div class="callout-icon">⚠️</div>
+      <div class="callout-body">
+        <h4>El Cuello de Botella del Modelo por Hilo (Thread-per-Request)</h4>
+        <p>
+          Si 10.000 clientes se conectan simultáneamente, el sistema operativo debe mantener 10.000 hilos vivos. Cada hilo reserva su propio espacio de pila (stack) de memoria (~2 a 8 MB por hilo). El consumo de memoria se dispara a decenas de Gigabytes, y la CPU colapsa intentando alternar entre miles de hilos mediante cambios de contexto (<em>context switching</em>), pasando más tiempo gestionando hilos que respondiendo peticiones.
+        </p>
+      </div>
+    </div>
+
+    <p>
+      En 2004, el ingeniero ruso <strong>Igor Sysoev</strong> presentó NGINX para resolver este desafío específico (conocido en ciencias de la computación como el <em>problema C10K: atender 10.000 conexiones concurrentes en un único servidor de hardware modesto</em>).
+    </p>
+
+    <!-- TABLA COMPARATIVA -->
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr>
+            <th>Característica</th>
+            <th>Modelo Tradicional (Apache / Clásico)</th>
+            <th>Modelo Asíncrono (NGINX)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Mecanismo de Concurrencia</strong></td>
+            <td>1 proceso o hilo por cada cliente activo.</td>
+            <td>1 bucle de eventos (Event Loop) por núcleo de CPU.</td>
+          </tr>
+          <tr>
+            <td><strong>Uso de Memoria (RAM)</strong></td>
+            <td>Escala linealmente: ~10.000 hilos &approx; 15-20 GB.</td>
+            <td>Prácticamente plano: ~10.000 conexiones &approx; 2.5 MB.</td>
+          </tr>
+          <tr>
+            <td><strong>Manejo de I/O Lento</strong></td>
+            <td>El hilo queda bloqueado esperando datos del disco o red.</td>
+            <td>No bloqueante: delega la espera al kernel y atiende a otros.</td>
+          </tr>
+          <tr>
+            <td><strong>Llamadas al Kernel</strong></td>
+            <td><code>select()</code> o <code>poll()</code> (inspeccionan todos los sockets, O(N)).</td>
+            <td><code>epoll()</code> en Linux o <code>kqueue()</code> en BSD (notificación O(1)).</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2>2. El Modelo de Procesos de NGINX: Master &amp; Workers</h2>
+    <p>
+      NGINX no es un ejecutable monolítico simple; opera mediante una arquitectura multiproceso asimétrica compuesta por un proceso <strong>Master</strong> y uno o más procesos <strong>Worker</strong>:
+    </p>
+
+    <!-- DIAGRAMA SVG MASTER WORKER -->
+    <div class="diagram-card">
+      <h4>Arquitectura Master-Worker de NGINX con epoll</h4>
+      <p class="caption">El proceso Master orquesta con permisos privilegiados; los Workers atienden el tráfico real sin privilegios</p>
+      <div class="diagram-svg-container">
+        <svg viewBox="0 0 820 300" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <!-- Background -->
+          <rect x="5" y="5" width="810" height="290" rx="14" fill="#0c1424" stroke="rgba(255,255,255,0.08)" stroke-width="1.5"/>
+
+          <!-- Master Process -->
+          <g>
+            <rect x="30" y="35" width="220" height="230" rx="12" fill="#141f36" stroke="#f59e0b" stroke-width="1.8"/>
+            <rect x="45" y="50" width="190" height="32" rx="6" fill="#f59e0b"/>
+            <text x="140" y="71" fill="#000" font-size="12" font-weight="800" text-anchor="middle" font-family="Inter">MASTER PROCESS (PID 1)</text>
+            
+            <text x="140" y="110" fill="#f1f5f9" font-size="11" font-weight="700" text-anchor="middle" font-family="Inter">Permisos de root</text>
+            <text x="140" y="135" fill="#94a3b8" font-size="10" text-anchor="middle" font-family="Inter">&bull; Lee y parsea nginx.conf</text>
+            <text x="140" y="155" fill="#94a3b8" font-size="10" text-anchor="middle" font-family="Inter">&bull; Enlaza puertos 80 y 443</text>
+            <text x="140" y="175" fill="#94a3b8" font-size="10" text-anchor="middle" font-family="Inter">&bull; Genera y supervisa Workers</text>
+            <text x="140" y="195" fill="#94a3b8" font-size="10" text-anchor="middle" font-family="Inter">&bull; Recibe señales Unix (reload/stop)</text>
+            <text x="140" y="235" fill="#fbbf24" font-size="10" font-weight="600" text-anchor="middle" font-family="Inter">No maneja conexiones de red</text>
+          </g>
+
+          <!-- Signals Arrow -->
+          <path d="M250 150 L320 150" stroke="#f59e0b" stroke-width="2" stroke-dasharray="4 4"/>
+          <polygon points="328,150 318,145 318,155" fill="#f59e0b"/>
+          <text x="285" y="140" fill="#f59e0b" font-size="9.5" font-weight="700" text-anchor="middle" font-family="JetBrains Mono">Signals</text>
+
+          <!-- Workers Container -->
+          <g>
+            <rect x="330" y="25" width="460" height="250" rx="12" fill="#0d1b16" stroke="#10b981" stroke-width="1.8"/>
+            <text x="560" y="52" fill="#34d399" font-size="12.5" font-weight="800" text-anchor="middle" font-family="Inter">WORKER PROCESSES (Usuario sin privilegios: www-data)</text>
+
+            <!-- Worker 1 -->
+            <rect x="350" y="70" width="205" height="185" rx="8" fill="#142b22" stroke="#10b981" stroke-opacity="0.4"/>
+            <rect x="360" y="80" width="185" height="26" rx="4" fill="#009639"/>
+            <text x="452" y="97" fill="#fff" font-size="11" font-weight="700" text-anchor="middle" font-family="Inter">Worker 1 (Core 0)</text>
+            <text x="452" y="125" fill="#a7f3d0" font-size="10" font-weight="600" text-anchor="middle" font-family="JetBrains Mono">epoll Event Loop</text>
+            <rect x="365" y="140" width="175" height="60" rx="4" fill="#0b1a14"/>
+            <text x="452" y="160" fill="#94a3b8" font-size="9.5" text-anchor="middle" font-family="Inter">Conexión 1 &bull; Conexión 2</text>
+            <text x="452" y="180" fill="#94a3b8" font-size="9.5" text-anchor="middle" font-family="Inter">Conexión 3 ... 10.000+</text>
+            <text x="452" y="225" fill="#6ee7b7" font-size="9.5" text-anchor="middle" font-family="Inter">I/O No Bloqueante</text>
+
+            <!-- Worker 2 -->
+            <rect x="570" y="70" width="205" height="185" rx="8" fill="#142b22" stroke="#10b981" stroke-opacity="0.4"/>
+            <rect x="580" y="80" width="185" height="26" rx="4" fill="#009639"/>
+            <text x="672" y="97" fill="#fff" font-size="11" font-weight="700" text-anchor="middle" font-family="Inter">Worker 2 (Core 1)</text>
+            <text x="672" y="125" fill="#a7f3d0" font-size="10" font-weight="600" text-anchor="middle" font-family="JetBrains Mono">epoll Event Loop</text>
+            <rect x="585" y="140" width="175" height="60" rx="4" fill="#0b1a14"/>
+            <text x="672" y="160" fill="#94a3b8" font-size="9.5" text-anchor="middle" font-family="Inter">Conexión 1 &bull; Conexión 2</text>
+            <text x="672" y="180" fill="#94a3b8" font-size="9.5" text-anchor="middle" font-family="Inter">Conexión 3 ... 10.000+</text>
+            <text x="672" y="225" fill="#6ee7b7" font-size="9.5" text-anchor="middle" font-family="Inter">I/O No Bloqueante</text>
+          </g>
+        </svg>
+      </div>
+    </div>
+
+    <h3>2.1 Funciones del Proceso Master</h3>
+    <ul>
+      <li><strong>Lectura y validación de configuración:</strong> Comprueba la sintaxis de <code>nginx.conf</code> y enlaza los puertos TCP reservados (ej. 80 y 443 requieren permisos de root para iniciarse en Linux).</li>
+      <li><strong>Ciclo de vida de Workers:</strong> Inicializa el número de workers configurados (generalmente <code>worker_processes auto;</code>, creando un proceso por núcleo de procesador). Si un worker fallara por una anomalía de hardware, el Master genera uno nuevo de inmediato en milisegundos.</li>
+      <li><strong>Recarga en caliente (Hot Reload):</strong> Al recibir una orden de recarga, el Master lee la nueva configuración, crea nuevos workers con la nueva configuración y envía una orden a los viejos workers para que terminen las peticiones en curso y mueran pacíficamente (<em>Graceful Retirement</em>), garantizando <strong>cero segundos de inactividad</strong> (Zero Downtime).</li>
+    </ul>
+
+    <h3>2.2 Funciones de los Procesos Worker</h3>
+    <ul>
+      <li><strong>Procesamiento del tráfico real:</strong> Aceptan nuevas conexiones entrantes desde los sockets compartidos, leen las cabeceras HTTP, enrutan hacia los backends o sirven archivos estáticos desde disco.</li>
+      <li><strong>Sin privilegios de root:</strong> Operan bajo la cuenta segura del sistema (ej. <code>www-data</code> en Debian/Ubuntu o <code>nginx</code> en Alpine/RHEL). Si un atacante lograse explotar una vulnerabilidad en el procesamiento HTTP, solo obtendría acceso a una cuenta sin privilegios en el sistema operativo.</li>
+    </ul>
+
+    <h2>3. Instalación y Gestión del Servicio en Linux</h2>
+    <p>
+      Para instalar NGINX en sistemas basados en Debian / Ubuntu:
+    </p>
+
+    <div class="code-block">
+      <div class="code-header">
+        <div class="code-dots"><span></span><span></span><span></span></div>
+        <div class="code-title">bash &bull; Terminal</div>
+        <button class="btn-copy">Copiar</button>
+      </div>
+      <pre><code># 1. Actualizar repositorios e instalar Nginx
+sudo apt update
+sudo apt install -y nginx
+
+# 2. Verificar la versión instalada
+nginx -v
+
+# 3. Comprobar la compilación y módulos disponibles (útil para SSL y gzip)
+nginx -V
+
+# 4. Iniciar y habilitar el servicio en el arranque del sistema
+sudo systemctl enable --now nginx
+
+# 5. Comprobar estado del servicio
+sudo systemctl status nginx</code></pre>
+    </div>
+
+    <h3>3.1 El Arsenal de Señales Unix y Control de NGINX</h3>
+    <p>
+      Aunque <code>systemctl</code> es el estándar en distribuciones con systemd, el comando nativo <code>nginx</code> ofrece herramientas indispensables para el administrador de sistemas:
+    </p>
+
+    <div class="code-block">
+      <div class="code-header">
+        <div class="code-dots"><span></span><span></span><span></span></div>
+        <div class="code-title">bash &bull; Señales de control nativas</div>
+        <button class="btn-copy">Copiar</button>
+      </div>
+      <pre><code># REGLA DE ORO: Validar sintaxis ANTES de cualquier reinicio
+sudo nginx -t
+
+# Salida esperada si todo está correcto:
+# nginx: the configuration file /etc/nginx/nginx.conf syntax is ok
+# nginx: configuration file /etc/nginx/nginx.conf test is successful
+
+# Recargar configuración en caliente (Hot Reload) sin cortar conexiones activas:
+sudo nginx -s reload
+
+# Parada limpia esperando a que finalicen las conexiones en curso (Graceful shutdown):
+sudo nginx -s quit
+
+# Parada inmediata y forzada:
+sudo nginx -s stop
+
+# Reabrir archivos de logs (crucial para herramientas de rotación como logrotate):
+sudo nginx -s reopen</code></pre>
+    </div>
+
+    <div class="callout callout-warning">
+      <div class="callout-icon">⚡</div>
+      <div class="callout-body">
+        <h4>Regla Profesional: NUNCA ejecutes restart a ciegas</h4>
+        <p>
+          Si ejecutas <code>systemctl restart nginx</code> y tu archivo de configuración tiene un error de sintaxis (por ejemplo, te olvidaste un punto y coma <code>;</code>), NGINX se apagará y no podrá volver a encenderse, dejando tu servicio caído en producción. Siempre ejecuta <code>sudo nginx -t && sudo nginx -s reload</code>.
+        </p>
+      </div>
+    </div>
+
+    <h2>4. Anatomía de Archivos y Directorios de NGINX</h2>
+    <p>
+      Al instalarse en Ubuntu/Debian, NGINX organiza su estructura en las siguientes rutas estándar:
+    </p>
+
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr>
+            <th>Ruta del Sistema</th>
+            <th>Propósito y Buenas Prácticas</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>/etc/nginx/nginx.conf</code></td>
+            <td>El archivo raíz principal. Define directivas globales (número de workers, usuario, eventos y configuración HTTP básica).</td>
+          </tr>
+          <tr>
+            <td><code>/etc/nginx/conf.d/</code></td>
+            <td>Directorio moderno recomendado. Cualquier archivo <code>*.conf</code> aquí dentro se incluye automáticamente en el bloque <code>http</code>.</td>
+          </tr>
+          <tr>
+            <td><code>/etc/nginx/sites-available/</code></td>
+            <td>Convención clásica de Debian. Contiene definiciones de servidores virtuales (Server Blocks) que pueden o no estar activas.</td>
+          </tr>
+          <tr>
+            <td><code>/etc/nginx/sites-enabled/</code></td>
+            <td>Enlaces simbólicos (symlinks) a los archivos de <code>sites-available</code> que están actualmente en producción.</td>
+          </tr>
+          <tr>
+            <td><code>/var/log/nginx/access.log</code></td>
+            <td>Registro histórico de cada petición HTTP entrante (IP, timestamp, código de estado, User-Agent, tiempo de respuesta).</td>
+          </tr>
+          <tr>
+            <td><code>/var/log/nginx/error.log</code></td>
+            <td>Registro de advertencias y errores del sistema (fallos de conexión con backends, permisos denegados, errores de sintaxis).</td>
+          </tr>
+          <tr>
+            <td><code>/var/www/html/</code></td>
+            <td>Raíz de almacenamiento por defecto para archivos HTML estáticos.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- NAVEGACIÓN -->
+    <div class="chapter-nav">
+      <a href="index.html" class="nav-card prev">
+        <span class="nav-card-label">&larr; Anterior</span>
+        <span class="nav-card-title">Portal del Curso</span>
+      </a>
+      <a href="02_configuracion_y_directivas.html" class="nav-card next">
+        <span class="nav-card-label">Siguiente &rarr;</span>
+        <span class="nav-card-title">02. Configuración y Directivas</span>
+      </a>
+    </div>
+
+  </main>
+
+  <!-- FOOTER -->
+  <footer>
+    <p><strong>NGINX Masterclass &bull; Módulo 01</strong> &bull; IES San Vicente</p>
+    <p>Especialización en Big Data &amp; Inteligencia Artificial &bull; 2026/2027</p>
+  </footer>
+
+  <script src="main.js"></script>
+</body>
+</html>

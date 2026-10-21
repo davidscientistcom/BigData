@@ -1,0 +1,694 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NGINX Masterclass</title>
+    <style>
+        :root {
+            --font-family-display: Arial, sans-serif;
+            --font-weight-display: 600;
+            --font-family-content: Arial, sans-serif;
+            --font-weight-content: 400;
+            --font-size-content: 16px;
+            --line-height-content: 1.4;
+        }
+
+        body.theme-dark {
+            --color-bg-base: #0f172a;
+            --color-bg-elevated: #020617;
+            --color-bg-surface: #1e293b;
+            --color-bg-muted: #334155;
+            --color-text-primary: #f1f5f9;
+            --color-text-secondary: #cbd5e1;
+            --color-text-muted: #94a3b8;
+            --color-text-accent: #38bdf8;
+            --color-primary: #38bdf8;
+            --color-primary-foreground: #0f172a;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: var(--font-family-content);
+            font-weight: var(--font-weight-content);
+            font-size: var(--font-size-content);
+            line-height: var(--line-height-content);
+            overflow-x: hidden;
+        }
+
+        .slide {
+            width: 960px;
+            height: 540px;
+            margin: 0 auto 20px;
+            display: flex;
+            flex-shrink: 0;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .row { flex-direction: row; }
+        .col { flex-direction: column; }
+        .center {
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+        }
+        .space-between { justify-content: space-between; }
+        .items-center { align-items: center; }
+        .items-start { align-items: flex-start; }
+        .fill-width { flex: 1; }
+        .fill-height { flex: 1; display: flex; flex-direction: column; }
+
+        .gap-sm { gap: 0.5rem; }
+        .gap-md { gap: 1rem; }
+        .gap-lg { gap: 1.5rem; }
+        .gap-xl { gap: 2rem; }
+
+        .p-4 { padding: 1rem; }
+        .p-6 { padding: 1.5rem; }
+        .p-8 { padding: 2rem; }
+        .p-12 { padding: 3rem; }
+        .p-16 { padding: 4rem; }
+
+        .mb-2 { margin-bottom: 0.5rem; }
+        .mb-4 { margin-bottom: 1rem; }
+        .mb-6 { margin-bottom: 1.5rem; }
+        .mb-8 { margin-bottom: 2rem; }
+
+        .mt-4 { margin-top: 1rem; }
+        .mt-6 { margin-top: 1.5rem; }
+        .mt-8 { margin-top: 2rem; }
+
+        h1, h2, h3, h4, h5, h6 {
+            font-family: var(--font-family-display);
+            font-weight: var(--font-weight-display);
+            line-height: 1.2;
+            margin: 0;
+        }
+
+        h1 { font-size: 3rem; }
+        h2 { font-size: 2.25rem; }
+        h3 { font-size: 1.75rem; }
+        h4 { font-size: 1.5rem; }
+
+        .text-6xl { font-size: 3.75rem; }
+        .text-4xl { font-size: 2.25rem; }
+        .text-3xl { font-size: 1.875rem; }
+        .text-2xl { font-size: 1.5rem; }
+        .text-xl { font-size: 1.25rem; }
+        .text-lg { font-size: 1.125rem; }
+        .text-sm { font-size: 0.875rem; }
+
+        .text-center { text-align: center; }
+        .text-left { text-align: left; }
+
+        ul, ol {
+            margin-left: 2rem;
+            line-height: 1.8;
+        }
+
+        ul li { list-style: disc; }
+        li { margin-bottom: 0.75rem; }
+        li:last-child { margin-bottom: 0; }
+
+        .card-rect {
+            padding: 2rem;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+        }
+
+        code {
+            background-color: #1e293b;
+            padding: 0.25rem 0.5rem;
+            border-radius: 3px;
+            font-size: 0.9em;
+            color: #38bdf8;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.95em;
+            line-height: 1.6;
+        }
+
+        th, td {
+            padding: 0.75rem;
+            text-align: left;
+            border-bottom: 1px solid #334155;
+        }
+
+        th {
+            background-color: #1e293b;
+            color: #38bdf8;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body class="theme-dark">
+
+<!-- SLIDE 1: Portada -->
+<section class="slide p-16 col center" style="background-color: #020617; color: #f1f5f9;">
+    <h1 class="text-6xl mb-4" style="color: #38bdf8;">NGINX</h1>
+    <p class="text-2xl mb-8" style="color: #cbd5e1;">Reverse Proxy &amp; Load Balancing para IA/ML</p>
+    <p class="text-sm" style="color: #94a3b8;">De conceptos básicos a arquitecturas de producción</p>
+</section>
+
+<!-- SLIDE 2: Índice - Lo que veremos -->
+<section class="slide p-16 col" style="background-color: #0f172a; color: #f1f5f9;">
+    <h2 class="mb-8" style="color: #38bdf8;">Roadmap de hoy</h2>
+    <div class="fill-height">
+        <ul class="text-lg" style="color: #cbd5e1;">
+            <li><strong>Fundamentos:</strong> ¿Qué es NGINX y por qué lo necesitas?</li>
+            <li><strong>Conceptos clave:</strong> Reverse proxy vs Forward proxy</li>
+            <li><strong>Arquitectura básica:</strong> Docker, redes y configuración</li>
+            <li><strong>Load Balancing:</strong> Distribuir tráfico entre múltiples servidores</li>
+            <li><strong>Seguridad:</strong> SSL/TLS y Let's Encrypt</li>
+            <li><strong>Performance:</strong> Caching, rate limiting y optimizaciones</li>
+            <li><strong>Avanzado:</strong> Streaming, WebSockets y gRPC</li>
+            <li><strong>Producción:</strong> Monitoreo, logs y casos reales</li>
+        </ul>
+    </div>
+</section>
+
+<!-- SLIDE 3: El Problema sin NGINX -->
+<section class="slide p-16 col" style="background-color: #0f172a; color: #f1f5f9;">
+    <h2 class="mb-6" style="color: #38bdf8;">Sin NGINX: Los Problemas</h2>
+    <div class="fill-height">
+        <ul class="text-lg" style="color: #cbd5e1;">
+            <li>Cliente directamente expuesto a detalles de infraestructura (IPs, puertos)</li>
+            <li>Sin balanceo: un servidor cae → aplicación cae completamente</li>
+            <li>Sin cache: servidor sobrecargado con requests repetidas</li>
+            <li>Uvicorn/FastAPI exponiendo puerto 8000 directamente = inseguro</li>
+            <li>SSL/TLS manejado por la app = complejidad, overhead de CPU</li>
+            <li>Rate limiting desordenado a nivel de aplicación</li>
+        </ul>
+    </div>
+</section>
+
+<!-- SLIDE 4: Qué es NGINX -->
+<section class="slide p-16 col" style="background-color: #0f172a; color: #f1f5f9;">
+    <h2 class="mb-6" style="color: #38bdf8;">¿Qué es NGINX?</h2>
+    <p class="text-lg mb-6" style="color: #cbd5e1;">
+        Servidor de infraestructura (NO de aplicaciones). Maneja tráfico HTTP/HTTPS con <strong>Event Loop</strong> asincrónico.
+    </p>
+    <ul class="text-lg" style="color: #cbd5e1;">
+        <li><strong>Lightweight:</strong> ~1MB de RAM por 10,000 conexiones (vs Nginx/Apache que usa procesos)</li>
+        <li><strong>Fast:</strong> Procesa requests sin bloqueos (epoll en Linux)</li>
+        <li><strong>Flexible:</strong> Reverse proxy, load balancing, caching, SSL, rate limiting...</li>
+        <li><strong>Production-ready:</strong> Usado por Netflix, Uber, AWS...</li>
+    </ul>
+</section>
+
+<!-- SLIDE 5: Uvicorn vs NGINX -->
+<section class="slide p-16 col" style="background-color: #0f172a; color: #f1f5f9;">
+    <h2 class="mb-6" style="color: #38bdf8;">Uvicorn vs NGINX: ¿Diferencia?</h2>
+    <div class="row gap-lg fill-height">
+        <div class="fill-width" style="background-color: #1e293b; color: #f1f5f9; padding: 2rem; box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);">
+            <h3 style="color: #38bdf8;">Uvicorn</h3>
+            <p style="color: #cbd5e1; font-size: 0.95em;">
+                <strong>Servidor de aplicaciones.</strong><br/>
+                Ejecuta tu código Python (FastAPI).<br/>
+                Un proceso/thread por conexión.
+            </p>
+            <p style="color: #94a3b8; font-size: 0.9em; margin-top: 1rem;">
+                ❌ RAM masiva con 1000s de usuarios<br/>
+                ✅ Lógica de negocio
+            </p>
+        </div>
+        <div class="fill-width" style="background-color: #1e293b; color: #f1f5f9; padding: 2rem; box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);">
+            <h3 style="color: #38bdf8;">NGINX</h3>
+            <p style="color: #cbd5e1; font-size: 0.95em;">
+                <strong>Servidor de infraestructura.</strong><br/>
+                Maneja tráfico HTTP (no ejecuta código).<br/>
+                Event Loop no bloqueante.
+            </p>
+            <p style="color: #94a3b8; font-size: 0.9em; margin-top: 1rem;">
+                ✅ 10,000+ conexiones con mínimos recursos<br/>
+                ❌ Sin lógica de negocio
+            </p>
+        </div>
+    </div>
+</section>
+
+<!-- SLIDE 6: Forward vs Reverse Proxy -->
+<section class="slide p-16 col" style="background-color: #0f172a; color: #f1f5f9;">
+    <h2 class="mb-6" style="color: #38bdf8;">Forward Proxy vs Reverse Proxy</h2>
+    <table style="margin-top: 1.5rem;">
+        <thead>
+            <tr>
+                <th>Tipo</th>
+                <th>¿A quién protege?</th>
+                <th>Ejemplo</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><strong>Forward Proxy</strong></td>
+                <td>Al cliente. Oculta quién eres tú.</td>
+                <td>Una VPN</td>
+            </tr>
+            <tr>
+                <td><strong>Reverse Proxy</strong></td>
+                <td>Al servidor. Oculta la infraestructura interna.</td>
+                <td><strong>NGINX</strong></td>
+            </tr>
+        </tbody>
+    </table>
+    <p class="text-lg mt-8" style="color: #cbd5e1;">
+        NGINX es <strong>Reverse Proxy:</strong> Cliente ve NGINX, no los servidores internos.
+    </p>
+</section>
+
+<!-- SLIDE 7: Arquitectura NGINX -->
+<section class="slide p-16 col" style="background-color: #0f172a; color: #f1f5f9;">
+    <h2 class="mb-6" style="color: #38bdf8;">Estructura jerárquica de NGINX</h2>
+    <p class="text-lg mb-6" style="color: #cbd5e1;">
+        Bloques anidados: <code style="background-color: #334155; padding: 0.5rem 1rem; border-radius: 3px;">http ⟹ server ⟹ location</code>
+    </p>
+    <ul class="text-lg" style="color: #cbd5e1;">
+        <li><code>http</code>: Configuración global de tráfico web</li>
+        <li><code>server</code>: Un host virtual (dominio/subdominio)</li>
+        <li><code>location</code>: Reglas de enrutamiento dentro de un server</li>
+        <li><code>upstream</code>: Grupo de servidores para load balancing</li>
+    </ul>
+    <p class="text-sm mt-8" style="color: #94a3b8;">
+        💡 Procesa <code>location</code> de más específica a más general.
+    </p>
+</section>
+
+<!-- SLIDE 8: Configuración básica -->
+<section class="slide p-16 col" style="background-color: #0f172a; color: #f1f5f9;">
+    <h2 class="mb-6" style="color: #38bdf8;">Bloques principales de NGINX</h2>
+    <ul class="text-lg" style="color: #cbd5e1;">
+        <li><code>worker_processes</code>: Núcleos de CPU (usualmente 'auto')</li>
+        <li><code>events</code>: Capacidad de conexiones por worker</li>
+        <li><code>upstream</code>: Define servidores para balanceo</li>
+        <li><code>server</code>: Host virtual (dominio)</li>
+        <li><code>location</code>: Reglas de enrutamiento</li>
+    </ul>
+    <p class="text-sm mt-8" style="color: #94a3b8;">
+        Cuanto más específica la <code>location</code>, mayor prioridad tiene.
+    </p>
+</section>
+
+<!-- SLIDE 9: De desarrollo a producción -->
+<section class="slide p-16 col" style="background-color: #0f172a; color: #f1f5f9;">
+    <h2 class="mb-6" style="color: #38bdf8;">¿Cómo escalar uvicorn a producción?</h2>
+    <p class="text-lg mb-6" style="color: #cbd5e1;">
+        Con NGINX como Reverse Proxy + Docker Compose:
+    </p>
+    <ol class="text-lg" style="color: #cbd5e1; margin-left: 2rem;">
+        <li><strong>NGINX escucha puerto 80/443</strong> (público)</li>
+        <li><strong>FastAPI usa sólo expose</strong>, no ports (privado)</li>
+        <li><strong>NGINX redirige</strong> requests a FastAPI internamente</li>
+        <li><strong>Cliente nunca ve</strong> los detalles de infraestructura</li>
+    </ol>
+</section>
+
+<!-- SLIDE 10: Docker Compose básico -->
+<section class="slide p-16 col" style="background-color: #0f172a; color: #f1f5f9;">
+    <h2 class="mb-6" style="color: #38bdf8;">Docker Compose: FastAPI + NGINX</h2>
+    <div style="background-color: #1e293b; padding: 1.5rem; border-radius: 3px; font-size: 0.85em; overflow-y: auto; max-height: 320px; color: #38bdf8;">
+        <pre style="margin: 0; color: #cbd5e1;"><code>services:
+  fastapi:
+    build: ./app
+    expose:      # ← Privado, solo NGINX
+      - "8000"
+    networks:
+      - app_network
+
+  nginx:
+    image: nginx:alpine
+    ports:       # ← Público
+      - "80:80"
+    depends_on:
+      - fastapi
+    networks:
+      - app_network</code></pre>
+    </div>
+    <p class="text-sm mt-4" style="color: #94a3b8;">
+        ✅ <code>expose</code> en FastAPI (privado)<br/>
+        ✅ <code>ports</code> en NGINX (público)<br/>
+        ✅ Same network = DNS resolution
+    </p>
+</section>
+
+<!-- SLIDE 11: Configuración FastAPI -->
+<section class="slide p-16 col" style="background-color: #0f172a; color: #f1f5f9;">
+    <h2 class="mb-6" style="color: #38bdf8;">nginx/conf.d/fastapi.conf</h2>
+    <div style="background-color: #1e293b; padding: 1.5rem; border-radius: 3px; font-size: 0.85em; overflow-y: auto; max-height: 300px; color: #38bdf8;">
+        <pre style="margin: 0; color: #cbd5e1;"><code>upstream fastapi_backend {
+  server fastapi:8000;  # ← DNS en Docker
+}
+
+server {
+  listen 80;
+  server_name localhost;
+
+  location / {
+    proxy_pass http://fastapi_backend;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+  }
+}</code></pre>
+    </div>
+</section>
+
+<!-- SLIDE 12: Headers críticos -->
+<section class="slide p-16 col" style="background-color: #0f172a; color: #f1f5f9;">
+    <h2 class="mb-6" style="color: #38bdf8;">Headers proxy: ¿Por qué importan?</h2>
+    <table style="font-size: 0.9em; line-height: 1.6;">
+        <thead>
+            <tr style="background-color: #1e293b;">
+                <th style="color: #38bdf8;">Header</th>
+                <th style="color: #38bdf8;">¿Por qué es crítico?</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><code>X-Real-IP</code></td>
+                <td>Sin esto: FastAPI ve IP de NGINX (172.x.x.x), no del usuario</td>
+            </tr>
+            <tr>
+                <td><code>X-Forwarded-For</code></td>
+                <td>Mantiene cadena de proxies. Esencial para logs/seguridad</td>
+            </tr>
+            <tr>
+                <td><code>X-Forwarded-Proto</code></td>
+                <td>Indica HTTP u HTTPS. Crucial para redirects</td>
+            </tr>
+            <tr>
+                <td><code>Host</code></td>
+                <td>Preserva dominio original. FastAPI lo necesita para URLs</td>
+            </tr>
+        </tbody>
+    </table>
+</section>
+
+<!-- SLIDE 13: Load Balancing intro -->
+<section class="slide p-16 col" style="background-color: #0f172a; color: #f1f5f9;">
+    <h2 class="mb-6" style="color: #38bdf8;">Load Balancing: ¿Por qué?</h2>
+    <p class="text-lg mb-6" style="color: #cbd5e1;">
+        <strong>Problema:</strong> Un servidor FastAPI puede manejar ~1000 requests/s. ¿Y si necesitas más?
+    </p>
+    <p class="text-lg mb-6" style="color: #cbd5e1;">
+        <strong>Solución:</strong> Múltiples servidores + NGINX distribuye tráfico.
+    </p>
+    <ul class="text-lg" style="color: #cbd5e1;">
+        <li>Cliente ve NGINX en puerto 80</li>
+        <li>NGINX redirige a fastapi_1, fastapi_2, fastapi_3 internamente</li>
+        <li>Si uno cae, los otros siguen respondiendo</li>
+        <li>Escalabilidad horizontal (más servers = más throughput)</li>
+    </ul>
+</section>
+
+<!-- SLIDE 14: Load balancing estrategias -->
+<section class="slide p-16 col" style="background-color: #0f172a; color: #f1f5f9;">
+    <h2 class="mb-6" style="color: #38bdf8;">Estrategias de Load Balancing</h2>
+    <table style="font-size: 0.85em; line-height: 1.5;">
+        <thead>
+            <tr style="background-color: #1e293b;">
+                <th style="color: #38bdf8; width: 20%;">Estrategia</th>
+                <th style="color: #38bdf8; width: 35%;">Cuándo usar</th>
+                <th style="color: #38bdf8; width: 45%;">Configuración</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><strong>Round Robin</strong></td>
+                <td>Backends con igual capacidad</td>
+                <td>(defecto)</td>
+            </tr>
+            <tr>
+                <td><strong>Least Conn</strong></td>
+                <td>Requests con tiempo variable</td>
+                <td><code>least_conn;</code></td>
+            </tr>
+            <tr>
+                <td><strong>IP Hash</strong></td>
+                <td>Sesiones sticky</td>
+                <td><code>ip_hash;</code></td>
+            </tr>
+            <tr>
+                <td><strong>Weighted</strong></td>
+                <td>Backends con diferente potencia</td>
+                <td><code>weight=3;</code></td>
+            </tr>
+        </tbody>
+    </table>
+</section>
+
+<!-- SLIDE 15: Weighted balancing GPU -->
+<section class="slide p-16 col" style="background-color: #0f172a; color: #f1f5f9;">
+    <h2 class="mb-6" style="color: #38bdf8;">Ejemplo: Balanceo con GPUs</h2>
+    <p class="text-lg mb-4" style="color: #cbd5e1;">
+        Diferentes GPUs = diferente throughput. Asigna weights:
+    </p>
+    <div style="background-color: #1e293b; padding: 1.5rem; border-radius: 3px; font-size: 0.85em; color: #38bdf8;">
+        <pre style="margin: 0; color: #cbd5e1;"><code>upstream ml_inference {
+  server gpu_v100:8000 weight=3;  # Tesla V100: 3x requests
+  server gpu_t4:8000 weight=2;    # Tesla T4: 2x requests
+  server cpu_fallback:8000 weight=1;  # CPU: backup
+}</code></pre>
+    </div>
+    <p class="text-sm mt-4" style="color: #94a3b8;">
+        💡 NGINX distribuirá: 50% a V100, 33% a T4, 17% a CPU
+    </p>
+</section>
+
+<!-- SLIDE 16: Health checks -->
+<section class="slide p-16 col" style="background-color: #0f172a; color: #f1f5f9;">
+    <h2 class="mb-6" style="color: #38bdf8;">Health Checks: Detectar Fallos</h2>
+    <p class="text-lg mb-4" style="color: #cbd5e1;">
+        Marcar servidor como muerto si falla:
+    </p>
+    <div style="background-color: #1e293b; padding: 1.5rem; border-radius: 3px; font-size: 0.85em; color: #38bdf8;">
+        <pre style="margin: 0; color: #cbd5e1;"><code>upstream fastapi_cluster {
+  server fastapi_1:8000 max_fails=3 fail_timeout=30s;
+  server fastapi_2:8000 max_fails=3 fail_timeout=30s;
+  server fastapi_3:8000 backup;  # Solo si otros fallan
+}</code></pre>
+    </div>
+    <ul class="text-sm mt-4" style="color: #cbd5e1;">
+        <li><code>max_fails=3</code>: Después de 3 errores, marca como muerto</li>
+        <li><code>fail_timeout=30s</code>: Intenta de nuevo después de 30s</li>
+        <li><code>backup</code>: Servidor de respaldo</li>
+    </ul>
+</section>
+
+<!-- SLIDE 17: SSL/TLS intro -->
+<section class="slide p-16 col" style="background-color: #0f172a; color: #f1f5f9;">
+    <h2 class="mb-6" style="color: #38bdf8;">SSL/TLS: Proteger el tráfico</h2>
+    <p class="text-lg mb-6" style="color: #cbd5e1;">
+        HTTP = tráfico plano (inseguro). HTTPS = encriptado. NGINX maneja SSL:
+    </p>
+    <ul class="text-lg" style="color: #cbd5e1;">
+        <li>Cliente ↔ NGINX: HTTPS encriptado</li>
+        <li>NGINX ↔ FastAPI: HTTP interno (privado)</li>
+        <li>NGINX: compresión, decompresión, caché de sesiones</li>
+        <li>FastAPI: sin overhead criptográfico</li>
+    </ul>
+</section>
+
+<!-- SLIDE 18: Tipos de certificados -->
+<section class="slide p-16 col" style="background-color: #0f172a; color: #f1f5f9;">
+    <h2 class="mb-6" style="color: #38bdf8;">Self-Signed vs Let's Encrypt</h2>
+    <div class="row gap-lg fill-height">
+        <div class="fill-width" style="background-color: #1e293b; color: #f1f5f9; padding: 2rem; box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);">
+            <h4 style="color: #38bdf8;">Self-Signed</h4>
+            <p style="color: #cbd5e1; font-size: 0.9em;">✅ Gratis, inmediato</p>
+            <p style="color: #cbd5e1; font-size: 0.9em;">❌ Error de seguridad en navegador</p>
+            <p style="color: #cbd5e1; font-size: 0.9em;">👉 Desarrollo local</p>
+        </div>
+        <div class="fill-width" style="background-color: #1e293b; color: #f1f5f9; padding: 2rem; box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);">
+            <h4 style="color: #38bdf8;">Let's Encrypt</h4>
+            <p style="color: #cbd5e1; font-size: 0.9em;">✅ Gratis, trusted por navegadores</p>
+            <p style="color: #cbd5e1; font-size: 0.9em;">✅ Auto-renovable cada 90 días</p>
+            <p style="color: #cbd5e1; font-size: 0.9em;">❌ Requiere dominio público</p>
+        </div>
+    </div>
+</section>
+
+<!-- SLIDE 19: Caching intro -->
+<section class="slide p-16 col" style="background-color: #0f172a; color: #f1f5f9;">
+    <h2 class="mb-6" style="color: #38bdf8;">Caching: La magia del performance</h2>
+    <p class="text-lg mb-6" style="color: #cbd5e1;">
+        <code>/api/predict</code> ejecuta modelo. Si input es igual → output igual. ¿Por qué recalcular?
+    </p>
+    <table style="font-size: 0.9em;">
+        <tbody>
+            <tr>
+                <td><strong>Sin cache:</strong></td>
+                <td style="color: #cbd5e1;">1000 requests idénticos = 1000 inferencias</td>
+            </tr>
+            <tr>
+                <td><strong>Con cache:</strong></td>
+                <td style="color: #38bdf8;">1000 requests idénticos = 1 inferencia + 999 hits</td>
+            </tr>
+        </tbody>
+    </table>
+    <p class="text-lg mt-6" style="color: #cbd5e1;">
+        <strong>Resultado:</strong> 10-100x más rápido, 90% menos carga en backend
+    </p>
+</section>
+
+<!-- SLIDE 20: Rate limiting intro -->
+<section class="slide p-16 col" style="background-color: #0f172a; color: #f1f5f9;">
+    <h2 class="mb-6" style="color: #38bdf8;">Rate Limiting: Proteger tu API</h2>
+    <p class="text-lg mb-6" style="color: #cbd5e1;">
+        Sin rate limiting: un bot puede saturar tu backend (DoS).
+    </p>
+    <p class="text-lg mb-6" style="color: #cbd5e1;">
+        Con rate limiting: "máximo 10 requests/segundo por IP"
+    </p>
+    <ul class="text-lg" style="color: #cbd5e1;">
+        <li>Diferentes límites por endpoint (/api vs /api/train)</li>
+        <li>API tiers: free users vs premium users</li>
+        <li>Responde con 429 (Too Many Requests) vs delay</li>
+    </ul>
+</section>
+
+<!-- SLIDE 21: Streaming y WebSockets -->
+<section class="slide p-16 col" style="background-color: #0f172a; color: #f1f5f9;">
+    <h2 class="mb-6" style="color: #38bdf8;">Streaming & WebSockets</h2>
+    <p class="text-lg mb-4" style="color: #cbd5e1;">
+        FastAPI puede servir streaming responses o WebSockets. NGINX debe soportarlos:
+    </p>
+    <ul class="text-lg" style="color: #cbd5e1;">
+        <li><strong>Streaming:</strong> Desactiva buffering (<code>proxy_buffering off</code>)</li>
+        <li><strong>WebSocket:</strong> Upgrade HTTP a WS con headers especiales</li>
+        <li><strong>gRPC:</strong> Usa <code>grpc_pass</code> en lugar de <code>proxy_pass</code></li>
+    </ul>
+</section>
+
+<!-- SLIDE 22: Monitoreo y logs -->
+<section class="slide p-16 col" style="background-color: #0f172a; color: #f1f5f9;">
+    <h2 class="mb-6" style="color: #38bdf8;">Monitoreo: Ver qué está pasando</h2>
+    <p class="text-lg mb-4" style="color: #cbd5e1;">
+        NGINX genera logs con tiempos de respuesta, cache hits, errores...
+    </p>
+    <ul class="text-lg" style="color: #cbd5e1;">
+        <li><code>$request_time</code>: Tiempo total de la request</li>
+        <li><code>$upstream_response_time</code>: Tiempo en FastAPI</li>
+        <li><code>$upstream_cache_status</code>: HIT/MISS/BYPASS</li>
+        <li><code>X-Cache-Status</code>: Header personalizado para debug</li>
+    </ul>
+    <p class="text-sm mt-4" style="color: #94a3b8;">
+        💡 Analiza logs con pandas para encontrar bottlenecks
+    </p>
+</section>
+
+<!-- SLIDE 23: Prometheus + Grafana -->
+<section class="slide p-16 col" style="background-color: #0f172a; color: #f1f5f9;">
+    <h2 class="mb-6" style="color: #38bdf8;">Métricas en tiempo real</h2>
+    <p class="text-lg mb-4" style="color: #cbd5e1;">
+        <code>nginx-prometheus-exporter</code> + Prometheus + Grafana:
+    </p>
+    <ul class="text-lg" style="color: #cbd5e1;">
+        <li>Conexiones activas, requests/s, latencia p95/p99</li>
+        <li>Cache hit ratio, tráfico por endpoint</li>
+        <li>Alertas automáticas si latencia > 500ms</li>
+    </ul>
+</section>
+
+<!-- SLIDE 24: Optimizaciones avanzadas -->
+<section class="slide p-16 col" style="background-color: #0f172a; color: #f1f5f9;">
+    <h2 class="mb-6" style="color: #38bdf8;">Performance: Optimizaciones</h2>
+    <ul class="text-lg" style="color: #cbd5e1;">
+        <li><code>gzip</code>: Comprime responses (reducir 70-80% tamaño)</li>
+        <li><code>sendfile</code>: Kernel acceleration para archivos estáticos</li>
+        <li><code>tcp_nopush/nodelay</code>: Tuning de TCP</li>
+        <li><code>keepalive</code>: Reutilizar conexiones TCP</li>
+        <li><code>open_file_cache</code>: Cache de descriptores de archivo</li>
+    </ul>
+</section>
+
+<!-- SLIDE 25: Arquitectura microservicios -->
+<section class="slide p-16 col" style="background-color: #0f172a; color: #f1f5f9;">
+    <h2 class="mb-6" style="color: #38bdf8;">Caso real: Plataforma ML</h2>
+    <p class="text-lg mb-4" style="color: #cbd5e1;">
+        Una sola aplicación con múltiples servicios:
+    </p>
+    <ul class="text-lg" style="color: #cbd5e1;">
+        <li><code>/api/</code> → FastAPI (producción)</li>
+        <li><code>/dashboard/</code> → Streamlit (visualización)</li>
+        <li><code>/mlflow/</code> → MLflow (experimentos)</li>
+        <li><code>/jupyter/</code> → Jupyter (desarrollo, protegido por IP)</li>
+    </ul>
+    <p class="text-sm mt-4" style="color: #94a3b8;">
+        🔐 Cliente solo ve un dominio: ml-platform.com<br/>
+        NGINX router internamente
+    </p>
+</section>
+
+<!-- SLIDE 26: Testing y debugging -->
+<section class="slide p-16 col" style="background-color: #0f172a; color: #f1f5f9;">
+    <h2 class="mb-6" style="color: #38bdf8;">Testing: Load & Latency</h2>
+    <p class="text-lg mb-4" style="color: #cbd5e1;">
+        Herramientas para verificar configuración:
+    </p>
+    <ul class="text-lg" style="color: #cbd5e1;">
+        <li><code>ab</code> (Apache Bench): Simple load testing</li>
+        <li><code>wrk</code>: Load testing con scripting</li>
+        <li><code>curl</code>: Debug headers y redirects</li>
+        <li><code>strace</code>: Ver syscalls internas de NGINX</li>
+    </ul>
+</parameter>
+</section>
+
+<!-- SLIDE 27: Configuración producción vs desarrollo -->
+<section class="slide p-16 col" style="background-color: #0f172a; color: #f1f5f9;">
+    <h2 class="mb-6" style="color: #38bdf8;">Dev vs Producción</h2>
+    <table style="font-size: 0.85em;">
+        <thead>
+            <tr style="background-color: #1e293b;">
+                <th style="color: #38bdf8;">Config</th>
+                <th style="color: #38bdf8;">Desarrollo</th>
+                <th style="color: #38bdf8;">Producción</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><code>worker_processes</code></td>
+                <td>1</td>
+                <td>auto (CPU cores)</td>
+            </tr>
+            <tr>
+                <td><code>worker_connections</code></td>
+                <td>1024</td>
+                <td>4096+</td>
+            </tr>
+            <tr>
+                <td><code>gzip</code></td>
+                <td>off</td>
+                <td>on</td>
+            </tr>
+            <tr>
+                <td><code>access_log</code></td>
+                <td>on</td>
+                <td>buffer/async</td>
+            </tr>
+        </tbody>
+    </table>
+</section>
+
+<!-- SLIDE 28: Conclusión -->
+<section class="slide p-16 col center" style="background-color: #020617; color: #f1f5f9;">
+    <h2 class="text-4xl mb-8" style="color: #38bdf8;">Has dominado NGINX</h2>
+    <p class="text-xl mb-8" style="color: #cbd5e1;">
+        De conceptos básicos hasta arquitecturas de producción para IA/ML
+    </p>
+    <p class="text-lg" style="color: #cbd5e1;">
+        <strong>Próximo paso:</strong> Aplica esto en tu pipeline con NoSQL, PySpark y Golang
+    </p>
+</section>
+
+</body>
+</html>

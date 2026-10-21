@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>04. Reverse Proxy y Arquitectura de Backend | IES San Vicente</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <!-- NAVBAR -->
+  <nav class="navbar">
+    <div class="nav-inner">
+      <a href="index.html" class="nav-brand">
+        <svg viewBox="0 0 24 24">
+          <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+        </svg>
+        <span class="brand-text">NGINX Masterclass</span>
+      </a>
+      <ul class="nav-links">
+        <li><a href="01_arquitectura_y_fundamentos.html">01. Arquitectura</a></li>
+        <li><a href="02_configuracion_y_directivas.html">02. Configuración</a></li>
+        <li><a href="03_servidor_web_y_estaticos.html">03. Servidor Web</a></li>
+        <li><a href="04_reverse_proxy_y_arquitectura.html" class="active">04. Reverse Proxy</a></li>
+        <li><a href="05_balanceo_de_carga.html">05. Load Balancing</a></li>
+        <li><a href="06_seguridad_ssl_y_optimizacion.html">06. Seguridad & SSL</a></li>
+        <li><a href="07_laboratorios_practicos.html" style="color: var(--primary-light); font-weight:700;">07. Labs Prácticos</a></li>
+      </ul>
+      <div class="nav-actions">
+        <span class="btn-nav-repo">BDA 2026/27</span>
+      </div>
+    </div>
+  </nav>
+
+  <!-- BREADCRUMB -->
+  <div class="breadcrumb">
+    <div class="breadcrumb-inner">
+      <a href="index.html">NGINX Masterclass</a>
+      <span class="breadcrumb-sep">/</span>
+      <span style="color: var(--primary-light);">04. Reverse Proxy &amp; Arquitectura</span>
+    </div>
+  </div>
+
+  <!-- HERO -->
+  <header class="page-hero">
+    <div class="hero-badge">
+      <span class="badge-dot"></span>
+      MÓDULO 04 &bull; INTEGRACIÓN CON APLICACIONES
+    </div>
+    <h1>Reverse Proxy &amp; <span class="gradient-text">Arquitectura de Backend</span></h1>
+    <p>
+      Por qué los servidores de aplicación (FastAPI, Flask, Express) nunca deben exponerse directamente, la regla de la barra final en <code>proxy_pass</code>, cabeceras de identidad del cliente y streaming no bloqueante para IA.
+    </p>
+  </header>
+
+  <!-- CONTENT -->
+  <main class="content">
+
+    <h2>1. Forward Proxy vs Reverse Proxy</h2>
+    <p>
+      El término <em>Proxy</em> significa intermediario o representante. En redes informáticas existen dos variantes fundamentales según la entidad a la que protegen:
+    </p>
+
+    <div class="two-col">
+      <div class="mini-card">
+        <div class="card-icon">👤</div>
+        <h4>Forward Proxy (Protege al Cliente)</h4>
+        <p>
+          Se coloca frente a los clientes (usuarios). El cliente configura su navegador para pasar por el proxy, el cual oculta la identidad del cliente ante los servidores de Internet.
+        </p>
+        <p style="margin-top: 0.5rem; font-size: 0.88rem; color: var(--secondary);">
+          <strong>Ejemplo clásico:</strong> Una VPN corporativa, Tor o un proxy de filtrado en un instituto.
+        </p>
+      </div>
+
+      <div class="mini-card">
+        <div class="card-icon">🛡️</div>
+        <h4>Reverse Proxy (Protege al Servidor)</h4>
+        <p>
+          Se coloca frente a los servidores de la empresa. El cliente exterior cree que habla con el servidor final, pero NGINX intercepta la petición y decide internamente a qué aplicación delegarla.
+        </p>
+        <p style="margin-top: 0.5rem; font-size: 0.88rem; color: var(--primary-light);">
+          <strong>Ejemplo clásico:</strong> NGINX recibiendo peticiones en el puerto 80/443 y enrutándolas hacia Uvicorn en el puerto 8000.
+        </p>
+      </div>
+    </div>
+
+    <h2>2. ¿Por qué FastAPI/Uvicorn NUNCA deben exponerse directamente?</h2>
+    <p>
+      En tutoriales de desarrollo es común ver <code>uvicorn main:app --host 0.0.0.0 --port 8000</code> abierto directamente a Internet. En un entorno de producción o pruebas reales, esto supone graves riesgos:
+    </p>
+
+    <ul>
+      <li><strong>Vulnerabilidad ante ataques Slowloris:</strong> Un atacante puede abrir cientos de conexiones enviando cabeceras a 1 byte por segundo. Uvicorn mantiene sockets abiertos en Python, agotando los recursos de la máquina y dejando el servicio inaccesible. NGINX, gracias a su arquitectura asíncrona, absorbe estos ataques sin inmutarse.</li>
+      <li><strong>Sobrecarga Criptográfica:</strong> Delegar la negociación de claves TLS (HTTPS) y la descompresión al intérprete de Python ralentiza drásticamente el rendimiento de cálculo de los modelos de IA. NGINX realiza la descarga de SSL en C a nivel de kernel.</li>
+      <li><strong>Aislamiento de Red:</strong> En contenedores Docker, los backends deben configurarse con <code>expose: 8000</code> (accesible únicamente dentro de la red interna de contenedores) y <strong>nunca con <code>ports: 8000:8000</code></strong>. NGINX es el único contenedor expuesto al exterior.</li>
+    </ul>
+
+    <h2>3. La Directiva `proxy_pass` y el Misterio de la Barra Final</h2>
+    <p>
+      Una de las directivas más utilizadas y a la vez más incomprendidas es <code>proxy_pass</code>. La presencia o ausencia de una barra diagonal <code>/</code> al final de la URL cambia radicalmente cómo NGINX reescribe la petición antes de enviársela al backend:
+    </p>
+
+    <!-- CASO A vs CASO B -->
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr>
+            <th>Configuración NGINX</th>
+            <th>Petición del Cliente</th>
+            <th>Petición que recibe FastAPI</th>
+            <th>Explicación</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>
+              <code>location /api/ {</code><br>
+              <code>&nbsp;&nbsp;proxy_pass http://127.0.0.1:8000;</code><br>
+              <code>}</code><br>
+              <em style="color: var(--accent);">Sin barra al final de la URL</em>
+            </td>
+            <td><code>GET /api/v1/users</code></td>
+            <td><code>GET /api/v1/users</code></td>
+            <td><strong>Paso directo sin alteración:</strong> NGINX añade la URI original completa al backend tal cual fue solicitada.</td>
+          </tr>
+          <tr>
+            <td>
+              <code>location /api/ {</code><br>
+              <code>&nbsp;&nbsp;proxy_pass http://127.0.0.1:8000/;</code><br>
+              <code>}</code><br>
+              <em style="color: var(--primary-light);">CON barra final (URI de sustitución)</em>
+            </td>
+            <td><code>GET /api/v1/users</code></td>
+            <td><code>GET /v1/users</code></td>
+            <td><strong>Reescritura de prefijo:</strong> NGINX elimina la porción coincidente <code>/api/</code> y la sustituye por <code>/</code>.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2>4. El Problema de la Pérdida de IP Real del Cliente</h2>
+    <p>
+      Cuando NGINX actúa como intermediario, es él quien establece la conexión TCP final con el servidor de aplicaciones. Como resultado, si tu código Python inspecciona <code>request.client.host</code>, observará:
+    </p>
+
+    <div class="code-block">
+      <div class="code-header">
+        <div class="code-dots"><span></span><span></span><span></span></div>
+        <div class="code-title">python &bull; Lo que ve FastAPI sin cabeceras de proxy</div>
+        <button class="btn-copy">Copiar</button>
+      </div>
+      <pre><code># En tu endpoint FastAPI:
+@app.get("/whoami")
+def whoami(request: Request):
+    return {"client_ip": request.client.host}
+
+# Respuesta si no configuraste cabeceras en Nginx:
+# {"client_ip": "127.0.0.1"}   <--- ¡TODOS LOS CLIENTES TIENEN LA MISMA IP!</code></pre>
+    </div>
+
+    <p>
+      Esto rompe los sistemas de auditoría, prevención de fraude, geolocalización y los límites de peticiones basados en IP. Para solucionarlo, NGINX <strong>debe inyectar obligatoriamente</strong> las cabeceras estándar de la industria:
+    </p>
+
+    <div class="code-block">
+      <div class="code-header">
+        <div class="code-dots"><span></span><span></span><span></span></div>
+        <div class="code-title">nginx &bull; Bloque de Reverse Proxy de Producción</div>
+        <button class="btn-copy">Copiar</button>
+      </div>
+      <pre><code>location /api/ {
+    proxy_pass http://127.0.0.1:8000;
+
+    # 1. Preservar el dominio original solicitado (ej. midominio.com en vez de localhost)
+    proxy_set_header Host $host;
+
+    # 2. Enviar la IP física real del cliente
+    proxy_set_header X-Real-IP $remote_addr;
+
+    # 3. Mantener la cadena completa de proxies intermedios
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+
+    # 4. Indicar al backend si el cliente original usó http o https
+    proxy_set_header X-Forwarded-Proto $scheme;
+
+    # 5. Forzar HTTP/1.1 para permitir Keepalive con el backend
+    proxy_http_version 1.1;
+    proxy_set_header Connection "";
+}</code></pre>
+    </div>
+
+    <h2>5. Buffering y Streaming para Modelos de IA (LLMs)</h2>
+    <p>
+      Por defecto, NGINX almacena en un búfer interno (<em>buffer</em>) toda la respuesta generada por el backend antes de comenzar a enviársela al cliente (<code>proxy_buffering on;</code>). Esto libera rápidamente los hilos de la aplicación para atender nuevas tareas.
+    </p>
+
+    <div class="callout callout-danger">
+      <div class="callout-icon">🤖</div>
+      <div class="callout-body">
+        <h4>El Conflicto con Server-Sent Events (SSE) y Streaming de LLMs</h4>
+        <p>
+          Si estás sirviendo un modelo de lenguaje (como Llama 3, Mistral, Ollama o vLLM) que envía tokens palabra por palabra mediante <strong>Server-Sent Events (SSE)</strong> o <code>StreamingResponse</code> en FastAPI, el buffering de NGINX retendrá los paquetes hasta que el búfer se llene o el modelo termine por completo. El usuario verá una pantalla congelada en blanco durante 10 segundos y luego todo el texto de golpe.
+        </p>
+      </div>
+    </div>
+
+    <p>
+      Para permitir que los tokens de IA fluyan en tiempo real hacia el frontend según son generados, desactiva el búfer en la ruta correspondiente:
+    </p>
+
+    <div class="code-block">
+      <div class="code-header">
+        <div class="code-dots"><span></span><span></span><span></span></div>
+        <div class="code-title">nginx &bull; Configuración para Streaming y Chatbots de IA</div>
+        <button class="btn-copy">Copiar</button>
+      </div>
+      <pre><code>location /api/v1/chat/stream {
+    proxy_pass http://llm_backend;
+
+    # Desactivar buffering para transmisión instantánea token por token
+    proxy_buffering off;
+    proxy_cache off;
+
+    # Timeouts prolongados para modelos pesados o generación de texto largo
+    proxy_read_timeout 300s;
+    proxy_connect_timeout 75s;
+
+    # Cabeceras necesarias para conexiones persistentes de streaming
+    proxy_set_header Connection '';
+    proxy_http_version 1.1;
+    chunked_transfer_encoding on;
+}</code></pre>
+    </div>
+
+    <!-- NAVEGACIÓN -->
+    <div class="chapter-nav">
+      <a href="03_servidor_web_y_estaticos.html" class="nav-card prev">
+        <span class="nav-card-label">&larr; Anterior</span>
+        <span class="nav-card-title">03. Servidor Web y Estáticos</span>
+      </a>
+      <a href="05_balanceo_de_carga.html" class="nav-card next">
+        <span class="nav-card-label">Siguiente &rarr;</span>
+        <span class="nav-card-title">05. Balanceo de Carga</span>
+      </a>
+    </div>
+
+  </main>
+
+  <!-- FOOTER -->
+  <footer>
+    <p><strong>NGINX Masterclass &bull; Módulo 04</strong> &bull; IES San Vicente</p>
+    <p>Especialización en Big Data &amp; Inteligencia Artificial &bull; 2026/2027</p>
+  </footer>
+
+  <script src="main.js"></script>
+</body>
+</html>

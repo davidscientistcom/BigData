@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NGINX Masterclass & Arquitectura de Producción | IES San Vicente</title>
+  <meta name="description" content="Curso integral de NGINX para Big Data e Inteligencia Artificial: de fundamentos y reverse proxy a balanceo de carga, seguridad SSL, rate limiting y laboratorios prácticos.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <!-- NAVBAR -->
+  <nav class="navbar">
+    <div class="nav-inner">
+      <a href="index.html" class="nav-brand">
+        <svg viewBox="0 0 24 24">
+          <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+        </svg>
+        <span class="brand-text">NGINX Masterclass</span>
+      </a>
+      <ul class="nav-links">
+        <li><a href="01_arquitectura_y_fundamentos.html">01. Arquitectura</a></li>
+        <li><a href="02_configuracion_y_directivas.html">02. Configuración</a></li>
+        <li><a href="03_servidor_web_y_estaticos.html">03. Servidor Web</a></li>
+        <li><a href="04_reverse_proxy_y_arquitectura.html">04. Reverse Proxy</a></li>
+        <li><a href="05_balanceo_de_carga.html">05. Load Balancing</a></li>
+        <li><a href="06_seguridad_ssl_y_optimizacion.html">06. Seguridad & SSL</a></li>
+        <li><a href="07_laboratorios_practicos.html" style="color: var(--primary-light); font-weight:700;">07. Labs Prácticos</a></li>
+      </ul>
+      <div class="nav-actions">
+        <span class="btn-nav-repo">BDA 2026/27</span>
+      </div>
+    </div>
+  </nav>
+
+  <!-- BREADCRUMB -->
+  <div class="breadcrumb">
+    <div class="breadcrumb-inner">
+      <a href="#">IES San Vicente</a>
+      <span class="breadcrumb-sep">/</span>
+      <a href="#">Big Data & IA</a>
+      <span class="breadcrumb-sep">/</span>
+      <a href="#">Sistemas y Almacenamiento</a>
+      <span class="breadcrumb-sep">/</span>
+      <span style="color: var(--primary-light);">NGINX Masterclass</span>
+    </div>
+  </div>
+
+  <!-- HERO -->
+  <header class="page-hero">
+    <div class="hero-badge">
+      <span class="badge-dot"></span>
+      INFRAESTRUCTURA DE ALTO RENDIMIENTO &bull; EDICIÓN 2026
+    </div>
+    <h1>NGINX <span class="gradient-text">Masterclass</span> &amp; Producción</h1>
+    <p>
+      El intermediario de alto rendimiento entre el tráfico de Internet y tus aplicaciones de Inteligencia Artificial y Big Data. De la teoría de procesos asíncronos a laboratorios reales y ejecutables de reverse proxy, balanceo de carga, rate limiting y SSL.
+    </p>
+  </header>
+
+  <!-- MAIN CONTENT -->
+  <main class="content">
+
+    <!-- ARQUITECTURA SVG INTERACTIVA -->
+    <div class="diagram-card">
+      <h4>Topología de Referencia: NGINX como Puerta de Enlace (API Gateway)</h4>
+      <p class="caption">Cómo NGINX protege y distribuye el tráfico hacia backends de Machine Learning y servicios estáticos</p>
+      <div class="diagram-svg-container">
+        <svg viewBox="0 0 860 330" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <!-- Background Grid Box -->
+          <rect x="5" y="5" width="850" height="320" rx="16" fill="#0b1326" stroke="rgba(255,255,255,0.08)" stroke-width="1.5"/>
+
+          <!-- Clients Box -->
+          <g>
+            <rect x="25" y="45" width="130" height="240" rx="12" fill="#141f36" stroke="#38bdf8" stroke-width="1.5" stroke-dasharray="4 4"/>
+            <text x="90" y="75" fill="#38bdf8" font-size="12" font-weight="700" text-anchor="middle" font-family="Inter">CLIENTES PÚBLICOS</text>
+            
+            <rect x="40" y="95" width="100" height="40" rx="6" fill="#1b2845" stroke="rgba(255,255,255,0.1)"/>
+            <text x="90" y="120" fill="#f1f5f9" font-size="11" text-anchor="middle" font-family="Inter">💻 Navegadores</text>
+            
+            <rect x="40" y="145" width="100" height="40" rx="6" fill="#1b2845" stroke="rgba(255,255,255,0.1)"/>
+            <text x="90" y="170" fill="#f1f5f9" font-size="11" text-anchor="middle" font-family="Inter">📱 Apps Móviles</text>
+
+            <rect x="40" y="195" width="100" height="40" rx="6" fill="#1b2845" stroke="rgba(255,255,255,0.1)"/>
+            <text x="90" y="220" fill="#f1f5f9" font-size="11" text-anchor="middle" font-family="Inter">🤖 Scrapers / Bots</text>
+            
+            <text x="90" y="265" fill="#94a3b8" font-size="10" text-anchor="middle" font-family="Inter">HTTP / HTTPS (:80/:443)</text>
+          </g>
+
+          <!-- Arrows Client -> NGINX -->
+          <path d="M155 165 L260 165" stroke="#38bdf8" stroke-width="2.5" stroke-dasharray="6 4"/>
+          <polygon points="268,165 258,160 258,170" fill="#38bdf8"/>
+          <text x="210" y="152" fill="#38bdf8" font-size="10" font-weight="700" text-anchor="middle" font-family="JetBrains Mono">TRAFFIC IN</text>
+
+          <!-- NGINX Box -->
+          <g>
+            <rect x="270" y="30" width="280" height="270" rx="14" fill="#11221b" stroke="#10b981" stroke-width="2"/>
+            <rect x="285" y="45" width="250" height="35" rx="6" fill="#009639"/>
+            <text x="410" y="67" fill="#ffffff" font-size="13" font-weight="800" text-anchor="middle" font-family="Inter">⚡ NGINX REVERSE PROXY</text>
+
+            <!-- Features inside NGINX -->
+            <rect x="285" y="92" width="118" height="38" rx="6" fill="#153629" stroke="#10b981" stroke-opacity="0.4"/>
+            <text x="344" y="115" fill="#a7f3d0" font-size="10.5" font-weight="600" text-anchor="middle" font-family="Inter">🔒 SSL Termination</text>
+
+            <rect x="417" y="92" width="118" height="38" rx="6" fill="#153629" stroke="#10b981" stroke-opacity="0.4"/>
+            <text x="476" y="115" fill="#a7f3d0" font-size="10.5" font-weight="600" text-anchor="middle" font-family="Inter">⏱️ Rate Limiting</text>
+
+            <rect x="285" y="140" width="118" height="38" rx="6" fill="#153629" stroke="#10b981" stroke-opacity="0.4"/>
+            <text x="344" y="163" fill="#a7f3d0" font-size="10.5" font-weight="600" text-anchor="middle" font-family="Inter">🗜️ Gzip &amp; Static</text>
+
+            <rect x="417" y="140" width="118" height="38" rx="6" fill="#153629" stroke="#10b981" stroke-opacity="0.4"/>
+            <text x="476" y="163" fill="#a7f3d0" font-size="10.5" font-weight="600" text-anchor="middle" font-family="Inter">⚖️ Load Balancing</text>
+
+            <rect x="285" y="188" width="250" height="42" rx="6" fill="#153629" stroke="#10b981" stroke-opacity="0.4"/>
+            <text x="410" y="206" fill="#6ee7b7" font-size="10.5" font-weight="700" text-anchor="middle" font-family="JetBrains Mono">proxy_set_header</text>
+            <text x="410" y="222" fill="#94a3b8" font-size="9.5" text-anchor="middle" font-family="Inter">X-Real-IP, Host, X-Forwarded-For</text>
+
+            <text x="410" y="280" fill="#34d399" font-size="11" font-weight="600" text-anchor="middle" font-family="Inter">Aislamiento de Red Interna Privada</text>
+          </g>
+
+          <!-- Arrows NGINX -> Backends -->
+          <path d="M550 110 L630 85" stroke="#10b981" stroke-width="2"/>
+          <polygon points="636,83 626,81 629,91" fill="#10b981"/>
+
+          <path d="M550 165 L630 165" stroke="#10b981" stroke-width="2"/>
+          <polygon points="638,165 628,160 628,170" fill="#10b981"/>
+
+          <path d="M550 220 L630 245" stroke="#10b981" stroke-width="2"/>
+          <polygon points="636,247 629,239 626,249" fill="#10b981"/>
+
+          <!-- Internal Backends Box -->
+          <g>
+            <rect x="640" y="45" width="195" height="240" rx="12" fill="#141f36" stroke="#f59e0b" stroke-width="1.5" stroke-dasharray="4 4"/>
+            <text x="737" y="70" fill="#fbbf24" font-size="11" font-weight="700" text-anchor="middle" font-family="Inter">RED PRIVADA DOCKER/VM</text>
+
+            <rect x="655" y="85" width="165" height="46" rx="6" fill="#1b2845" stroke="rgba(255,255,255,0.1)"/>
+            <text x="737" y="105" fill="#f1f5f9" font-size="11" font-weight="700" text-anchor="middle" font-family="Inter">FastAPI Replica 1</text>
+            <text x="737" y="122" fill="#94a3b8" font-size="9.5" text-anchor="middle" font-family="JetBrains Mono">:8001 (GPU Inferencia)</text>
+
+            <rect x="655" y="142" width="165" height="46" rx="6" fill="#1b2845" stroke="rgba(255,255,255,0.1)"/>
+            <text x="737" y="162" fill="#f1f5f9" font-size="11" font-weight="700" text-anchor="middle" font-family="Inter">FastAPI Replica 2</text>
+            <text x="737" y="179" fill="#94a3b8" font-size="9.5" text-anchor="middle" font-family="JetBrains Mono">:8002 (CPU Inferencia)</text>
+
+            <rect x="655" y="200" width="165" height="46" rx="6" fill="#1b2845" stroke="rgba(255,255,255,0.1)"/>
+            <text x="737" y="220" fill="#f1f5f9" font-size="11" font-weight="700" text-anchor="middle" font-family="Inter">Frontend SPA / Assets</text>
+            <text x="737" y="237" fill="#94a3b8" font-size="9.5" text-anchor="middle" font-family="JetBrains Mono">/var/www/html (Estático)</text>
+
+            <text x="737" y="272" fill="#ef4444" font-size="9.5" font-weight="600" text-anchor="middle" font-family="Inter">🔒 Puertos cerrados a Internet</text>
+          </g>
+        </svg>
+      </div>
+    </div>
+
+    <!-- RESUMEN EJECUTIVO -->
+    <h2>¿Por qué NGINX es crítico en Big Data e Inteligencia Artificial?</h2>
+    <p>
+      En entornos de producción, exponer directamente un servidor de aplicaciones como <strong>Uvicorn</strong>, <strong>Gunicorn</strong>, <strong>Flask</strong> o <strong>Node.js</strong> a Internet es una negligencia de seguridad y rendimiento. NGINX actúa como el <em>"sistema nervioso y la piel"</em> de tu infraestructura:
+    </p>
+
+    <div class="three-col">
+      <div class="mini-card">
+        <div class="card-icon">⚡</div>
+        <h4>Rendimiento Asíncrono</h4>
+        <p>Basado en un Event Loop no bloqueante (epoll). Atiende más de 10.000 conexiones concurrentes con apenas ~2.5 MB de RAM sin crear hilos pesados.</p>
+      </div>
+      <div class="mini-card">
+        <div class="card-icon">🛡️</div>
+        <h4>Seguridad y Blindaje</h4>
+        <p>Aísla la red interna, oculta versiones y puertos, aplica terminación SSL/TLS moderna y ejecuta Rate Limiting para evitar ataques de denegación de servicio (DoS).</p>
+      </div>
+      <div class="mini-card">
+        <div class="card-icon">⚖️</div>
+        <h4>Escalabilidad Horizontal</h4>
+        <p>Distribuye la carga entre clústeres de inferencia mediante algoritmos Round-Robin, Least-Connections o Pesos por GPU, detectando caídas en milisegundos.</p>
+      </div>
+    </div>
+
+    <!-- ROADMAP DE MÓDULOS -->
+    <h2>Módulos del Curso</h2>
+    <p>
+      Estructura pedagógica progresiva desde los conceptos elementales de la máquina hasta laboratorios prácticos ejecutables paso a paso:
+    </p>
+
+    <div class="two-col">
+      
+      <!-- Módulo 1 -->
+      <a href="01_arquitectura_y_fundamentos.html" class="mini-card" style="display: block;">
+        <span class="lab-badge">Módulo 01</span>
+        <h4 style="margin-top: 0.5rem; color: #fff;">Arquitectura Interna &amp; Fundamentos</h4>
+        <p>El dilema del C10K: Event-Driven (epoll) vs Thread-per-request (Apache). Modelo Master y Worker Processes. Instalación, señales Unix y anatomía de carpetas.</p>
+      </a>
+
+      <!-- Módulo 2 -->
+      <a href="02_configuracion_y_directivas.html" class="mini-card" style="display: block;">
+        <span class="lab-badge">Módulo 02</span>
+        <h4 style="margin-top: 0.5rem; color: #fff;">Anatomía de Configuración &amp; Enrutamiento</h4>
+        <p>Jerarquía de contextos: <code>http &rarr; server &rarr; location</code>. Algoritmo de resolución de rutas, precedencia estricta (=, ^~, ~*, /) y trampas frecuentes.</p>
+      </a>
+
+      <!-- Módulo 3 -->
+      <a href="03_servidor_web_y_estaticos.html" class="mini-card" style="display: block;">
+        <span class="lab-badge">Módulo 03</span>
+        <h4 style="margin-top: 0.5rem; color: #fff;">Servidor Web &amp; Archivos Estáticos</h4>
+        <p>La diferencia vital entre <code>root</code> y <code>alias</code>. Enrutamiento SPA con <code>try_files</code>, compresión dinámica Gzip al 80% y páginas de error 404/50x a medida.</p>
+      </a>
+
+      <!-- Módulo 4 -->
+      <a href="04_reverse_proxy_y_arquitectura.html" class="mini-card" style="display: block;">
+        <span class="lab-badge">Módulo 04</span>
+        <h4 style="margin-top: 0.5rem; color: #fff;">Reverse Proxy &amp; Aislamiento de Red</h4>
+        <p>Directiva <code>proxy_pass</code> y la regla de la barra final. Preservación obligatoria de IP real (X-Real-IP, X-Forwarded-For) y streaming para LLMs con buffering off.</p>
+      </a>
+
+      <!-- Módulo 5 -->
+      <a href="05_balanceo_de_carga.html" class="mini-card" style="display: block;">
+        <span class="lab-badge">Módulo 05</span>
+        <h4 style="margin-top: 0.5rem; color: #fff;">Balanceo de Carga (Load Balancing)</h4>
+        <p>Pools de servidores con <code>upstream</code>. Algoritmos: Round-Robin, Least-Connections, IP-Hash y pesos por potencia de GPU. Health checks pasivos y Keepalive.</p>
+      </a>
+
+      <!-- Módulo 6 -->
+      <a href="06_seguridad_ssl_y_optimizacion.html" class="mini-card" style="display: block;">
+        <span class="lab-badge">Módulo 06</span>
+        <h4 style="margin-top: 0.5rem; color: #fff;">Seguridad, SSL/TLS &amp; Rate Limiting</h4>
+        <p>Terminación SSL/HTTPS moderna y redirecciones 301. Protección anti-abuso con Leaky Bucket (<code>limit_req_zone</code>), cabeceras de seguridad y logging JSON estructurado.</p>
+      </a>
+
+      <!-- Módulo 7 -->
+      <a href="07_laboratorios_practicos.html" class="mini-card" style="display: block; border-color: rgba(16, 185, 129, 0.4); background: rgba(16, 185, 129, 0.05); grid-column: 1 / -1;">
+        <span class="lab-badge" style="background: var(--primary); color: #042111;">Módulo 07 &bull; Práctico</span>
+        <h4 style="margin-top: 0.5rem; color: var(--primary-light);">🧪 Laboratorios Prácticos Resueltos (Hands-On)</h4>
+        <p style="color: var(--text);">
+          <strong>6 Escenarios completos 100% resueltos y ejecutables:</strong> Servidor estático con Gzip, Reverse Proxy con FastAPI, Clúster de 3 réplicas con simulación de caída (Failover), Ataque de Rate Limiting en vivo con código 429, Certificado SSL autofirmado con OpenSSL, y Despliegue Multi-Contenedor completo en Docker Compose.
+        </p>
+      </a>
+
+    </div>
+
+    <!-- CALLOUT DE FILOSOFÍA PEDAGÓGICA -->
+    <div class="callout callout-tip">
+      <div class="callout-icon">💡</div>
+      <div class="callout-body">
+        <h4>Metodología de Aprendizaje</h4>
+        <p>
+          Cada concepto teórico está acompañado de snippets probados en producción y comandos de terminal ejecutables con <code>curl</code>, <code>nginx -t</code> y scripts en Python. Se recomienda leer primero los fundamentos arquitectónicos y luego clonar o ejecutar directamente las prácticas del Módulo 07.
+        </p>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- FOOTER -->
+  <footer>
+    <p><strong>NGINX Masterclass &amp; Arquitectura de Sistemas</strong> &bull; IES San Vicente</p>
+    <p>Curso 2026/2027 &bull; Especialización en Big Data &amp; Inteligencia Artificial</p>
+  </footer>
+
+  <script src="main.js"></script>
+</body>
+</html>
