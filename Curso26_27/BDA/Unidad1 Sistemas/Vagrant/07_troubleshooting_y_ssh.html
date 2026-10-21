@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>7. Troubleshooting y SSH — Vagrant Bootcamp</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+
+    <!-- Prism.js Syntax Highlighting -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/themes/prism-tomorrow.min.css">
+</head>
+
+<body>
+
+    <!-- NAVBAR PRINCIPAL -->
+    <nav class="navbar" id="navbar">
+        <div class="nav-inner">
+            <div class="nav-brand">
+                <span class="brand-text">BDA · Vagrant Bootcamp</span>
+            </div>
+            <ul class="nav-links" id="navLinks">
+                <li><a href="index.html">Inicio</a></li>
+                <li><a href="01_introduccion_iac.html">1. Intro IaC</a></li>
+                <li><a href="02_anatomia_y_ciclo_de_vida.html">2. Vagrantfile &amp; CLI</a></li>
+                <li><a href="03_redes_y_conectividad.html">3. Redes</a></li>
+                <li><a href="04_hardware_y_almacenamiento.html">4. Hardware &amp; Disco</a></li>
+                <li><a href="05_aprovisionamiento.html">5. Provisioning</a></li>
+                <li><a href="06_multimaquina_y_clusters.html">6. Multi-Máquina</a></li>
+                <li><a href="07_troubleshooting_y_ssh.html" class="active">7. Troubleshooting</a></li>
+                <li><a href="08_practicas_y_multipass.html">8. Labs &amp; Multipass</a></li>
+            </ul>
+            <button class="nav-mobile-btn" id="navToggle" onclick="toggleNav()">MENÚ</button>
+        </div>
+    </nav>
+
+    <!-- BREADCRUMB -->
+    <div class="breadcrumb">
+        <div class="breadcrumb-inner">
+            <a href="index.html">Inicio</a>
+            <span class="breadcrumb-sep">›</span>
+            <span>7. Resolución de Problemas y el Misterio SSH</span>
+        </div>
+    </div>
+
+    <!-- HERO SECTION -->
+    <header class="page-hero">
+        <div class="hero-badge">
+            <span class="badge-dot"></span>
+            Capítulo 07 · Diagnóstico Avanzado de Sistemas
+        </div>
+        <h1>Troubleshooting, Redes Residuales y el <span class="gradient-text">Misterio de las Claves SSH</span></h1>
+        <p>Aprende a diagnosticar y resolver los fallos más frustrantes de la virtualización: bloqueos de autenticación SSH por sobreescritura de authorized_keys, adaptadores de red huérfanos en Windows y desincronizaciones de Guest Additions.</p>
+    </header>
+
+    <!-- MAIN CONTENT -->
+    <main class="content">
+
+        <!-- 1. EL GRAN MISTERIO SSH -->
+        <h2>1. El Gran Misterio de las Claves SSH en Vagrant</h2>
+        <p>Uno de los problemas más comunes en laboratorios de formación ocurre cuando un alumno intenta configurar claves SSH para Ansible o acceso remoto: de repente, <code>ssh vagrant@192.168.56.x</code> funciona, pero <code>vagrant ssh</code> o <code>vagrant provision</code> empiezan a devolver el temido <strong><code>Permission denied (publickey)</code></strong> o piden contraseña indefinidamente.</p>
+
+        <!-- DIAGRAMA SVG SSH RACE CONDITION -->
+        <div class="diagram-container">
+            <div class="diagram-title">El Mecanismo de Inserción de Claves y la Condición de Carrera</div>
+            <svg viewBox="0 0 880 340" width="100%" height="auto" style="max-width: 820px; display: block; margin: 0 auto;">
+                <defs>
+                    <linearGradient id="sshBoxHost" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stop-color="#1e293b" />
+                        <stop offset="100%" stop-color="#0f172a" />
+                    </linearGradient>
+                    <linearGradient id="sshBoxGuest" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stop-color="#1e3a8a" />
+                        <stop offset="100%" stop-color="#172554" />
+                    </linearGradient>
+                </defs>
+
+                <!-- HOST -->
+                <rect x="40" y="30" width="360" height="280" rx="14" fill="url(#sshBoxHost)" stroke="#38bdf8" stroke-width="2" />
+                <text x="220" y="65" fill="#38bdf8" font-family="Inter, sans-serif" font-size="15" font-weight="800" text-anchor="middle">TU MÁQUINA ANFITRIONA (HOST)</text>
+                
+                <rect x="65" y="90" width="310" height="60" rx="8" fill="#141d2e" stroke="#475569" />
+                <text x="80" y="115" fill="#f8fafc" font-family="JetBrains Mono, monospace" font-size="11">Clave Insegura Global:</text>
+                <text x="80" y="135" fill="#94a3b8" font-family="JetBrains Mono, monospace" font-size="10">~/.vagrant.d/insecure_private_key</text>
+
+                <path d="M 220 155 L 220 185" stroke="#f59e0b" stroke-width="2" stroke-dasharray="3 3" />
+
+                <rect x="65" y="195" width="310" height="85" rx="8" fill="#0f172a" stroke="#10b981" />
+                <text x="80" y="220" fill="#34d399" font-family="JetBrains Mono, monospace" font-size="11" font-weight="700">Clave Generada Dinámica:</text>
+                <text x="80" y="240" fill="#94a3b8" font-family="JetBrains Mono, monospace" font-size="10">.vagrant/machines/&lt;name&gt;/</text>
+                <text x="80" y="258" fill="#94a3b8" font-family="JetBrains Mono, monospace" font-size="10">virtualbox/private_key</text>
+
+                <!-- FLECHAS CONEXIÓN -->
+                <g transform="translate(415, 140)">
+                    <text x="25" y="0" fill="#fbbf24" font-family="Inter, sans-serif" font-size="11" font-weight="700" text-anchor="middle">1. Boot</text>
+                    <line x1="5" y1="10" x2="45" y2="10" stroke="#fbbf24" stroke-width="2" />
+                    <polygon points="45,6 55,10 45,14" fill="#fbbf24" />
+
+                    <text x="25" y="45" fill="#ef4444" font-family="Inter, sans-serif" font-size="11" font-weight="700" text-anchor="middle">2. Reemplazo</text>
+                    <line x1="5" y1="55" x2="45" y2="55" stroke="#ef4444" stroke-width="2" />
+                    <polygon points="45,51 55,55 45,59" fill="#ef4444" />
+                </g>
+
+                <!-- GUEST VM -->
+                <rect x="480" y="30" width="360" height="280" rx="14" fill="url(#sshBoxGuest)" stroke="#60a5fa" stroke-width="2" />
+                <text x="660" y="65" fill="#60a5fa" font-family="Inter, sans-serif" font-size="15" font-weight="800" text-anchor="middle">MÁQUINA VIRTUAL (GUEST)</text>
+
+                <rect x="505" y="90" width="310" height="70" rx="8" fill="#0a0f1e" stroke="#1d4ed8" />
+                <text x="520" y="115" fill="#f8fafc" font-family="JetBrains Mono, monospace" font-size="11">/home/vagrant/.ssh/authorized_keys</text>
+                <text x="520" y="135" fill="#38bdf8" font-family="JetBrains Mono, monospace" font-size="10">Contiene la clave pública segura</text>
+                <text x="520" y="150" fill="#93c5fd" font-family="JetBrains Mono, monospace" font-size="10">inyectada por Vagrant en el arranque</text>
+
+                <rect x="505" y="180" width="310" height="100" rx="8" fill="#450a0a" stroke="#ef4444" stroke-width="1.5" />
+                <text x="520" y="205" fill="#fca5a5" font-family="Inter, sans-serif" font-size="12" font-weight="700">❌ EL ERROR TÍPICO DE APROVISIONAMIENTO:</text>
+                <text x="520" y="230" fill="#f87171" font-family="JetBrains Mono, monospace" font-size="10">cat mi_clave.pub > ~/.ssh/authorized_keys</text>
+                <text x="520" y="255" fill="#fca5a5" font-family="Inter, sans-serif" font-size="10">¡El operador '>' BORRA la clave privada</text>
+                <text x="520" y="270" fill="#fca5a5" font-family="Inter, sans-serif" font-size="10">con la que Vagrant controla la máquina!</text>
+            </svg>
+        </div>
+
+        <h3>¿Qué hace Vagrant por debajo del capó?</h3>
+        <ol style="margin-left: 1.5rem; color: var(--text2); line-height: 1.8; margin-bottom: 1.5rem;">
+            <li>Todas las boxes oficiales de Vagrant vienen de fábrica con un par de claves público-privadas idénticas para todo el mundo (<code>insecure_private_key</code>).</li>
+            <li>En el primer <code>vagrant up</code>, Vagrant entra a la VM usando esa clave insegura pública.</li>
+            <li>Inmediatamente, por seguridad (<code>config.ssh.insert_key = true</code> por defecto), genera al vuelo un par de claves aleatorias únicas, copia la pública dentro de <code>authorized_keys</code> y guarda la privada en tu carpeta local <code>.vagrant/machines/&lt;nombre&gt;/virtualbox/private_key</code>.</li>
+            <li>Si en tu script de aprovisionamiento ejecutas <code>cat mi_clave.pub > ~/.ssh/authorized_keys</code> con el operador de sobreescritura (<code>></code>), <strong>eliminas la clave generada por Vagrant</strong>. A partir de ese segundo, tú puedes conectar con tu clave personal, pero el comando <code>vagrant ssh</code> y <code>vagrant provision</code> quedan bloqueados sin acceso.</li>
+        </ol>
+
+        <!-- LAS DOS SOLUCIONES -->
+        <h2>2. Las Dos Soluciones Definitivas al Problema SSH</h2>
+
+        <div class="two-col">
+            <div class="mini-card">
+                <h5>✦ Solución 1: Coexistencia con '&gt;&gt;' (Recomendada)</h5>
+                <p>En lugar de sobreescribir el archivo, añade tu clave al final utilizando el operador de append (<code>&gt;&gt;</code>). Ambas claves convivirán pacíficamente en <code>authorized_keys</code>:</p>
+                <div class="code-block" style="margin-top: 0.8rem;">
+                    <pre><code class="language-bash"># ✅ CORRECTO: Ambas claves coexisten
+cat /tmp/mi_clave.pub >> /home/vagrant/.ssh/authorized_keys
+chmod 600 /home/vagrant/.ssh/authorized_keys
+chown -R vagrant:vagrant /home/vagrant/.ssh
+</code></pre>
+                </div>
+            </div>
+            <div class="mini-card">
+                <h5>✦ Solución 2: Control Declarativo en Vagrantfile</h5>
+                <p>Si quieres usar exclusivamente tu clave personal y desactivar la generación dinámica de claves de Vagrant, indícalo explícitamente:</p>
+                <div class="code-block" style="margin-top: 0.8rem;">
+                    <pre><code class="language-ruby">Vagrant.configure("2") do |config|
+  config.vm.box = "ubuntu/jammy64"
+
+  # 1. Desactivar reemplazo automático
+  config.ssh.insert_key = false
+
+  # 2. Ruta a tus claves privadas
+  config.ssh.private_key_path = [
+    "~/.ssh/id_rsa",
+    "~/.vagrant.d/insecure_private_key"
+  ]
+end
+</code></pre>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. ERROR DE REDES RESIDUALES -->
+        <h2>3. Adaptadores de Red Residuales en Windows (VERR_INTNET_FLT_IF_NOT_FOUND)</h2>
+        <p>En sistemas operativos Windows, al crear y destruir varias máquinas con red privada (Host-Only), VirtualBox suele dejar adaptadores de red huérfanos o desincronizados en el registro del sistema. Al hacer <code>vagrant up</code>, la consola escupe un error como este:</p>
+
+        <div class="code-block">
+            <div class="code-header">
+                <span class="code-lang">text — Mensaje de error de VirtualBox</span>
+            </div>
+            <pre><code class="language-text">There was an error while executing `VBoxManage`, a CLI used by Vagrant...
+Stderr: VBoxManage.exe: error: Failed to open/create the internal network 
+'HostInterfaceNetworking-VirtualBox Host-Only Ethernet Adapter #2' (VERR_INTNET_FLT_IF_NOT_FOUND).
+VBoxManage.exe: error: Failed to attach the network LUN (VERR_INTNET_FLT_IF_NOT_FOUND)
+</code></pre>
+        </div>
+
+        <h3>Protocolo de Reparación Paso a Paso</h3>
+        <div class="steps">
+            <div class="step">
+                <div class="step-num">1</div>
+                <div class="step-body">
+                    <h4>Listar adaptadores Host-Only en PowerShell</h4>
+                    <p>Abre PowerShell en tu sistema anfitrión y consulta los adaptadores registrados:</p>
+                    <div class="code-block">
+                        <pre><code class="language-powershell">VBoxManage list hostonlyifs</code></pre>
+                    </div>
+                    <p>Observarás nombres duplicados o numerados como <code>VirtualBox Host-Only Ethernet Adapter #2</code>.</p>
+                </div>
+            </div>
+
+            <div class="step">
+                <div class="step-num">2</div>
+                <div class="step-body">
+                    <h4>Eliminar el adaptador corrupto por línea de comandos</h4>
+                    <p>Ejecuta el borrado del adaptador residual indicando su nombre exacto:</p>
+                    <div class="code-block">
+                        <pre><code class="language-powershell">VBoxManage hostonlyif remove "VirtualBox Host-Only Ethernet Adapter #2"</code></pre>
+                    </div>
+                </div>
+            </div>
+
+            <div class="step">
+                <div class="step-num">3</div>
+                <div class="step-body">
+                    <h4>Solución de Purga Definitiva (Si el comando falla)</h4>
+                    <p>Si VBoxManage devuelve <code>E_INVALIDARG</code> o no encuentra la interfaz pero el error persiste, cierra VirtualBox completamente y elimina la caché de configuración en tu perfil de usuario de Windows:</p>
+                    <div class="code-block">
+                        <pre><code class="language-powershell"># Cerrar procesos huérfanos de VirtualBox en Windows
+Stop-Process -Name "VBoxSVC" -Force -ErrorAction SilentlyContinue
+
+# Comprobar la carpeta de configuración global de VirtualBox
+# Ruta: C:\Users\<TU_USUARIO>\.VirtualBox\VirtualBox.xml
+</code></pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 4. GUEST ADDITIONS DESYNC -->
+        <h2>4. Desincronización de Guest Additions y Carpetas Compartidas</h2>
+        <p>Si al hacer <code>vagrant up</code> observas el mensaje de advertencia:</p>
+        <div class="code-block">
+            <pre><code class="language-text">No guest additions were detected on the base box for this VM...
+Mounting failed with the error: No such device (mount: unknown filesystem type 'vboxsf')
+</code></pre>
+        </div>
+        <p>Significa que el núcleo de Linux de la máquina virtual no tiene cargados los módulos de kernel de VirtualBox necesarios para enlazar las carpetas sincronizadas. La solución oficial recomendada por HashiCorp es instalar el plugin <strong><code>vagrant-vbguest</code></strong>, que detecta y actualiza los controladores automáticamente al arrancar:</p>
+
+        <div class="code-block">
+            <div class="code-header">
+                <span class="code-lang">bash — Instalación de vagrant-vbguest</span>
+                <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+            </div>
+            <pre><code class="language-bash"># Instalar plugin en el Host (solo una vez)
+vagrant plugin install vagrant-vbguest
+
+# O alternativamente dentro de la VM vía script de aprovisionamiento:
+sudo apt-get update -y && sudo apt-get install -y virtualbox-guest-utils
+</code></pre>
+        </div>
+
+        <!-- 5. CHEAT SHEET DE TROUBLESHOOTING -->
+        <h2>5. Matriz Rápida de Diagnóstico de Incidentes</h2>
+
+        <div class="table-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Síntoma / Error</th>
+                        <th>Causa Raíz</th>
+                        <th>Acción Correctiva Inmediata</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>Permission denied (publickey)</code> en <code>vagrant ssh</code></td>
+                        <td>Se sobreescribió <code>authorized_keys</code> con <code>></code> borrando la clave privada de Vagrant.</td>
+                        <td>Cambiar el script a <code>>></code> o regenerar la VM con <code>vagrant destroy -f && vagrant up</code>.</td>
+                    </tr>
+                    <tr>
+                        <td><code>VERR_INTNET_FLT_IF_NOT_FOUND</code></td>
+                        <td>Adaptador de red Host-Only residual en Windows o subred no permitida (VirtualBox 7).</td>
+                        <td>Usar subred <code>192.168.56.x</code> y ejecutar <code>VBoxManage hostonlyif remove "..."</code>.</td>
+                    </tr>
+                    <tr>
+                        <td><code>VT-x is not available / VERR_VMX_NO_VMX</code></td>
+                        <td>La virtualización por hardware está deshabilitada en la BIOS/UEFI del ordenador físico.</td>
+                        <td>Reiniciar el PC, entrar a la BIOS/UEFI y habilitar <strong>Intel Virtualization Technology (VT-x)</strong> o <strong>AMD-V / SVM Mode</strong>.</td>
+                    </tr>
+                    <tr>
+                        <td>Se queda colgado en <code>Waiting for machine to boot...</code></td>
+                        <td>Grub esperando intervención, kernel panic o conflicto de red.</td>
+                        <td>Activar <code>vb.gui = true</code> en el Vagrantfile para abrir la ventana visual y observar el log del monitor.</td>
+                    </tr>
+                    <tr>
+                        <td><code>Port collision detected</code></td>
+                        <td>El puerto del host (ej. 8080 o 5432) ya está ocupado por otro servicio.</td>
+                        <td>Añadir <code>auto_correct: true</code> a la directiva <code>forwarded_port</code> en el Vagrantfile.</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- CHECKLIST INTERACTIVA -->
+        <div class="checklist-card">
+            <h4>✓ Checklist de Troubleshooting</h4>
+            <ul class="checklist-items">
+                <li class="check-item" onclick="toggleCheck(this)">
+                    <input type="checkbox">
+                    <span>Comprendido el mecanismo de claves SSH inseguras iniciales y la generación de claves en <code>.vagrant/</code>.</span>
+                </li>
+                <li class="check-item" onclick="toggleCheck(this)">
+                    <input type="checkbox">
+                    <span>Verificado que los scripts de provisión utilizan <code>&gt;&gt;</code> para añadir claves a <code>authorized_keys</code> sin sobreescribir.</span>
+                </li>
+                <li class="check-item" onclick="toggleCheck(this)">
+                    <input type="checkbox">
+                    <span>Dominado el uso de <code>VBoxManage list hostonlyifs</code> para sanear adaptadores residuales en Windows.</span>
+                </li>
+                <li class="check-item" onclick="toggleCheck(this)">
+                    <input type="checkbox">
+                    <span>Conocido el truco de <code>vb.gui = true</code> para depurar máquinas congeladas en el arranque.</span>
+                </li>
+            </ul>
+        </div>
+
+        <!-- NAVEGACIÓN ENTRE CAPÍTULOS -->
+        <div class="chapter-nav">
+            <a href="06_multimaquina_y_clusters.html" class="chapter-nav-btn">← 6. Multi-Máquina &amp; Clústeres</a>
+            <a href="index.html" class="chapter-nav-btn">Índice General</a>
+            <a href="08_practicas_y_multipass.html" class="chapter-nav-btn primary">8. Prácticas Guiadas &amp; Multipass →</a>
+        </div>
+
+    </main>
+
+    <!-- FOOTER -->
+    <footer class="footer">
+        <div class="footer-inner">
+            <div class="footer-brand">
+                <div class="brand-logo"><span class="brand-text">IES San Vicente</span> · Big Data &amp; Cloud</div>
+                <p>Material de laboratorio de Sistemas Informáticos &amp; Virtualización (Curso 2026-2027).</p>
+            </div>
+            <div class="footer-brand" style="text-align: right;">
+                <p>Módulo 1 · Unidad de Sistemas · <strong>Vagrant &amp; IaC Bootcamp</strong></p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- PRISM.JS PARA RESALTADO DE CÓDIGO -->
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/prism.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-ruby.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-bash.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-powershell.min.js"></script>
+
+    <!-- SCRIPTS -->
+    <script>
+        function copyCode(btn) {
+            const pre = btn.closest('.code-block').querySelector('pre code');
+            if (!pre) return;
+            const text = pre.innerText || pre.textContent;
+            navigator.clipboard.writeText(text).then(() => {
+                const originalText = btn.innerText;
+                btn.innerText = '✓ Copiado';
+                btn.classList.add('copied');
+                setTimeout(() => {
+                    btn.innerText = originalText;
+                    btn.classList.remove('copied');
+                }, 2000);
+            }).catch(err => {
+                console.error('Error al copiar:', err);
+            });
+        }
+
+        function toggleNav() {
+            const links = document.getElementById('navLinks');
+            links.classList.toggle('open');
+        }
+
+        function toggleCheck(item) {
+            const checkbox = item.querySelector('input[type="checkbox"]');
+            if (event.target !== checkbox) {
+                checkbox.checked = !checkbox.checked;
+            }
+            if (checkbox.checked) {
+                item.classList.add('completed');
+            } else {
+                item.classList.remove('completed');
+            }
+        }
+    </script>
+</body>
+
+</html>

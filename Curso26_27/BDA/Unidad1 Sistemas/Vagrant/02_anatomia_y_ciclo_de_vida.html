@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>2. Anatomía de Vagrant, Vagrantfile y CLI — Vagrant Bootcamp</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+
+    <!-- Prism.js Syntax Highlighting -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/themes/prism-tomorrow.min.css">
+</head>
+
+<body>
+
+    <!-- NAVBAR PRINCIPAL -->
+    <nav class="navbar" id="navbar">
+        <div class="nav-inner">
+            <div class="nav-brand">
+                <span class="brand-text">BDA · Vagrant Bootcamp</span>
+            </div>
+            <ul class="nav-links" id="navLinks">
+                <li><a href="index.html">Inicio</a></li>
+                <li><a href="01_introduccion_iac.html">1. Intro IaC</a></li>
+                <li><a href="02_anatomia_y_ciclo_de_vida.html" class="active">2. Vagrantfile &amp; CLI</a></li>
+                <li><a href="03_redes_y_conectividad.html">3. Redes</a></li>
+                <li><a href="04_hardware_y_almacenamiento.html">4. Hardware &amp; Disco</a></li>
+                <li><a href="05_aprovisionamiento.html">5. Provisioning</a></li>
+                <li><a href="06_multimaquina_y_clusters.html">6. Multi-Máquina</a></li>
+                <li><a href="07_troubleshooting_y_ssh.html">7. Troubleshooting</a></li>
+                <li><a href="08_practicas_y_multipass.html">8. Labs &amp; Multipass</a></li>
+            </ul>
+            <button class="nav-mobile-btn" id="navToggle" onclick="toggleNav()">MENÚ</button>
+        </div>
+    </nav>
+
+    <!-- BREADCRUMB -->
+    <div class="breadcrumb">
+        <div class="breadcrumb-inner">
+            <a href="index.html">Inicio</a>
+            <span class="breadcrumb-sep">›</span>
+            <span>2. Anatomía de Vagrantfile y Flujo de Trabajo</span>
+        </div>
+    </div>
+
+    <!-- HERO SECTION -->
+    <header class="page-hero">
+        <div class="hero-badge">
+            <span class="badge-dot"></span>
+            Capítulo 02 · El Núcleo de la Herramienta
+        </div>
+        <h1>Anatomía del <span class="gradient-text">Vagrantfile &amp; Ciclo de Vida</span></h1>
+        <p>Aprende a dominar el archivo de configuración en Ruby DSL, el repositorio Vagrant Cloud y los comandos fundamentales para controlar máquinas virtuales sin tocar la GUI.</p>
+    </header>
+
+    <!-- MAIN CONTENT -->
+    <main class="content">
+
+        <!-- 1. BOXES Y VAGRANT CLOUD -->
+        <h2>1. Las Cajas (Boxes) y Vagrant Cloud</h2>
+        <p>En lugar de descargar manualmente una ISO de instalación y pasar por el asistente de instalación de Ubuntu, Vagrant utiliza imágenes base empaquetadas llamadas <strong>Boxes</strong>.</p>
+        <p>Una box es un archivo comprimido que contiene un disco base en formato <code>.vmdk</code> o <code>.vdi</code> con un sistema operativo mínimo ya instalado, configurado con un usuario estándar <code>vagrant</code> (con privilegios de <code>sudo</code> sin contraseña) y las herramientas de integración del hipervisor (Guest Additions).</p>
+
+        <div class="two-col">
+            <div class="mini-card">
+                <h5>✦ Vagrant Cloud (El Repositorio Global)</h5>
+                <p>Al igual que Docker Hub para contenedores, HashiCorp mantiene <a href="https://app.vagrantup.com/boxes/search" target="_blank" style="color: var(--primary-light);">Vagrant Cloud</a>, donde Canonical, Debian y la comunidad publican cajas oficiales.</p>
+                <ul>
+                    <li><code>ubuntu/jammy64</code> → Ubuntu 22.04 LTS (Oficial Canonical, 64-bit).</li>
+                    <li><code>ubuntu/noble64</code> → Ubuntu 24.04 LTS (Oficial Canonical, 64-bit).</li>
+                    <li><code>generic/ubuntu2204</code> → Variante genérica optimizada.</li>
+                </ul>
+            </div>
+            <div class="mini-card">
+                <h5>✦ Caché Local de Boxes</h5>
+                <p>La primera vez que utilizas una box, Vagrant la descarga en tu disco local en la carpeta oculta <code>~/.vagrant.d/boxes</code>. Las siguientes veces que crees máquinas con esa misma box, se clonará de forma instantánea sin gastar ancho de banda.</p>
+            </div>
+        </div>
+
+        <!-- 2. ANATOMÍA DEL VAGRANTFILE -->
+        <h2>2. Anatomía de un Vagrantfile</h2>
+        <p>El <strong>Vagrantfile</strong> es el archivo de texto plano que define la máquina virtual. Aunque utiliza la sintaxis de <strong>Ruby</strong>, no necesitas saber programar en Ruby: se estructura como un bloque de configuración declarativo muy limpio:</p>
+
+        <div class="code-block">
+            <div class="code-header">
+                <span class="code-lang">ruby — Estructura básica de un Vagrantfile</span>
+                <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+            </div>
+            <pre><code class="language-ruby"># -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+# Versión 2 de la API de configuración de Vagrant
+Vagrant.configure("2") do |config|
+
+  # 1. Imagen base del sistema operativo (Box oficial)
+  config.vm.box = "ubuntu/jammy64"
+
+  # 2. Nombre de host dentro de la máquina invitada
+  config.vm.hostname = "servidor-bda"
+
+  # 3. Proveedor: VirtualBox y parámetros de hardware
+  config.vm.provider "virtualbox" do |vb|
+    vb.name = "VM_Ubuntu_BigData"   # Nombre visible en VirtualBox GUI
+    vb.memory = 2048                # Memoria RAM en Megabytes (2 GB)
+    vb.cpus = 2                     # Cores de CPU virtuales
+  end
+
+end
+</code></pre>
+        </div>
+
+        <div class="info-box tip">
+            <span class="info-box-icon">💡</span>
+            <div class="info-box-text">
+                <strong>¿Por qué 'ubuntu/jammy64' en lugar de versiones antiguas?</strong><br>
+                Muchos tutoriales antiguos de internet siguen usando <code>ubuntu/bionic64</code> (Ubuntu 18.04) o <code>xenial64</code> (16.04). Esas versiones ya han alcanzado el fin de su soporte oficial (EOL). En Big Data y desarrollo moderno usamos siempre <strong>Ubuntu 22.04 LTS (Jammy)</strong> o <strong>Ubuntu 24.04 LTS (Noble)</strong> para tener compatibilidad total con Docker, Python 3.10+ y Java 17/21.
+            </div>
+        </div>
+
+        <!-- 3. PRIMER PROYECTO PASO A PASO -->
+        <h2>3. Creación del Primer Proyecto Paso a Paso</h2>
+
+        <div class="steps">
+            <div class="step">
+                <div class="step-num">1</div>
+                <div class="step-body">
+                    <h4>Crear un Directorio de Trabajo Limpio</h4>
+                    <p>Cada proyecto de Vagrant debe residir en su propia carpeta aislada:</p>
+                    <div class="code-block">
+                        <div class="code-header">
+                            <span class="code-lang">bash / powershell</span>
+                            <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+                        </div>
+                        <pre><code class="language-bash">mkdir mi_primer_vagrant && cd mi_primer_vagrant</code></pre>
+                    </div>
+                </div>
+            </div>
+
+            <div class="step">
+                <div class="step-num">2</div>
+                <div class="step-body">
+                    <h4>Inicializar el Vagrantfile</h4>
+                    <p>El comando <code>vagrant init</code> genera un archivo <code>Vagrantfile</code> de plantilla apuntando a la box elegida:</p>
+                    <div class="code-block">
+                        <div class="code-header">
+                            <span class="code-lang">bash / powershell</span>
+                            <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+                        </div>
+                        <pre><code class="language-bash">vagrant init ubuntu/jammy64</code></pre>
+                    </div>
+                </div>
+            </div>
+
+            <div class="step">
+                <div class="step-num">3</div>
+                <div class="step-body">
+                    <h4>Arrancar la Máquina Virtual (vagrant up)</h4>
+                    <p>Este es el comando maestro: descarga la box si no existe, crea la VM en VirtualBox, configura la red e inicia el sistema:</p>
+                    <div class="code-block">
+                        <div class="code-header">
+                            <span class="code-lang">bash / powershell</span>
+                            <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+                        </div>
+                        <pre><code class="language-bash">vagrant up</code></pre>
+                    </div>
+                </div>
+            </div>
+
+            <div class="step">
+                <div class="step-num">4</div>
+                <div class="step-body">
+                    <h4>Conectarse por SSH a la Máquina</h4>
+                    <p>No necesitas abrir la consola gráfica de VirtualBox ni introducir contraseñas. Vagrant gestiona las llaves criptográficas automáticamente:</p>
+                    <div class="code-block">
+                        <div class="code-header">
+                            <span class="code-lang">bash / powershell</span>
+                            <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+                        </div>
+                        <pre><code class="language-bash">vagrant ssh</code></pre>
+                    </div>
+                    <p style="font-size: 0.85rem; color: var(--text3);">¡Ya estás dentro de tu servidor Ubuntu! Para salir y volver a tu anfitrión, escribe <code>exit</code>.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- 4. DIAGRAMA DE CICLO DE VIDA -->
+        <h2>4. Diagrama del Ciclo de Vida y Comandos de Gestión</h2>
+
+        <div class="diagram-demo">
+            <span class="diagram-demo-label">Transiciones de Estado de una Máquina Vagrant</span>
+            <svg viewBox="0 0 850 220" xmlns="http://www.w3.org/2000/svg" style="height:220px">
+                <!-- Estado: Not Created -->
+                <circle cx="90" cy="110" r="50" fill="#141d2e" stroke="#64748b" stroke-width="2"/>
+                <text x="90" y="105" text-anchor="middle" fill="#94a3b8" font-size="11" font-weight="700" font-family="Inter">Not Created</text>
+                <text x="90" y="122" text-anchor="middle" fill="#64748b" font-size="9" font-family="Inter">(Sin VM)</text>
+
+                <!-- Flecha: vagrant up -->
+                <line x1="145" y1="110" x2="285" y2="110" stroke="#10b981" stroke-width="2" marker-end="url(#arrow)"/>
+                <text x="215" y="98" text-anchor="middle" fill="#10b981" font-size="10" font-weight="700" font-family="'JetBrains Mono', monospace">vagrant up</text>
+
+                <!-- Estado: Running -->
+                <circle cx="345" cy="110" r="55" fill="#141d2e" stroke="#10b981" stroke-width="2.5"/>
+                <text x="345" y="105" text-anchor="middle" fill="#10b981" font-size="12" font-weight="800" font-family="Inter">Running</text>
+                <text x="345" y="122" text-anchor="middle" fill="#f1f5f9" font-size="9" font-family="'JetBrains Mono', monospace">vagrant ssh</text>
+
+                <!-- Flechas: Running <-> Poweroff -->
+                <path d="M 400 95 L 565 95" stroke="#ef4444" stroke-width="2"/>
+                <text x="482" y="85" text-anchor="middle" fill="#ef4444" font-size="10" font-weight="700" font-family="'JetBrains Mono', monospace">vagrant halt</text>
+
+                <path d="M 565 125 L 400 125" stroke="#10b981" stroke-width="2"/>
+                <text x="482" y="142" text-anchor="middle" fill="#10b981" font-size="10" font-weight="700" font-family="'JetBrains Mono', monospace">vagrant up</text>
+
+                <!-- Estado: Poweroff -->
+                <circle cx="625" cy="110" r="50" fill="#141d2e" stroke="#ef4444" stroke-width="2"/>
+                <text x="625" y="105" text-anchor="middle" fill="#ef4444" font-size="11" font-weight="700" font-family="Inter">Poweroff</text>
+                <text x="625" y="122" text-anchor="middle" fill="#64748b" font-size="9" font-family="Inter">(Apagada)</text>
+
+                <!-- Flecha de retorno: destroy -->
+                <path d="M 625 160 Q 360 215 90 160" fill="none" stroke="#ef4444" stroke-width="2" stroke-dasharray="4,4"/>
+                <text x="360" y="200" text-anchor="middle" fill="#ef4444" font-size="10" font-weight="700" font-family="'JetBrains Mono', monospace">vagrant destroy -f</text>
+            </svg>
+        </div>
+
+        <div class="table-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Comando</th>
+                        <th>Qué hace exactamente</th>
+                        <th>Consumo de Recursos</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>vagrant status</code></td>
+                        <td>Muestra el estado actual de la máquina (<code>running</code>, <code>poweroff</code>, <code>not created</code>).</td>
+                        <td>Cero. Solo consulta el hipervisor.</td>
+                    </tr>
+                    <tr>
+                        <td><code>vagrant halt</code></td>
+                        <td>Apagado limpio del sistema operativo (equivalente a <code>shutdown -h now</code>).</td>
+                        <td>Libera RAM y CPU. Mantiene el disco y los datos.</td>
+                    </tr>
+                    <tr>
+                        <td><code>vagrant suspend</code></td>
+                        <td>Pausa la máquina y congela su estado en RAM/disco (muy rápido de reanudar con <code>vagrant resume</code>).</td>
+                        <td>Libera CPU pero ocupa espacio de swap/disco.</td>
+                    </tr>
+                    <tr>
+                        <td><code>vagrant reload</code></td>
+                        <td>Reinicia la máquina y <strong>vuelve a leer el Vagrantfile</strong> para aplicar cambios de red o RAM.</td>
+                        <td>Reinicia el sistema operativo.</td>
+                    </tr>
+                    <tr>
+                        <td><code>vagrant destroy -f</code></td>
+                        <td>Borra completamente la máquina virtual y sus discos en VirtualBox.</td>
+                        <td>Libera el 100% del almacenamiento SSD.</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- 5. LA CARPETA .VAGRANT Y GITIGNORE -->
+        <h2>5. La Carpeta Oculta '.vagrant/' y la Regla de Oro de Git</h2>
+        <p>Cuando ejecutas <code>vagrant up</code>, Vagrant crea automáticamente una carpeta oculta llamada <code>.vagrant/</code> dentro del directorio de tu proyecto.</p>
+
+        <div class="info-box danger">
+            <span class="info-box-icon">🛑</span>
+            <div class="info-box-text">
+                <strong>¡NUNCA subas '.vagrant/' a GitHub!</strong><br>
+                Dentro de <code>.vagrant/</code> se guardan datos efímeros y específicos de tu máquina local: el UUID que vincula el proyecto con VirtualBox y la clave SSH privada generada (<code>private_key</code>). Si subes esta carpeta a un repositorio, romperás la máquina de tus compañeros de equipo y expondrás claves privadas.
+            </div>
+        </div>
+
+        <p>Asegúrate de que todo repositorio que contenga un Vagrantfile incluya este archivo <code>.gitignore</code>:</p>
+
+        <div class="code-block">
+            <div class="code-header">
+                <span class="code-lang">gitignore</span>
+                <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+            </div>
+            <pre><code class="language-plaintext"># Directorio de estado interno de Vagrant (Obligatorio ignorar)
+.vagrant/
+
+# Archivos de log
+*.log
+</code></pre>
+        </div>
+
+        <!-- CHECKLIST -->
+        <div class="checklist-card">
+            <h4>✓ Lista de Comprobación del Capítulo</h4>
+            <ul class="checklist-items">
+                <li class="check-item" onclick="toggleCheck(this)">
+                    <input type="checkbox">
+                    <span>Directorio de proyecto creado e inicializado con <code>vagrant init ubuntu/jammy64</code>.</span>
+                </li>
+                <li class="check-item" onclick="toggleCheck(this)">
+                    <input type="checkbox">
+                    <span>Máquina arrancada con <code>vagrant up</code> y sesión interactiva abierta con <code>vagrant ssh</code>.</span>
+                </li>
+                <li class="check-item" onclick="toggleCheck(this)">
+                    <input type="checkbox">
+                    <span>Comprobados los comandos de parada y reinicio (<code>vagrant halt</code> y <code>vagrant reload</code>).</span>
+                </li>
+                <li class="check-item" onclick="toggleCheck(this)">
+                    <input type="checkbox">
+                    <span>Archivo <code>.gitignore</code> configurado para evitar la subida accidental de <code>.vagrant/</code>.</span>
+                </li>
+            </ul>
+        </div>
+
+        <!-- NAVEGACIÓN ENTRE CAPÍTULOS -->
+        <div class="chapter-nav">
+            <a href="01_introduccion_iac.html" class="chapter-nav-btn">← 1. Introducción a IaC</a>
+            <a href="index.html" class="chapter-nav-btn">Índice General</a>
+            <a href="03_redes_y_conectividad.html" class="chapter-nav-btn primary">3. Redes &amp; Conectividad →</a>
+        </div>
+
+    </main>
+
+    <!-- FOOTER -->
+    <footer class="footer">
+        <div class="footer-inner">
+            <div class="footer-brand">
+                <div class="brand-logo"><span class="brand-text">IES San Vicente</span> · Big Data &amp; Cloud</div>
+                <p>Material de laboratorio de Sistemas Informáticos &amp; Virtualización (Curso 2026-2027).</p>
+            </div>
+            <div class="footer-brand" style="text-align: right;">
+                <p>Módulo 1 · Unidad de Sistemas · <strong>Vagrant &amp; IaC Bootcamp</strong></p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- PRISM.JS PARA RESALTADO DE CÓDIGO -->
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/prism.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-ruby.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-bash.min.js"></script>
+
+    <!-- SCRIPTS -->
+    <script>
+        function copyCode(btn) {
+            const pre = btn.closest('.code-block').querySelector('pre code');
+            if (!pre) return;
+            const text = pre.innerText || pre.textContent;
+            navigator.clipboard.writeText(text).then(() => {
+                const originalText = btn.innerText;
+                btn.innerText = '✓ Copiado';
+                btn.classList.add('copied');
+                setTimeout(() => {
+                    btn.innerText = originalText;
+                    btn.classList.remove('copied');
+                }, 2000);
+            }).catch(err => {
+                console.error('Error al copiar:', err);
+            });
+        }
+
+        function toggleNav() {
+            const links = document.getElementById('navLinks');
+            links.classList.toggle('open');
+        }
+
+        function toggleCheck(item) {
+            const checkbox = item.querySelector('input[type="checkbox"]');
+            if (event.target !== checkbox) {
+                checkbox.checked = !checkbox.checked;
+            }
+            if (checkbox.checked) {
+                item.classList.add('completed');
+            } else {
+                item.classList.remove('completed');
+            }
+        }
+    </script>
+</body>
+
+</html>

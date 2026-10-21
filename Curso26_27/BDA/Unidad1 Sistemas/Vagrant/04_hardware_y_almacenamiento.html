@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>4. Hardware y Almacenamiento — Vagrant Bootcamp</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+
+    <!-- Prism.js Syntax Highlighting -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/themes/prism-tomorrow.min.css">
+</head>
+
+<body>
+
+    <!-- NAVBAR PRINCIPAL -->
+    <nav class="navbar" id="navbar">
+        <div class="nav-inner">
+            <div class="nav-brand">
+                <span class="brand-text">BDA · Vagrant Bootcamp</span>
+            </div>
+            <ul class="nav-links" id="navLinks">
+                <li><a href="index.html">Inicio</a></li>
+                <li><a href="01_introduccion_iac.html">1. Intro IaC</a></li>
+                <li><a href="02_anatomia_y_ciclo_de_vida.html">2. Vagrantfile &amp; CLI</a></li>
+                <li><a href="03_redes_y_conectividad.html">3. Redes</a></li>
+                <li><a href="04_hardware_y_almacenamiento.html" class="active">4. Hardware &amp; Disco</a></li>
+                <li><a href="05_aprovisionamiento.html">5. Provisioning</a></li>
+                <li><a href="06_multimaquina_y_clusters.html">6. Multi-Máquina</a></li>
+                <li><a href="07_troubleshooting_y_ssh.html">7. Troubleshooting</a></li>
+                <li><a href="08_practicas_y_multipass.html">8. Labs &amp; Multipass</a></li>
+            </ul>
+            <button class="nav-mobile-btn" id="navToggle" onclick="toggleNav()">MENÚ</button>
+        </div>
+    </nav>
+
+    <!-- BREADCRUMB -->
+    <div class="breadcrumb">
+        <div class="breadcrumb-inner">
+            <a href="index.html">Inicio</a>
+            <span class="breadcrumb-sep">›</span>
+            <span>4. Hardware, Carpetas Sincronizadas y Disco</span>
+        </div>
+    </div>
+
+    <!-- HERO SECTION -->
+    <header class="page-hero">
+        <div class="hero-badge">
+            <span class="badge-dot"></span>
+            Capítulo 04 · Dimensionamiento y Persistencia
+        </div>
+        <h1>Personalización de <span class="gradient-text">Hardware y Almacenamiento</span></h1>
+        <p>Configura CPU y RAM mediante el proveedor VirtualBox, monta carpetas sincronizadas en tiempo real con permisos UNIX adecuados y amplía el almacenamiento para cargas de Big Data.</p>
+    </header>
+
+    <!-- MAIN CONTENT -->
+    <main class="content">
+
+        <!-- 1. PERSONALIZACIÓN DE HARDWARE -->
+        <h2>1. Asignación de Recursos de CPU y Memoria RAM</h2>
+        <p>Por defecto, la mayoría de cajas descargadas desde Vagrant Cloud arrancan con especificaciones muy modestas (habitualmente 1 CPU virtual y 512 MB o 1024 MB de RAM). En el ciclo de Big Data, ejecutar procesos de Spark, contenedores Docker o motores de base de datos exige dimensionar los recursos mediante el bloque de configuración del proveedor:</p>
+
+        <div class="code-block">
+            <div class="code-header">
+                <span class="code-lang">ruby — Configuración de hardware en Vagrantfile</span>
+                <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+            </div>
+            <pre><code class="language-ruby">Vagrant.configure("2") do |config|
+  config.vm.box = "ubuntu/jammy64"
+  config.vm.hostname = "motor-analitica"
+
+  # Bloque de configuración específico para VirtualBox
+  config.vm.provider "virtualbox" do |vb|
+    vb.name = "VM_BigData_Worker_01"   # Nombre visible en la lista de VirtualBox GUI
+    vb.memory = 4096                   # Memoria RAM en Megabytes (4 GB)
+    vb.cpus = 2                        # Número de núcleos vCPU asignados
+    vb.gui = false                     # Ejecución sin ventana gráfica (Headless, ahorra CPU)
+
+    # Parámetros avanzados vía VBoxManage (ej: Virtualización anidada para Docker/KVM)
+    vb.customize ["modifyvm", :id, "--nested-hw-virt", "on"]
+    
+    # Habilitar soporte de portapapeles y arrastrar si se usara GUI
+    # vb.customize ["modifyvm", :id, "--clipboard-mode", "bidirectional"]
+  end
+end
+</code></pre>
+        </div>
+
+        <div class="info-box tip">
+            <span class="info-box-icon">💡</span>
+            <div class="info-box-text">
+                <strong>Consejo de SysAdmin: No asfixies el Sistema Anfitrión</strong><br>
+                Como norma general, nunca asignes a tus máquinas virtuales más del <strong>50% de la RAM física</strong> ni más del <strong>50% de los hilos de CPU</strong> de tu ordenador físico. Si tu portátil tiene 16 GB de RAM, puedes asignar hasta 8 GB a tu máquina invitada; de lo contrario, el sistema operativo anfitrión (Windows/macOS) sufrirá congelaciones y "swapping" severo de disco.
+            </div>
+        </div>
+
+        <!-- 2. CARPETAS SINCRONIZADAS -->
+        <h2>2. Carpetas Sincronizadas (Synced Folders)</h2>
+        <p>Una de las mayores ventajas de Vagrant sobre las máquinas virtuales convencionales es la eliminación de la necesidad de transferir archivos por FTP o pendrives. Vagrant enlaza de forma bidireccional carpetas de tu ordenador físico con directorios dentro de la máquina virtual.</p>
+
+        <!-- DIAGRAMA SVG SYNC FOLDERS -->
+        <div class="diagram-container">
+            <div class="diagram-title">Mapeo Bidireccional de Carpetas Compartidas</div>
+            <svg viewBox="0 0 840 240" width="100%" height="auto" style="max-width: 800px; display: block; margin: 0 auto;">
+                <defs>
+                    <linearGradient id="hostCardGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stop-color="#1e293b" />
+                        <stop offset="100%" stop-color="#0f172a" />
+                    </linearGradient>
+                    <linearGradient id="vmCardGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stop-color="#1e3a8a" />
+                        <stop offset="100%" stop-color="#172554" />
+                    </linearGradient>
+                </defs>
+
+                <!-- HOST FOLDER -->
+                <rect x="40" y="30" width="320" height="180" rx="14" fill="url(#hostCardGrad)" stroke="#38bdf8" stroke-width="2" />
+                <text x="200" y="65" fill="#38bdf8" font-family="Inter, sans-serif" font-size="16" font-weight="700" text-anchor="middle">SISTEMA ANFITRIÓN (HOST)</text>
+                <text x="200" y="90" fill="#94a3b8" font-family="Inter, sans-serif" font-size="12" text-anchor="middle">Tu editor favorito (VS Code / JetBrains)</text>
+                
+                <rect x="65" y="115" width="270" height="70" rx="8" fill="#141d2e" stroke="#475569" />
+                <text x="80" y="142" fill="#f8fafc" font-family="JetBrains Mono, monospace" font-size="13">./codigo_fuente/</text>
+                <text x="80" y="165" fill="#64748b" font-family="JetBrains Mono, monospace" font-size="11">pipeline.py, dataset.csv</text>
+
+                <!-- FLECHAS SYNC -->
+                <g transform="translate(385, 95)">
+                    <rect x="0" y="0" width="70" height="50" rx="6" fill="#0f172a" stroke="#1563ff" />
+                    <text x="35" y="22" fill="#60a5fa" font-family="Inter, sans-serif" font-size="10" font-weight="700" text-anchor="middle">SYNC</text>
+                    <text x="35" y="38" fill="#38bdf8" font-family="Inter, sans-serif" font-size="16" text-anchor="middle">⇄</text>
+                </g>
+
+                <!-- VM GUEST FOLDER -->
+                <rect x="480" y="30" width="320" height="180" rx="14" fill="url(#vmCardGrad)" stroke="#60a5fa" stroke-width="2" />
+                <text x="640" y="65" fill="#60a5fa" font-family="Inter, sans-serif" font-size="16" font-weight="700" text-anchor="middle">MÁQUINA VIRTUAL (GUEST)</text>
+                <text x="640" y="90" fill="#94a3b8" font-family="Inter, sans-serif" font-size="12" text-anchor="middle">Entorno de ejecución (Linux)</text>
+                
+                <rect x="505" y="115" width="270" height="70" rx="8" fill="#0a0f1e" stroke="#1d4ed8" />
+                <text x="520" y="142" fill="#f8fafc" font-family="JetBrains Mono, monospace" font-size="13">/home/vagrant/proyectos/</text>
+                <text x="520" y="165" fill="#34d399" font-family="JetBrains Mono, monospace" font-size="11">Ejecución nativa Linux</text>
+            </svg>
+        </div>
+
+        <div class="two-col">
+            <div class="mini-card">
+                <h5>✦ La carpeta por defecto: '/vagrant'</h5>
+                <p>Sin escribir una sola línea extra en tu <code>Vagrantfile</code>, el directorio donde se ubica dicho archivo se monta automáticamente dentro de la máquina invitada en la ruta <code>/vagrant</code>.</p>
+            </div>
+            <div class="mini-card">
+                <h5>✦ Sincronización en Tiempo Real</h5>
+                <p>Cualquier fichero que guardes en tu ordenador anfitrión usando VS Code aparece en la máquina virtual en milisegundos, permitiendo programar en tu interfaz habitual y compilar o procesar dentro de Linux.</p>
+            </div>
+        </div>
+
+        <h3>Definición de Carpetas Sincronizadas Personalizadas</h3>
+        <p>Podemos mapear directorios adicionales o alterar permisos UNIX de propietario y lectura/escritura:</p>
+
+        <div class="code-block">
+            <div class="code-header">
+                <span class="code-lang">ruby — Opciones avanzadas de synced_folder</span>
+                <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+            </div>
+            <pre><code class="language-ruby">Vagrant.configure("2") do |config|
+  config.vm.box = "ubuntu/jammy64"
+
+  # 1. Deshabilitar la carpeta por defecto /vagrant si no la necesitas por seguridad
+  # config.vm.synced_folder ".", "/vagrant", disabled: true
+
+  # 2. Mapeo personalizado: ./data en el host -> /mnt/datasets en la VM
+  config.vm.synced_folder "./data", "/mnt/datasets"
+
+  # 3. Mapeo con permisos explícitos para servidores web o bases de datos
+  # fmode = permisos de ficheros (664) | dmode = permisos de directorios (775)
+  config.vm.synced_folder "./src", "/var/www/html",
+    owner: "vagrant",
+    group: "vagrant",
+    mount_options: ["dmode=775", "fmode=664"]
+end
+</code></pre>
+        </div>
+
+        <!-- 3. ALMACENAMIENTO DE DISCO -->
+        <h2>3. Almacenamiento y Redimensionamiento del Disco</h2>
+        <p>Las cajas oficiales de Ubuntu en Vagrant Cloud se publican típicamente con un disco base de <strong>10 GB a 20 GB</strong>. Para tareas de Big Data (donde los archivos Parquet, bases de datos PostgreSQL o logs superan fácilmente esta capacidad), nos encontramos pronto con el temido error <code>No space left on device</code>.</p>
+
+        <h3>Método 1: Redimensionamiento Nativo (Vagrant 2.2.19+)</h3>
+        <p>En versiones recientes de Vagrant, ya es posible declarar el tamaño del disco principal directamente mediante la directiva <code>config.vm.disk</code>:</p>
+
+        <div class="code-block">
+            <div class="code-header">
+                <span class="code-lang">ruby — Redimensionamiento nativo en Vagrantfile</span>
+                <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+            </div>
+            <pre><code class="language-ruby">Vagrant.configure("2") do |config|
+  config.vm.box = "ubuntu/jammy64"
+
+  # Redimensionar el disco principal primario a 50 Gigabytes
+  config.vm.disk :disk, size: "50GB", primary: true
+
+  config.vm.provider "virtualbox" do |vb|
+    vb.memory = 4096
+    vb.cpus = 2
+  end
+end
+</code></pre>
+        </div>
+
+        <h3>Método 2: Plugin Clásico 'vagrant-disksize' (Máxima Compatibilidad)</h3>
+        <p>Si trabajas en sistemas donde la directiva nativa no esté activa o uses cajas de terceros, el plugin <code>vagrant-disksize</code> es el estándar histórico de la industria:</p>
+
+        <div class="steps">
+            <div class="step">
+                <div class="step-num">1</div>
+                <div class="step-body">
+                    <h4>Instalar el plugin en el sistema anfitrión</h4>
+                    <p>Ejecuta en tu terminal anfitriona (solo hay que hacerlo una vez):</p>
+                    <div class="code-block">
+                        <div class="code-header">
+                            <span class="code-lang">bash — Instalación del plugin</span>
+                            <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+                        </div>
+                        <pre><code class="language-bash">vagrant plugin install vagrant-disksize</code></pre>
+                    </div>
+                </div>
+            </div>
+
+            <div class="step">
+                <div class="step-num">2</div>
+                <div class="step-body">
+                    <h4>Declarar el tamaño en el Vagrantfile</h4>
+                    <p>Añade la directiva <code>config.disksize.size</code>:</p>
+                    <div class="code-block">
+                        <div class="code-header">
+                            <span class="code-lang">ruby — Uso del plugin vagrant-disksize</span>
+                            <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+                        </div>
+                        <pre><code class="language-ruby">Vagrant.configure("2") do |config|
+  config.vm.box = "ubuntu/jammy64"
+
+  # Asignar 60 GB de disco mediante el plugin
+  config.disksize.size = "60GB"
+end
+</code></pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="info-box note">
+            <span class="info-box-icon">ℹ️</span>
+            <div class="info-box-text">
+                <strong>¿Qué pasa con la partición en Ubuntu Jammy?</strong><br>
+                En sistemas antiguos, ampliar el disco virtual obligaba al alumno a ejecutar <code>gparted</code> o <code>fdisk</code> para extender la partición. En las cajas modernas <code>ubuntu/jammy64</code> y <code>noble64</code>, el servicio <strong>cloud-init</strong> detecta el crecimiento del disco en el primer arranque y ejecuta automáticamente <code>growpart</code> y <code>resize2fs</code>, entregándote el disco expandido al 100% sin intervención manual.
+            </div>
+        </div>
+
+        <!-- 4. EJEMPLO COMPLETO -->
+        <h2>4. Vagrantfile Completo: Estación de Ingeniería de Datos</h2>
+        <p>Unificamos hardware avanzado, carpetas compartidas y disco ampliado en una plantilla lista para producción:</p>
+
+        <div class="code-block">
+            <div class="code-header">
+                <span class="code-lang">ruby — Vagrantfile completo optimizado para datos</span>
+                <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+            </div>
+            <pre><code class="language-ruby"># -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+Vagrant.configure("2") do |config|
+  config.vm.box = "ubuntu/jammy64"
+  config.vm.hostname = "data-station"
+
+  # 1. Almacenamiento en disco (50 GB)
+  config.vm.disk :disk, size: "50GB", primary: true
+
+  # 2. Red privada estática
+  config.vm.network "private_network", ip: "192.168.56.30"
+
+  # 3. Sincronización de datasets locales
+  config.vm.synced_folder "./datasets", "/opt/datasets",
+    owner: "vagrant",
+    group: "vagrant"
+
+  # 4. Asignación de recursos en VirtualBox
+  config.vm.provider "virtualbox" do |vb|
+    vb.name = "VM_BigData_DataStation"
+    vb.memory = 4096
+    vb.cpus = 2
+    vb.customize ["modifyvm", :id, "--nested-hw-virt", "on"]
+  end
+end
+</code></pre>
+        </div>
+
+        <!-- 5. VERIFICACIÓN EN TERMINAL -->
+        <h2>5. Verificación de Recursos desde la Terminal</h2>
+        <p>Arranca la máquina con <code>vagrant up</code> (o si ya existía y cambiaste el hardware, usa <code>vagrant reload</code>) y valida los recursos:</p>
+
+        <div class="code-block">
+            <div class="code-header">
+                <span class="code-lang">bash — Comandos de comprobación dentro de la VM</span>
+                <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+            </div>
+            <pre><code class="language-bash"># 1. Comprobar memoria RAM libre y asignada
+free -h
+
+# 2. Comprobar núcleos de CPU disponibles
+nproc
+lscpu | grep "CPU(s):"
+
+# 3. Comprobar tamaño real de las particiones montadas
+df -h /
+
+# 4. Comprobar que la carpeta sincronizada está montada y operativa
+ls -la /opt/datasets/
+touch /opt/datasets/prueba_host.txt
+# ¡Comprueba ahora en tu explorador de archivos del host que el fichero apareció!
+</code></pre>
+        </div>
+
+        <!-- CHECKLIST INTERACTIVA -->
+        <div class="checklist-card">
+            <h4>✓ Checklist de Verificación de Recursos</h4>
+            <ul class="checklist-items">
+                <li class="check-item" onclick="toggleCheck(this)">
+                    <input type="checkbox">
+                    <span>Configurados <code>vb.memory</code> y <code>vb.cpus</code> sin exceder el 50% de las capacidades del equipo físico.</span>
+                </li>
+                <li class="check-item" onclick="toggleCheck(this)">
+                    <input type="checkbox">
+                    <span>Comprobada la carpeta compartida por defecto <code>/vagrant</code> y personalizadas nuevas carpetas con permisos de usuario.</span>
+                </li>
+                <li class="check-item" onclick="toggleCheck(this)">
+                    <input type="checkbox">
+                    <span>Dimensionado el almacenamiento a 50GB mediante <code>config.vm.disk</code> o el plugin <code>vagrant-disksize</code>.</span>
+                </li>
+                <li class="check-item" onclick="toggleCheck(this)">
+                    <input type="checkbox">
+                    <span>Verificado con <code>df -h</code> y <code>free -h</code> que el sistema operativo reconoce los recursos asignados.</span>
+                </li>
+            </ul>
+        </div>
+
+        <!-- NAVEGACIÓN ENTRE CAPÍTULOS -->
+        <div class="chapter-nav">
+            <a href="03_redes_y_conectividad.html" class="chapter-nav-btn">← 3. Redes &amp; Conectividad</a>
+            <a href="index.html" class="chapter-nav-btn">Índice General</a>
+            <a href="05_aprovisionamiento.html" class="chapter-nav-btn primary">5. Aprovisionamiento (Provisioning) →</a>
+        </div>
+
+    </main>
+
+    <!-- FOOTER -->
+    <footer class="footer">
+        <div class="footer-inner">
+            <div class="footer-brand">
+                <div class="brand-logo"><span class="brand-text">IES San Vicente</span> · Big Data &amp; Cloud</div>
+                <p>Material de laboratorio de Sistemas Informáticos &amp; Virtualización (Curso 2026-2027).</p>
+            </div>
+            <div class="footer-brand" style="text-align: right;">
+                <p>Módulo 1 · Unidad de Sistemas · <strong>Vagrant &amp; IaC Bootcamp</strong></p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- PRISM.JS PARA RESALTADO DE CÓDIGO -->
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/prism.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-ruby.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-bash.min.js"></script>
+
+    <!-- SCRIPTS -->
+    <script>
+        function copyCode(btn) {
+            const pre = btn.closest('.code-block').querySelector('pre code');
+            if (!pre) return;
+            const text = pre.innerText || pre.textContent;
+            navigator.clipboard.writeText(text).then(() => {
+                const originalText = btn.innerText;
+                btn.innerText = '✓ Copiado';
+                btn.classList.add('copied');
+                setTimeout(() => {
+                    btn.innerText = originalText;
+                    btn.classList.remove('copied');
+                }, 2000);
+            }).catch(err => {
+                console.error('Error al copiar:', err);
+            });
+        }
+
+        function toggleNav() {
+            const links = document.getElementById('navLinks');
+            links.classList.toggle('open');
+        }
+
+        function toggleCheck(item) {
+            const checkbox = item.querySelector('input[type="checkbox"]');
+            if (event.target !== checkbox) {
+                checkbox.checked = !checkbox.checked;
+            }
+            if (checkbox.checked) {
+                item.classList.add('completed');
+            } else {
+                item.classList.remove('completed');
+            }
+        }
+    </script>
+</body>
+
+</html>

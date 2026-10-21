@@ -45,17 +45,25 @@ El siguiente script configura una máquina virtual con Vagrant y asegura que la 
 ### **`Vagrantfile` Explicado Paso a Paso**
 ```ruby
 Vagrant.configure("2") do |config|
-  # Especifica la caja base de Ubuntu
-  config.vm.box = "ubuntu/xenial64"
+  # Especifica la caja base de Ubuntu (recomendado Ubuntu 22.04 LTS o 20.04 LTS)
+  config.vm.box = "ubuntu/jammy64"
 
   # Configura una red privada con una IP fija
   config.vm.network "private_network", ip: "192.168.33.10"
 
-  # Configura los recursos de hardware
+  # Configura los recursos de hardware (2048 MB y 2 vCPUs)
   config.vm.provider "virtualbox" do |vb|
-    vb.memory = "4096"  # 4 GB de memoria
+    vb.memory = "2048"  # 2 GB de memoria
     vb.cpus = 2          # 2 CPUs
   end
+
+  # Configuración para evitar prompts de SSH y permitir acceso con clave personalizada
+  config.ssh.insert_key = false
+  config.ssh.private_key_path = [
+    "#{Dir.home}/.ssh/vagrant_vm_key",
+    "#{Dir.home}/.vagrant.d/insecure_private_key"
+  ]
+  config.ssh.extra_args = ["-o StrictHostKeyChecking=no", "-o UserKnownHostsFile=/dev/null"]
 
   # Copia la clave pública generada en el host a la VM
   config.vm.provision "file", run: "once", source: "#{Dir.home}/.ssh/vagrant_vm_key.pub", destination: "/home/vagrant/.ssh/vagrant_vm_key.pub"
@@ -76,23 +84,20 @@ Vagrant.configure("2") do |config|
       chmod 700 /home/vagrant/.ssh
       chown vagrant:vagrant /home/vagrant/.ssh
 
-      # Sobrescribir el contenido de authorized_keys con la clave pública
-      cat /home/vagrant/.ssh/vagrant_vm_key.pub > /home/vagrant/.ssh/authorized_keys
+      # Añadir (>>) el contenido de la clave pública a authorized_keys sin sobrescribir
+      cat /home/vagrant/.ssh/vagrant_vm_key.pub >> /home/vagrant/.ssh/authorized_keys
 
-      # Ajustar permisos
+      # Ajustar permisos estrictos requeridos por SSH
       chmod 600 /home/vagrant/.ssh/authorized_keys
       chown vagrant:vagrant /home/vagrant/.ssh/authorized_keys
 
       # Reiniciar el servidor SSH
       systemctl restart sshd
 
+      # Teclado en español (para la consola gráfica de VirtualBox)
       loadkeys es
     SHELL
   end
-
-  # Configuración para evitar prompts de SSH
-  config.ssh.insert_key = false
-  config.ssh.extra_args = ["-o StrictHostKeyChecking=no", "-o UserKnownHostsFile=/dev/null"]
 end
 ```
 
@@ -102,12 +107,13 @@ end
 
 2. **Configuración del servidor SSH**:
    - Se asegura de que el servidor SSH esté instalado y configurado para aceptar claves públicas (habilitando `PubkeyAuthentication`).
-   - La clave pública se sobrescribe en el archivo `authorized_keys` para permitir la autenticación.
-   - Ajusta los permisos del directorio `.ssh` y el archivo `authorized_keys`.
+   - La clave pública se concatena con `>>` en el archivo `authorized_keys` para que coexista con la clave de Vagrant sin bloquear el acceso del comando `vagrant ssh`.
+   - Ajusta los permisos estrictos (`700` para `.ssh` y `600` para `authorized_keys`).
 
-3. **Evitar prompts de SSH**:
-   - La opción `config.ssh.insert_key = false` desactiva la generación automática de claves por parte de Vagrant.
-   - `config.ssh.extra_args` desactiva verificaciones estrictas del archivo `known_hosts`.
+3. **Gestión de claves privadas en el Host**:
+   - `config.ssh.insert_key = false`: Impide que Vagrant regenere e inserte claves aleatorias que puedan desincronizar la máquina.
+   - `config.ssh.private_key_path`: Define la ruta donde reside tu clave privada (`~/.ssh/vagrant_vm_key`), garantizando que tanto `vagrant ssh` como `ssh` directo funcionen.
+   - Para más detalle sobre cómo funciona este mecanismo interno, consulta el documento `101_el_misterio_de_las_claves_ssh_en_vagrant.md`.
 
 
 

@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>1. Fundamentos e Infraestructura como Código (IaC) — Vagrant Bootcamp</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+
+    <!-- Prism.js Syntax Highlighting -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/themes/prism-tomorrow.min.css">
+</head>
+
+<body>
+
+    <!-- NAVBAR PRINCIPAL -->
+    <nav class="navbar" id="navbar">
+        <div class="nav-inner">
+            <div class="nav-brand">
+                <span class="brand-text">BDA · Vagrant Bootcamp</span>
+            </div>
+            <ul class="nav-links" id="navLinks">
+                <li><a href="index.html">Inicio</a></li>
+                <li><a href="01_introduccion_iac.html" class="active">1. Intro IaC</a></li>
+                <li><a href="02_anatomia_y_ciclo_de_vida.html">2. Vagrantfile &amp; CLI</a></li>
+                <li><a href="03_redes_y_conectividad.html">3. Redes</a></li>
+                <li><a href="04_hardware_y_almacenamiento.html">4. Hardware &amp; Disco</a></li>
+                <li><a href="05_aprovisionamiento.html">5. Provisioning</a></li>
+                <li><a href="06_multimaquina_y_clusters.html">6. Multi-Máquina</a></li>
+                <li><a href="07_troubleshooting_y_ssh.html">7. Troubleshooting</a></li>
+                <li><a href="08_practicas_y_multipass.html">8. Labs &amp; Multipass</a></li>
+            </ul>
+            <button class="nav-mobile-btn" id="navToggle" onclick="toggleNav()">MENÚ</button>
+        </div>
+    </nav>
+
+    <!-- BREADCRUMB -->
+    <div class="breadcrumb">
+        <div class="breadcrumb-inner">
+            <a href="index.html">Inicio</a>
+            <span class="breadcrumb-sep">›</span>
+            <span>1. Fundamentos e Infraestructura como Código</span>
+        </div>
+    </div>
+
+    <!-- HERO SECTION -->
+    <header class="page-hero">
+        <div class="hero-badge">
+            <span class="badge-dot"></span>
+            Capítulo 01 · Fundamentos de Automatización
+        </div>
+        <h1>Introducción a <span class="gradient-text">Vagrant &amp; IaC</span></h1>
+        <p>Aprende por qué la Infraestructura como Código es la base del Big Data moderno: elimina el error humano, unifica entornos de trabajo y orquesta máquinas virtuales reproducibles.</p>
+    </header>
+
+    <!-- MAIN CONTENT -->
+    <main class="content">
+
+        <!-- QUÉ ES VAGRANT -->
+        <h2>1. ¿Qué es Vagrant y Qué Problema Resuelve?</h2>
+        <p>En el mundo del desarrollo de software y Big Data, existe un clásico problema conocido como el síndrome de <em>"En mi máquina sí funciona"</em>. Un ingeniero instala PostgreSQL en Ubuntu 20.04 en su portátil, otro usa macOS con Docker y un tercero intenta ejecutarlo en Windows con configuraciones distintas. Al subir el código a producción o entregarlo para evaluación, todo falla por incompatibilidades sutiles de versiones, variables de entorno o librerías.</p>
+        <p><strong>Vagrant</strong> es una herramienta de código abierto desarrollada por <strong>HashiCorp</strong> diseñada para construir y mantener entornos de desarrollo virtualizados reproducibles y portables mediante <strong>código</strong>.</p>
+
+        <!-- DIAGRAMA ARQUITECTURA EN CAPAS -->
+        <div class="diagram-demo">
+            <span class="diagram-demo-label">Arquitectura de Virtualización Orquestada con Vagrant</span>
+            <svg viewBox="0 0 850 250" xmlns="http://www.w3.org/2000/svg" style="height:250px">
+                <!-- Capa 1: Código -->
+                <rect x="30" y="25" width="220" height="85" rx="8" fill="#141d2e" stroke="#60a5fa" stroke-width="2"/>
+                <text x="140" y="55" text-anchor="middle" fill="#60a5fa" font-size="12" font-weight="800" font-family="'JetBrains Mono', monospace">Vagrantfile</text>
+                <text x="140" y="75" text-anchor="middle" fill="#f1f5f9" font-size="10" font-family="Inter">Definición de Infraestructura (Ruby)</text>
+                <text x="140" y="93" text-anchor="middle" fill="#94a3b8" font-size="9" font-family="Inter">RAM, CPU, IP, Scripts</text>
+
+                <!-- Flecha 1 -->
+                <line x1="250" y1="67" x2="310" y2="67" stroke="#60a5fa" stroke-width="2" stroke-dasharray="4,4"/>
+
+                <!-- Capa 2: Vagrant CLI -->
+                <rect x="310" y="25" width="230" height="85" rx="8" fill="#141d2e" stroke="#1563ff" stroke-width="2"/>
+                <text x="425" y="55" text-anchor="middle" fill="#1563ff" font-size="13" font-weight="800" font-family="Inter">Vagrant Core (Orquestador)</text>
+                <text x="425" y="75" text-anchor="middle" fill="#94a3b8" font-size="10" font-family="Inter">Lee el archivo y llama a la API</text>
+                <text x="425" y="93" text-anchor="middle" fill="#38bdf8" font-size="9" font-family="'JetBrains Mono', monospace">vagrant up / reload / destroy</text>
+
+                <!-- Flecha 2 -->
+                <line x1="540" y1="67" x2="600" y2="67" stroke="#60a5fa" stroke-width="2" stroke-dasharray="4,4"/>
+
+                <!-- Capa 3: Proveedor -->
+                <rect x="600" y="25" width="220" height="85" rx="8" fill="#141d2e" stroke="#38bdf8" stroke-width="2"/>
+                <text x="710" y="55" text-anchor="middle" fill="#38bdf8" font-size="12" font-weight="800" font-family="Inter">Proveedor (VirtualBox)</text>
+                <text x="710" y="75" text-anchor="middle" fill="#94a3b8" font-size="10" font-family="Inter">Hipervisor Subyacente</text>
+                <text x="710" y="93" text-anchor="middle" fill="#10b981" font-size="9" font-family="Inter">Ejecuta la VM en hardware físico</text>
+
+                <!-- Máquina Virtual Resultante -->
+                <rect x="180" y="145" width="490" height="80" rx="8" fill="#1e293b" stroke="#10b981" stroke-width="1.5"/>
+                <text x="425" y="175" text-anchor="middle" fill="#10b981" font-size="13" font-weight="800" font-family="Inter">Entorno Virtual Invitado (Guest OS)</text>
+                <text x="425" y="195" text-anchor="middle" fill="#f1f5f9" font-size="11" font-family="'JetBrains Mono', monospace">Ubuntu 22.04 LTS (Jammy) · IP Fija · Docker · Spark</text>
+                <text x="425" y="212" text-anchor="middle" fill="#94a3b8" font-size="9" font-family="Inter">100% Idéntico en el portátil del alumno y en el servidor del profesor</text>
+            </svg>
+        </div>
+
+        <div class="two-col">
+            <div class="mini-card">
+                <h5>✦ Qué ES Vagrant</h5>
+                <ul>
+                    <li>Un <strong>orquestador de infraestructura local</strong> basado en archivos de configuración planos.</li>
+                    <li>Un sistema para levantar, aprovisionar y destruir entornos virtuales completos en segundos.</li>
+                    <li>Una herramienta de <strong>automatización de hipervisores</strong> (VirtualBox, VMware, Hyper-V).</li>
+                </ul>
+            </div>
+            <div class="mini-card">
+                <h5>✦ Qué NO ES Vagrant</h5>
+                <ul>
+                    <li><strong>NO es un hipervisor:</strong> Vagrant no virtualiza hardware por sí mismo, necesita un proveedor (como VirtualBox).</li>
+                    <li><strong>NO es Docker:</strong> Vagrant virtualiza sistemas operativos completos (Kernel propio, discos virtuales), mientras que Docker aísla procesos sobre el Kernel del host.</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- VENTAJAS EN BIG DATA -->
+        <h2>2. Ventajas Clave en Big Data &amp; Machine Learning</h2>
+        <div class="table-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Característica</th>
+                        <th>Virtualización Clásica Manual</th>
+                        <th>Vagrant (IaC)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Tiempo de despliegue</strong></td>
+                        <td>40 – 60 minutos por máquina (instalador, clics, esperar ISO).</td>
+                        <td><strong>2 minutos</strong> (un solo comando: <code>vagrant up</code>).</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Consistencia de equipo</strong></td>
+                        <td>Baja. Cada alumno instala versiones y librerías ligeramente distintas.</td>
+                        <td><strong>Absoluta</strong>. Todos usan exactamente la misma box base bit a bit.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Control de versiones (Git)</strong></td>
+                        <td>Imposible versionar archivos de disco <code>.vdi</code> de 20 GB en GitHub.</td>
+                        <td>Perfecto: solo commiteas el archivo de texto <code>Vagrantfile</code> (1 KB).</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Limpieza de recursos</strong></td>
+                        <td>Discos huérfanos ocupando 80 GB en tu SSD sin que te des cuenta.</td>
+                        <td><code>vagrant destroy -f</code> elimina todo de raíz en 5 segundos.</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- INSTALACIÓN Y VERIFICACIÓN -->
+        <h2>3. Instalación de Vagrant en tu Sistema Operativo</h2>
+        <p>Para trabajar con Vagrant necesitas dos componentes en tu ordenador anfitrión: <strong>VirtualBox</strong> (el motor de virtualización) y <strong>Vagrant CLI</strong>.</p>
+
+        <div class="steps">
+            <div class="step">
+                <div class="step-num">1</div>
+                <div class="step-body">
+                    <h4>Paso 1: Instalar VirtualBox</h4>
+                    <p>Descarga e instala <strong>VirtualBox 7.0 o superior</strong> desde el sitio oficial <a href="https://www.virtualbox.org" target="_blank" style="color: var(--primary-light);">virtualbox.org</a> junto con el <em>Extension Pack</em> correspondiente.</p>
+                </div>
+            </div>
+
+            <div class="step">
+                <div class="step-num">2</div>
+                <div class="step-body">
+                    <h4>Paso 2: Instalar Vagrant CLI</h4>
+                    
+                    <div class="two-col">
+                        <div>
+                            <h4>En Windows (PowerShell con Winget o Chocolatey):</h4>
+                            <div class="code-block">
+                                <div class="code-header">
+                                    <span class="code-lang">powershell</span>
+                                    <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+                                </div>
+                                <pre><code class="language-bash"># Con winget oficial de Windows
+winget install HashiCorp.Vagrant
+
+# O con Chocolatey
+choco install vagrant</code></pre>
+                            </div>
+                        </div>
+
+                        <div>
+                            <h4>En macOS (Terminal con Homebrew):</h4>
+                            <div class="code-block">
+                                <div class="code-header">
+                                    <span class="code-lang">bash</span>
+                                    <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+                                </div>
+                                <pre><code class="language-bash">brew install hashicorp/tap/hashicorp-vagrant</code></pre>
+                            </div>
+                        </div>
+                    </div>
+
+                    <h4>En Linux (Debian / Ubuntu con Repositorio HashiCorp Oficial):</h4>
+                    <div class="code-block">
+                        <div class="code-header">
+                            <span class="code-lang">bash</span>
+                            <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+                        </div>
+                        <pre><code class="language-bash"># Añadir la clave GPG oficial de HashiCorp y el repositorio
+wget -O- https://apt.releases.hashicorp.com/gpg | sudo gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg
+echo "deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/hashicorp.list
+
+# Instalar Vagrant
+sudo apt update && sudo apt install -y vagrant</code></pre>
+                    </div>
+                </div>
+            </div>
+
+            <div class="step">
+                <div class="step-num">3</div>
+                <div class="step-body">
+                    <h4>Paso 3: Verificación de la Instalación</h4>
+                    <p>Abre una terminal nueva y comprueba que ambos binarios responden correctamente:</p>
+                    <div class="code-block">
+                        <div class="code-header">
+                            <span class="code-lang">bash / powershell</span>
+                            <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+                        </div>
+                        <pre><code class="language-bash"># Comprobar versión de Vagrant
+vagrant --version
+# Ejemplo de respuesta: Vagrant 2.4.1
+
+# Comprobar versión de VirtualBox CLI
+VBoxManage --version
+# Ejemplo de respuesta: 7.0.18r162988</code></pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- CHECKLIST DE CONFIGURACIÓN -->
+        <div class="checklist-card">
+            <h4>✓ Lista de Comprobación del Entorno</h4>
+            <ul class="checklist-items">
+                <li class="check-item" onclick="toggleCheck(this)">
+                    <input type="checkbox">
+                    <span>VirtualBox 7.x instalado y ejecutándose en el anfitrión.</span>
+                </li>
+                <li class="check-item" onclick="toggleCheck(this)">
+                    <input type="checkbox">
+                    <span>Virtualización de hardware (VT-x / AMD-V) habilitada en la BIOS/UEFI de tu equipo.</span>
+                </li>
+                <li class="check-item" onclick="toggleCheck(this)">
+                    <input type="checkbox">
+                    <span>Vagrant CLI instalado y accesible globalmente desde cualquier terminal (<code>vagrant --version</code>).</span>
+                </li>
+            </ul>
+        </div>
+
+        <!-- NAVEGACIÓN ENTRE CAPÍTULOS -->
+        <div class="chapter-nav">
+            <a href="index.html" class="chapter-nav-btn">← Índice General</a>
+            <a href="02_anatomia_y_ciclo_de_vida.html" class="chapter-nav-btn primary">2. Vagrantfile &amp; Ciclo de Vida →</a>
+        </div>
+
+    </main>
+
+    <!-- FOOTER -->
+    <footer class="footer">
+        <div class="footer-inner">
+            <div class="footer-brand">
+                <div class="brand-logo"><span class="brand-text">IES San Vicente</span> · Big Data &amp; Cloud</div>
+                <p>Material de laboratorio de Sistemas Informáticos &amp; Virtualización (Curso 2026-2027).</p>
+            </div>
+            <div class="footer-brand" style="text-align: right;">
+                <p>Módulo 1 · Unidad de Sistemas · <strong>Vagrant &amp; IaC Bootcamp</strong></p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- PRISM.JS PARA RESALTADO DE CÓDIGO -->
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/prism.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-bash.min.js"></script>
+
+    <!-- SCRIPTS -->
+    <script>
+        function copyCode(btn) {
+            const pre = btn.closest('.code-block').querySelector('pre code');
+            if (!pre) return;
+            const text = pre.innerText || pre.textContent;
+            navigator.clipboard.writeText(text).then(() => {
+                const originalText = btn.innerText;
+                btn.innerText = '✓ Copiado';
+                btn.classList.add('copied');
+                setTimeout(() => {
+                    btn.innerText = originalText;
+                    btn.classList.remove('copied');
+                }, 2000);
+            }).catch(err => {
+                console.error('Error al copiar:', err);
+            });
+        }
+
+        function toggleNav() {
+            const links = document.getElementById('navLinks');
+            links.classList.toggle('open');
+        }
+
+        function toggleCheck(item) {
+            const checkbox = item.querySelector('input[type="checkbox"]');
+            if (event.target !== checkbox) {
+                checkbox.checked = !checkbox.checked;
+            }
+            if (checkbox.checked) {
+                item.classList.add('completed');
+            } else {
+                item.classList.remove('completed');
+            }
+        }
+    </script>
+</body>
+
+</html>

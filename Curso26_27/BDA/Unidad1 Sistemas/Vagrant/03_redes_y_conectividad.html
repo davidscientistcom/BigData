@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3. Redes y Conectividad — Vagrant Bootcamp</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+
+    <!-- Prism.js Syntax Highlighting -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/themes/prism-tomorrow.min.css">
+</head>
+
+<body>
+
+    <!-- NAVBAR PRINCIPAL -->
+    <nav class="navbar" id="navbar">
+        <div class="nav-inner">
+            <div class="nav-brand">
+                <span class="brand-text">BDA · Vagrant Bootcamp</span>
+            </div>
+            <ul class="nav-links" id="navLinks">
+                <li><a href="index.html">Inicio</a></li>
+                <li><a href="01_introduccion_iac.html">1. Intro IaC</a></li>
+                <li><a href="02_anatomia_y_ciclo_de_vida.html">2. Vagrantfile &amp; CLI</a></li>
+                <li><a href="03_redes_y_conectividad.html" class="active">3. Redes</a></li>
+                <li><a href="04_hardware_y_almacenamiento.html">4. Hardware &amp; Disco</a></li>
+                <li><a href="05_aprovisionamiento.html">5. Provisioning</a></li>
+                <li><a href="06_multimaquina_y_clusters.html">6. Multi-Máquina</a></li>
+                <li><a href="07_troubleshooting_y_ssh.html">7. Troubleshooting</a></li>
+                <li><a href="08_practicas_y_multipass.html">8. Labs &amp; Multipass</a></li>
+            </ul>
+            <button class="nav-mobile-btn" id="navToggle" onclick="toggleNav()">MENÚ</button>
+        </div>
+    </nav>
+
+    <!-- BREADCRUMB -->
+    <div class="breadcrumb">
+        <div class="breadcrumb-inner">
+            <a href="index.html">Inicio</a>
+            <span class="breadcrumb-sep">›</span>
+            <span>3. Redes, Puertos y Conectividad</span>
+        </div>
+    </div>
+
+    <!-- HERO SECTION -->
+    <header class="page-hero">
+        <div class="hero-badge">
+            <span class="badge-dot"></span>
+            Capítulo 03 · Topología de Red en IaC
+        </div>
+        <h1>Configuración de <span class="gradient-text">Redes y Puertos</span> en Vagrant</h1>
+        <p>Domina el reenvío de puertos NAT, la creación de redes privadas Host-Only con IPs estáticas seguras y la conexión pública en modo puente (Bridged) para entornos multi-servidor.</p>
+    </header>
+
+    <!-- MAIN CONTENT -->
+    <main class="content">
+
+        <!-- 1. MODELO DE REDES EN VAGRANT -->
+        <h2>1. Los Tres Modos de Red en Vagrant</h2>
+        <p>Una máquina virtual aislada sin conectividad tiene poca utilidad práctica en Big Data o desarrollo. Vagrant abstrae la compleja pila de red de VirtualBox mediante 3 primitivas declarativas en el <code>Vagrantfile</code>:</p>
+
+        <!-- DIAGRAMA SVG REDES -->
+        <div class="diagram-container">
+            <div class="diagram-title">Topología de Redes en Vagrant: NAT vs Privada vs Pública</div>
+            <svg viewBox="0 0 900 360" width="100%" height="auto" style="max-width: 860px; display: block; margin: 0 auto;">
+                <defs>
+                    <linearGradient id="gradHost" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stop-color="#1e293b" />
+                        <stop offset="100%" stop-color="#0f172a" />
+                    </linearGradient>
+                    <linearGradient id="gradGuest" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stop-color="#1d4ed8" />
+                        <stop offset="100%" stop-color="#1e40af" />
+                    </linearGradient>
+                    <linearGradient id="gradLan" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stop-color="#047857" />
+                        <stop offset="100%" stop-color="#065f46" />
+                    </linearGradient>
+                    <filter id="glowDrop" x="-20%" y="-20%" width="140%" height="140%">
+                        <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#000" flood-opacity="0.5" />
+                    </filter>
+                </defs>
+
+                <!-- HOST CONTAINER -->
+                <rect x="30" y="30" width="840" height="300" rx="16" fill="url(#gradHost)" stroke="#334155" stroke-width="2" filter="url(#glowDrop)" />
+                <text x="50" y="65" fill="#f8fafc" font-family="Inter, sans-serif" font-size="16" font-weight="800">SISTEMA ANFITRIÓN (HOST: Windows / macOS / Linux)</text>
+                <text x="50" y="85" fill="#94a3b8" font-family="JetBrains Mono, monospace" font-size="12">IP Host: 192.168.1.50 (LAN) | localhost: 127.0.0.1</text>
+
+                <!-- MODO 1: FORWARDED PORT (NAT) -->
+                <g transform="translate(60, 110)">
+                    <rect x="0" y="0" width="230" height="190" rx="12" fill="#141d2e" stroke="#1563ff" stroke-width="1.5" />
+                    <text x="115" y="30" fill="#60a5fa" font-family="Inter, sans-serif" font-size="14" font-weight="700" text-anchor="middle">1. Port Forwarding (NAT)</text>
+                    
+                    <rect x="15" y="50" width="200" height="40" rx="6" fill="#0f172a" stroke="#334155" />
+                    <text x="115" y="75" fill="#e2e8f0" font-family="JetBrains Mono, monospace" font-size="11" text-anchor="middle">Host: localhost:8080</text>
+                    
+                    <!-- Flecha bidireccional -->
+                    <path d="M 115 95 L 115 125" stroke="#38bdf8" stroke-width="2" stroke-dasharray="4 2" />
+                    <polygon points="110,123 115,131 120,123" fill="#38bdf8" />
+                    <polygon points="110,97 115,89 120,97" fill="#38bdf8" />
+                    <text x="125" y="115" fill="#38bdf8" font-family="JetBrains Mono, monospace" font-size="10">Mapeo</text>
+
+                    <rect x="15" y="135" width="200" height="40" rx="6" fill="#1e3a8a" stroke="#60a5fa" />
+                    <text x="115" y="160" fill="#ffffff" font-family="JetBrains Mono, monospace" font-size="11" text-anchor="middle">VM Guest: Port 80</text>
+                </g>
+
+                <!-- MODO 2: PRIVATE NETWORK -->
+                <g transform="translate(335, 110)">
+                    <rect x="0" y="0" width="230" height="190" rx="12" fill="#141d2e" stroke="#10b981" stroke-width="1.5" />
+                    <text x="115" y="30" fill="#34d399" font-family="Inter, sans-serif" font-size="14" font-weight="700" text-anchor="middle">2. Private Network</text>
+                    
+                    <rect x="15" y="50" width="200" height="40" rx="6" fill="#0f172a" stroke="#334155" />
+                    <text x="115" y="75" fill="#e2e8f0" font-family="JetBrains Mono, monospace" font-size="11" text-anchor="middle">VirtualBox Host-Only</text>
+                    
+                    <path d="M 115 95 L 115 125" stroke="#10b981" stroke-width="2" />
+                    <polygon points="110,123 115,131 120,123" fill="#10b981" />
+                    <polygon points="110,97 115,89 120,97" fill="#10b981" />
+                    <text x="125" y="115" fill="#34d399" font-family="JetBrains Mono, monospace" font-size="10">Subred aislada</text>
+
+                    <rect x="15" y="135" width="200" height="40" rx="6" fill="#064e3b" stroke="#34d399" />
+                    <text x="115" y="160" fill="#ffffff" font-family="JetBrains Mono, monospace" font-size="11" text-anchor="middle">IP: 192.168.56.10</text>
+                </g>
+
+                <!-- MODO 3: PUBLIC NETWORK -->
+                <g transform="translate(610, 110)">
+                    <rect x="0" y="0" width="230" height="190" rx="12" fill="#141d2e" stroke="#f59e0b" stroke-width="1.5" />
+                    <text x="115" y="30" fill="#fbbf24" font-family="Inter, sans-serif" font-size="14" font-weight="700" text-anchor="middle">3. Public Network (Bridge)</text>
+                    
+                    <rect x="15" y="50" width="200" height="40" rx="6" fill="#0f172a" stroke="#334155" />
+                    <text x="115" y="75" fill="#e2e8f0" font-family="JetBrains Mono, monospace" font-size="11" text-anchor="middle">Router Físico / Wi-Fi</text>
+                    
+                    <path d="M 115 95 L 115 125" stroke="#f59e0b" stroke-width="2" />
+                    <polygon points="110,123 115,131 120,123" fill="#f59e0b" />
+                    <polygon points="110,97 115,89 120,97" fill="#f59e0b" />
+                    <text x="125" y="115" fill="#fbbf24" font-family="JetBrains Mono, monospace" font-size="10">Misma LAN</text>
+
+                    <rect x="15" y="135" width="200" height="40" rx="6" fill="#78350f" stroke="#fbbf24" />
+                    <text x="115" y="160" fill="#ffffff" font-family="JetBrains Mono, monospace" font-size="11" text-anchor="middle">IP: 192.168.1.185 (DHCP)</text>
+                </g>
+            </svg>
+        </div>
+
+        <div class="table-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Modo de Red</th>
+                        <th>Directiva Vagrant</th>
+                        <th>Visibilidad Host</th>
+                        <th>Visibilidad Red Local (LAN)</th>
+                        <th>Caso de Uso Típico</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>NAT + Forwarded Port</strong></td>
+                        <td><code>forwarded_port</code></td>
+                        <td>Solo vía <code>localhost:PUERTO</code></td>
+                        <td>❌ No visible</td>
+                        <td>Desarrollo web puntual, APIs y microservicios.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Private Network</strong></td>
+                        <td><code>private_network</code></td>
+                        <td>Directa vía IP estática (Host-Only)</td>
+                        <td>❌ Aislada (Segura)</td>
+                        <td><strong>Estándar docente</strong>: Clústeres Hadoop/Spark, réplicas y Ansible.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Public Network</strong></td>
+                        <td><code>public_network</code></td>
+                        <td>Directa como un equipo más</td>
+                        <td>✅ Sí (toda la oficina / aula)</td>
+                        <td>Demos compartidas, servidores para acceso de compañeros.</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- 2. REENVÍO DE PUERTOS (PORT FORWARDING) -->
+        <h2>2. Reenvío de Puertos (Forwarded Ports)</h2>
+        <p>Por defecto, la interfaz 1 de toda máquina Vagrant es un adaptador <strong>NAT</strong> gestionado por VirtualBox. Esto permite que la máquina descargue paquetes de Internet pero impide que el Host se conecte a sus servicios directamente. Para abrir un túnel, mapeamos puertos:</p>
+
+        <div class="code-block">
+            <div class="code-header">
+                <span class="code-lang">ruby — Mapeo de puertos en Vagrantfile</span>
+                <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+            </div>
+            <pre><code class="language-ruby">Vagrant.configure("2") do |config|
+  config.vm.box = "ubuntu/jammy64"
+
+  # Mapeo simple: Puerto 80 de la VM expuesto en el puerto 8080 del host
+  config.vm.network "forwarded_port", guest: 80, host: 8080
+
+  # Mapeo seguro con auto-corrección de colisiones y binding exclusivo a localhost
+  config.vm.network "forwarded_port", 
+    guest: 5432, 
+    host: 5432, 
+    host_ip: "127.0.0.1", 
+    auto_correct: true
+end
+</code></pre>
+        </div>
+
+        <div class="two-col">
+            <div class="mini-card">
+                <h5>✦ Parámetro 'host_ip: "127.0.0.1"' (Seguridad)</h5>
+                <p>Por defecto, Vagrant escucha en <code>0.0.0.0</code> (todas las interfaces del Host). Si estás conectado a la Wi-Fi pública del instituto o cafetería, cualquiera podría atacar tu base de datos abierta. Al fijar <code>host_ip: "127.0.0.1"</code>, el puerto solo es accesible desde tu propio ordenador.</p>
+            </div>
+            <div class="mini-card">
+                <h5>✦ Parámetro 'auto_correct: true'</h5>
+                <p>Si el puerto 8080 del Host ya está ocupado por otro contenedor Docker o servicio del sistema, Vagrant detectará el conflicto y asignará automáticamente el siguiente puerto libre (ej. 2200 o 8081), informándote en la consola sin abortar el arranque.</p>
+            </div>
+        </div>
+
+        <!-- 3. RED PRIVADA (HOST-ONLY) -->
+        <h2>3. Red Privada (Private Network / Host-Only)</h2>
+        <p>Es la configuración más robusta y la que utilizaremos en el 90% de las prácticas de Big Data. Crea un adaptador virtual Host-Only en VirtualBox, otorgando a la VM una dirección IP propia accesible desde tu terminal anfitrión sin necesidad de mapear decenas de puertos.</p>
+
+        <div class="code-block">
+            <div class="code-header">
+                <span class="code-lang">ruby — Asignación de IP estática en red privada</span>
+                <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+            </div>
+            <pre><code class="language-ruby">Vagrant.configure("2") do |config|
+  config.vm.box = "ubuntu/jammy64"
+  config.vm.hostname = "nodo-master"
+
+  # Asignación de IP estática recomendada en rango estándar VirtualBox
+  config.vm.network "private_network", ip: "192.168.56.10"
+end
+</code></pre>
+        </div>
+
+        <div class="info-box alert">
+            <span class="info-box-icon">⚠️</span>
+            <div class="info-box-text">
+                <strong>¡ATENCIÓN CRÍTICA: Restricción de subred en VirtualBox 6.1.28+ y 7.x!</strong><br>
+                Muchos tutoriales antiguos de internet (e incluso apuntes de años anteriores) utilizan la IP <code>192.168.33.10</code>. A partir de VirtualBox 6.1.28 y en todo VirtualBox 7.x, Oracle introdujo una política de seguridad estricta: <em>los adaptadores host-only quedan restringidos por defecto a la subred <code>192.168.56.0/21</code></em>.<br><br>
+                Si usas <code>192.168.33.x</code> sin configurar previamente el archivo <code>/etc/vbox/networks.conf</code>, Vagrant fallará con el error <code>VERR_INTNET_FLT_IF_NOT_FOUND</code> o denegará la creación del adaptador.<br>
+                <strong>Regla de oro:</strong> En todas nuestras prácticas utilizaremos el rango <strong><code>192.168.56.x</code></strong> (ejemplo: <code>192.168.56.10</code>, <code>192.168.56.11</code>, etc.).
+            </div>
+        </div>
+
+        <!-- 4. RED PÚBLICA (BRIDGED) -->
+        <h2>4. Red Pública (Public Network / Modo Puente)</h2>
+        <p>En este modo, la máquina virtual se comporta como un dispositivo físico independiente conectado directamente al switch o router de tu red local. Obtendrá una IP de la misma subred que tu ordenador físico (por ejemplo, <code>192.168.1.X</code>).</p>
+
+        <div class="code-block">
+            <div class="code-header">
+                <span class="code-lang">ruby — Red pública por DHCP o IP estática</span>
+                <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+            </div>
+            <pre><code class="language-ruby">Vagrant.configure("2") do |config|
+  config.vm.box = "ubuntu/jammy64"
+
+  # 1. DHCP automático (Vagrant preguntará qué tarjeta de red usar si hay varias)
+  config.vm.network "public_network"
+
+  # 2. Selección explícita de interfaz física para no pedir confirmación interactiva
+  # En Windows suele llamarse: "Realtek Gaming 2.5GbE Family Controller" o "Intel(R) Wi-Fi"
+  # En macOS: "en0: Wi-Fi (AirPort)"
+  config.vm.network "public_network", bridge: "en0: Wi-Fi (AirPort)"
+
+  # 3. IP Estática en la red local del aula/oficina
+  config.vm.network "public_network", 
+    ip: "192.168.1.185",
+    netmask: "255.255.255.0",
+    gateway: "192.168.1.1"
+end
+</code></pre>
+        </div>
+
+        <!-- 5. EJEMPLO COMPLETO MULTI-RED -->
+        <h2>5. Vagrantfile de Producción: Combinando Puertos y Red Privada</h2>
+        <p>En proyectos reales de Ingeniería de Datos es habitual combinar una <strong>red privada con IP estática</strong> (para comunicación interna y Ansible) y un <strong>puerto reenviado</strong> para probar un panel de administración web desde el navegador del Host:</p>
+
+        <div class="code-block">
+            <div class="code-header">
+                <span class="code-lang">ruby — Vagrantfile completo con red robusta</span>
+                <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+            </div>
+            <pre><code class="language-ruby"># -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+Vagrant.configure("2") do |config|
+  config.vm.box = "ubuntu/jammy64"
+  config.vm.hostname = "datascience-srv"
+
+  # 1. Red privada fija para SSH directo y gestión interna
+  config.vm.network "private_network", ip: "192.168.56.20"
+
+  # 2. Reenvío del puerto 8888 (Jupyter Notebook / Web UI) al localhost del anfitrión
+  config.vm.network "forwarded_port", guest: 8888, host: 8888, host_ip: "127.0.0.1", auto_correct: true
+
+  # 3. Reenvío del puerto PostgreSQL
+  config.vm.network "forwarded_port", guest: 5432, host: 5433, host_ip: "127.0.0.1"
+
+  # 4. Ajustes de proveedor
+  config.vm.provider "virtualbox" do |vb|
+    vb.name = "VM_DataScience_Redes"
+    vb.memory = 2048
+    vb.cpus = 2
+  end
+end
+</code></pre>
+        </div>
+
+        <!-- 6. DIAGNÓSTICO EN TERMINAL -->
+        <h2>6. Comandos de Diagnóstico y Validación de Red</h2>
+        <p>Una vez levantada la máquina con <code>vagrant up</code>, verifica el estado de las interfaces ejecutando las siguientes comprobaciones:</p>
+
+        <div class="steps">
+            <div class="step">
+                <div class="step-num">1</div>
+                <div class="step-body">
+                    <h4>Inspeccionar las interfaces de red dentro de la VM</h4>
+                    <p>Entra por SSH a la máquina invitada y ejecuta el comando de Linux para listar direcciones IP y adaptadores:</p>
+                    <div class="code-block">
+                        <div class="code-header">
+                            <span class="code-lang">bash — Dentro de la máquina virtual (vagrant ssh)</span>
+                            <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+                        </div>
+                        <pre><code class="language-bash"># Listar adaptadores (eth0 será NAT, eth1 será la red privada)
+ip -br addr show
+
+# Salida esperada:
+# lo               UNKNOWN        127.0.0.1/8 ::1/128 
+# eth0             UP             10.0.2.15/24 (Adaptador NAT de Vagrant)
+# eth1             UP             192.168.56.20/24 (Adaptador Host-Only Privado)
+</code></pre>
+                    </div>
+                </div>
+            </div>
+
+            <div class="step">
+                <div class="step-num">2</div>
+                <div class="step-body">
+                    <h4>Verificar la conectividad desde tu máquina anfitriona (Host)</h4>
+                    <p>Abre PowerShell o Terminal en tu sistema físico y haz ping a la IP estática configurada:</p>
+                    <div class="code-block">
+                        <div class="code-header">
+                            <span class="code-lang">bash — En tu terminal Host</span>
+                            <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+                        </div>
+                        <pre><code class="language-bash"># Probar si el host llega a la máquina virtual
+ping -c 3 192.168.56.20
+
+# Conectar por SSH directamente sin pasar por 'vagrant ssh'
+ssh vagrant@192.168.56.20
+</code></pre>
+                    </div>
+                </div>
+            </div>
+
+            <div class="step">
+                <div class="step-num">3</div>
+                <div class="step-body">
+                    <h4>Comprobar puertos reenviados en el Host</h4>
+                    <p>Verifica si el puerto local está escuchando y listo para redirigir tráfico:</p>
+                    <div class="code-block">
+                        <div class="code-header">
+                            <span class="code-lang">bash — Verificación de puertos locales</span>
+                            <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+                        </div>
+                        <pre><code class="language-bash"># En Linux / macOS
+lsof -i :8888
+
+# En Windows PowerShell
+Test-NetConnection -ComputerName 127.0.0.1 -Port 8888
+</code></pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- CHECKLIST INTERACTIVA -->
+        <div class="checklist-card">
+            <h4>✓ Checklist de Verificación de Red</h4>
+            <ul class="checklist-items">
+                <li class="check-item" onclick="toggleCheck(this)">
+                    <input type="checkbox">
+                    <span>Comprendidas las diferencias entre NAT, Red Privada (Host-Only) y Red Pública (Bridge).</span>
+                </li>
+                <li class="check-item" onclick="toggleCheck(this)">
+                    <input type="checkbox">
+                    <span>Configurada la red privada en el rango compatible <code>192.168.56.x</code> evitando el error de subred <code>192.168.33.x</code>.</span>
+                </li>
+                <li class="check-item" onclick="toggleCheck(this)">
+                    <input type="checkbox">
+                    <span>Añadido <code>host_ip: "127.0.0.1"</code> a los puertos sensibles para no exponerlos a la Wi-Fi local.</span>
+                </li>
+                <li class="check-item" onclick="toggleCheck(this)">
+                    <input type="checkbox">
+                    <span>Validada la conectividad mediante <code>ping 192.168.56.x</code> e <code>ip -br addr show</code>.</span>
+                </li>
+            </ul>
+        </div>
+
+        <!-- NAVEGACIÓN ENTRE CAPÍTULOS -->
+        <div class="chapter-nav">
+            <a href="02_anatomia_y_ciclo_de_vida.html" class="chapter-nav-btn">← 2. Vagrantfile &amp; Ciclo de Vida</a>
+            <a href="index.html" class="chapter-nav-btn">Índice General</a>
+            <a href="04_hardware_y_almacenamiento.html" class="chapter-nav-btn primary">4. Hardware &amp; Almacenamiento →</a>
+        </div>
+
+    </main>
+
+    <!-- FOOTER -->
+    <footer class="footer">
+        <div class="footer-inner">
+            <div class="footer-brand">
+                <div class="brand-logo"><span class="brand-text">IES San Vicente</span> · Big Data &amp; Cloud</div>
+                <p>Material de laboratorio de Sistemas Informáticos &amp; Virtualización (Curso 2026-2027).</p>
+            </div>
+            <div class="footer-brand" style="text-align: right;">
+                <p>Módulo 1 · Unidad de Sistemas · <strong>Vagrant &amp; IaC Bootcamp</strong></p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- PRISM.JS PARA RESALTADO DE CÓDIGO -->
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/prism.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-ruby.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-bash.min.js"></script>
+
+    <!-- SCRIPTS -->
+    <script>
+        function copyCode(btn) {
+            const pre = btn.closest('.code-block').querySelector('pre code');
+            if (!pre) return;
+            const text = pre.innerText || pre.textContent;
+            navigator.clipboard.writeText(text).then(() => {
+                const originalText = btn.innerText;
+                btn.innerText = '✓ Copiado';
+                btn.classList.add('copied');
+                setTimeout(() => {
+                    btn.innerText = originalText;
+                    btn.classList.remove('copied');
+                }, 2000);
+            }).catch(err => {
+                console.error('Error al copiar:', err);
+            });
+        }
+
+        function toggleNav() {
+            const links = document.getElementById('navLinks');
+            links.classList.toggle('open');
+        }
+
+        function toggleCheck(item) {
+            const checkbox = item.querySelector('input[type="checkbox"]');
+            if (event.target !== checkbox) {
+                checkbox.checked = !checkbox.checked;
+            }
+            if (checkbox.checked) {
+                item.classList.add('completed');
+            } else {
+                item.classList.remove('completed');
+            }
+        }
+    </script>
+</body>
+
+</html>

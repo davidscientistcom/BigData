@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>8. Prácticas Guiadas y Multipass — Vagrant Bootcamp</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+
+    <!-- Prism.js Syntax Highlighting -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/themes/prism-tomorrow.min.css">
+</head>
+
+<body>
+
+    <!-- NAVBAR PRINCIPAL -->
+    <nav class="navbar" id="navbar">
+        <div class="nav-inner">
+            <div class="nav-brand">
+                <span class="brand-text">BDA · Vagrant Bootcamp</span>
+            </div>
+            <ul class="nav-links" id="navLinks">
+                <li><a href="index.html">Inicio</a></li>
+                <li><a href="01_introduccion_iac.html">1. Intro IaC</a></li>
+                <li><a href="02_anatomia_y_ciclo_de_vida.html">2. Vagrantfile &amp; CLI</a></li>
+                <li><a href="03_redes_y_conectividad.html">3. Redes</a></li>
+                <li><a href="04_hardware_y_almacenamiento.html">4. Hardware &amp; Disco</a></li>
+                <li><a href="05_aprovisionamiento.html">5. Provisioning</a></li>
+                <li><a href="06_multimaquina_y_clusters.html">6. Multi-Máquina</a></li>
+                <li><a href="07_troubleshooting_y_ssh.html">7. Troubleshooting</a></li>
+                <li><a href="08_practicas_y_multipass.html" class="active">8. Labs &amp; Multipass</a></li>
+            </ul>
+            <button class="nav-mobile-btn" id="navToggle" onclick="toggleNav()">MENÚ</button>
+        </div>
+    </nav>
+
+    <!-- BREADCRUMB -->
+    <div class="breadcrumb">
+        <div class="breadcrumb-inner">
+            <a href="index.html">Inicio</a>
+            <span class="breadcrumb-sep">›</span>
+            <span>8. Prácticas de Laboratorio y Multipass</span>
+        </div>
+    </div>
+
+    <!-- HERO SECTION -->
+    <header class="page-hero">
+        <div class="hero-badge">
+            <span class="badge-dot"></span>
+            Capítulo 08 · Talleres Prácticos y Tecnologías Nativas
+        </div>
+        <h1>Prácticas Guiadas de <span class="gradient-text">Laboratorio y Multipass</span></h1>
+        <p>Aplica todo lo aprendido mediante tres proyectos reales de ingeniería de sistemas y descubre Multipass, la herramienta cloud-native de Canonical basada en hipervisores nativos y cloud-init.</p>
+    </header>
+
+    <!-- MAIN CONTENT -->
+    <main class="content">
+
+        <!-- 1. LAB 1: SERVIDOR WEB + DB -->
+        <h2>1. Lab 1: Servidor Web Nginx + PostgreSQL Aprovisionado</h2>
+        <p><strong>Objetivo del proyecto:</strong> Crear una infraestructura reproducible que levante una máquina virtual con Ubuntu 22.04 LTS, instale Nginx y PostgreSQL de forma desatendida, exponga sus puertos de manera segura hacia el anfitrión y monte un directorio de datos compartido.</p>
+
+        <div class="code-block">
+            <div class="code-header">
+                <span class="code-lang">ruby — Vagrantfile del Lab 1</span>
+                <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+            </div>
+            <pre><code class="language-ruby"># -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+Vagrant.configure("2") do |config|
+  config.vm.box = "ubuntu/jammy64"
+  config.vm.hostname = "lab1-datasrv"
+
+  # 1. Red privada estática en subred VirtualBox 7
+  config.vm.network "private_network", ip: "192.168.56.50"
+
+  # 2. Reenvío de puertos a localhost
+  config.vm.network "forwarded_port", guest: 80, host: 8080, host_ip: "127.0.0.1", auto_correct: true
+  config.vm.network "forwarded_port", guest: 5432, host: 5433, host_ip: "127.0.0.1", auto_correct: true
+
+  # 3. Carpeta sincronizada para scripts SQL y datasets
+  config.vm.synced_folder "./sql_data", "/opt/sql_data",
+    owner: "vagrant",
+    group: "vagrant"
+
+  # 4. Recursos de VirtualBox
+  config.vm.provider "virtualbox" do |vb|
+    vb.name = "VM_Lab1_DataServer"
+    vb.memory = 2048
+    vb.cpus = 2
+  end
+
+  # 5. Aprovisionamiento Shell externo
+  config.vm.provision "shell", path: "provision_lab1.sh"
+end
+</code></pre>
+        </div>
+
+        <div class="code-block">
+            <div class="code-header">
+                <span class="code-lang">bash — provision_lab1.sh</span>
+                <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+            </div>
+            <pre><code class="language-bash">#!/usr/bin/env bash
+set -e
+
+echo "==> [Paso 1] Actualizando repositorios del sistema..."
+export DEBIAN_FRONTEND=noninteractive
+apt-get update -y
+
+echo "==> [Paso 2] Instalando Nginx y PostgreSQL..."
+apt-get install -y nginx postgresql postgresql-contrib
+
+echo "==> [Paso 3] Configurando Nginx con mensaje personalizado..."
+cat << 'EOF' > /var/www/html/index.html
+<!DOCTYPE html>
+<html>
+<head><title>Lab 1 BDA</title><style>body{font-family:sans-serif;background:#0f172a;color:#f8fafc;padding:3rem;}</style></head>
+<body>
+  <h1>✓ Servidor Web Nginx Operativo</h1>
+  <p>Entorno aprovisionado exitosamente con <strong>Vagrant IaC</strong>.</p>
+</body>
+</html>
+EOF
+systemctl restart nginx
+
+echo "==> [Paso 4] Configurando usuario de PostgreSQL para el curso..."
+sudo -u postgres psql -c "ALTER USER postgres PASSWORD 'vagrant';"
+sudo -u postgres createdb bda_analytics || true
+
+echo "==> ¡Servidor aprovisionado y listo para pruebas!"
+</code></pre>
+        </div>
+
+        <!-- 2. LAB 2: CLÚSTER DISTRIBUIDO -->
+        <h2>2. Lab 2: Clúster de Datos Master/Worker con DNS Interno</h2>
+        <p><strong>Objetivo del proyecto:</strong> Diseñar un clúster distribuido de 3 nodos (1 Master y 2 Workers). Cada nodo debe tener conectividad por red privada y resolución de nombres cruzada en <code>/etc/hosts</code> para que puedan comunicarse por su nombre (ej. <code>ping spark-worker-1</code>).</p>
+
+        <div class="code-block">
+            <div class="code-header">
+                <span class="code-lang">ruby — Vagrantfile del Clúster Distribuido</span>
+                <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+            </div>
+            <pre><code class="language-ruby"># -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+NODOS = [
+  { name: "master",  ip: "192.168.56.10", cpus: 2, ram: 2048 },
+  { name: "worker1", ip: "192.168.56.11", cpus: 1, ram: 1024 },
+  { name: "worker2", ip: "192.168.56.12", cpus: 1, ram: 1024 }
+]
+
+Vagrant.configure("2") do |config|
+  config.vm.box = "ubuntu/jammy64"
+
+  NODOS.each do |nodo|
+    config.vm.define nodo[:name] do |node|
+      node.vm.hostname = nodo[:name]
+      node.vm.network "private_network", ip: nodo[:ip]
+
+      node.vm.provider "virtualbox" do |vb|
+        vb.name = "Cluster_#{nodo[:name].capitalize}"
+        vb.memory = nodo[:ram]
+        vb.cpus = nodo[:cpus]
+      end
+
+      # Script común para resolver nombres en /etc/hosts
+      node.vm.provision "shell", inline: <<-SHELL
+        grep -qxF "192.168.56.10 master" /etc/hosts || echo "192.168.56.10 master" >> /etc/hosts
+        grep -qxF "192.168.56.11 worker1" /etc/hosts || echo "192.168.56.11 worker1" >> /etc/hosts
+        grep -qxF "192.168.56.12 worker2" /etc/hosts || echo "192.168.56.12 worker2" >> /etc/hosts
+      SHELL
+    end
+  end
+end
+</code></pre>
+        </div>
+
+        <div class="info-box tip">
+            <span class="info-box-icon">💡</span>
+            <div class="info-box-text">
+                <strong>Prueba de Conectividad Cruzada del Lab 2:</strong><br>
+                Una vez levantado el clúster con <code>vagrant up</code>, entra al nodo maestro con <code>vagrant ssh master</code> y haz ping a los trabajadores usando directamente sus nombres de host:
+                <div class="code-block" style="margin-top: 0.5rem;">
+                    <pre><code class="language-bash">ping -c 2 worker1
+ping -c 2 worker2
+</code></pre>
+                </div>
+                ¡Comprobarás que responden en <code>192.168.56.11</code> y <code>.12</code> con cero pérdida de paquetes!
+            </div>
+        </div>
+
+        <!-- 3. LAB 3: EMPAQUETADO Y REAPROVECHAMIENTO -->
+        <h2>3. Lab 3: Empaquetar y Distribuir una Box Personalizada</h2>
+        <p><strong>Objetivo:</strong> Configurar un entorno con herramientas complejas (Docker, Python 3, librerías) y exportarlo como un fichero <code>.box</code> que un compañero pueda añadir con <code>vagrant box add</code> sin descargar nada de internet.</p>
+
+        <div class="steps">
+            <div class="step">
+                <div class="step-num">1</div>
+                <div class="step-body">
+                    <h4>Limpiar la máquina antes del empaquetado (Para reducir tamaño)</h4>
+                    <p>Entra por SSH a la máquina y vacía las cachés de apt y ficheros temporales:</p>
+                    <div class="code-block">
+                        <pre><code class="language-bash">sudo apt-get clean
+sudo rm -rf /tmp/* /var/tmp/*
+# Opcional: Rellenar el espacio libre con ceros para comprimir el disco virtual
+sudo dd if=/dev/zero of=/EMPTY bs=1M || sudo rm -f /EMPTY
+exit
+</code></pre>
+                    </div>
+                </div>
+            </div>
+
+            <div class="step">
+                <div class="step-num">2</div>
+                <div class="step-body">
+                    <h4>Apagar y empaquetar con el CLI de Vagrant</h4>
+                    <p>Desde el host en la carpeta del Vagrantfile:</p>
+                    <div class="code-block">
+                        <pre><code class="language-bash">vagrant halt
+vagrant package --output ubuntu_bda_custom.box
+</code></pre>
+                    </div>
+                </div>
+            </div>
+
+            <div class="step">
+                <div class="step-num">3</div>
+                <div class="step-body">
+                    <h4>Probar la nueva box en una carpeta limpia</h4>
+                    <p>En cualquier otro equipo o carpeta:</p>
+                    <div class="code-block">
+                        <pre><code class="language-bash">vagrant box add bda-base ./ubuntu_bda_custom.box
+vagrant init bda-base
+vagrant up
+</code></pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 4. TUTORIAL DE MULTIPASS -->
+        <h2>4. Alternativa Cloud-Native: Tutorial de Multipass (Canonical)</h2>
+        <p>En los últimos años, Canonical (la creadora de Ubuntu) ha desarrollado <strong>Multipass</strong>, una alternativa moderna a la combinación Vagrant + VirtualBox diseñada específicamente para entornos Cloud y arquitecturas Apple Silicon / WSL2.</p>
+
+        <!-- DIAGRAMA SVG MULTIPASS VS VAGRANT -->
+        <div class="diagram-container">
+            <div class="diagram-title">Comparativa de Arquitectura: Vagrant+VirtualBox vs Multipass Nativo</div>
+            <svg viewBox="0 0 880 260" width="100%" height="auto" style="max-width: 820px; display: block; margin: 0 auto;">
+                <defs>
+                    <linearGradient id="vboxGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stop-color="#1e293b" />
+                        <stop offset="100%" stop-color="#0f172a" />
+                    </linearGradient>
+                    <linearGradient id="multiGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stop-color="#1e3a8a" />
+                        <stop offset="100%" stop-color="#1e40af" />
+                    </linearGradient>
+                </defs>
+
+                <!-- VAGRANT + VIRTUALBOX -->
+                <g transform="translate(40, 20)">
+                    <rect x="0" y="0" width="370" height="220" rx="12" fill="url(#vboxGrad)" stroke="#64748b" stroke-width="1.5" />
+                    <text x="185" y="30" fill="#f8fafc" font-family="Inter, sans-serif" font-size="14" font-weight="700" text-anchor="middle">VAGRANT + VIRTUALBOX (Tipo 2)</text>
+                    
+                    <rect x="25" y="50" width="320" height="35" rx="6" fill="#141d2e" stroke="#334155" />
+                    <text x="185" y="72" fill="#94a3b8" font-family="Inter, sans-serif" font-size="12" text-anchor="middle">Vagrant CLI (Orquestador Ruby)</text>
+
+                    <rect x="25" y="95" width="320" height="35" rx="6" fill="#141d2e" stroke="#334155" />
+                    <text x="185" y="117" fill="#f59e0b" font-family="Inter, sans-serif" font-size="12" text-anchor="middle">VirtualBox (Hipervisor Hosted - Capa Extra)</text>
+
+                    <rect x="25" y="140" width="320" height="35" rx="6" fill="#141d2e" stroke="#334155" />
+                    <text x="185" y="162" fill="#94a3b8" font-family="Inter, sans-serif" font-size="12" text-anchor="middle">Sistema Operativo Host (Windows / macOS)</text>
+
+                    <rect x="25" y="185" width="320" height="25" rx="4" fill="#0284c7" />
+                    <text x="185" y="202" fill="#ffffff" font-family="JetBrains Mono, monospace" font-size="11" font-weight="700" text-anchor="middle">Hardware Físico</text>
+                </g>
+
+                <!-- MULTIPASS -->
+                <g transform="translate(470, 20)">
+                    <rect x="0" y="0" width="370" height="220" rx="12" fill="url(#multiGrad)" stroke="#60a5fa" stroke-width="2" />
+                    <text x="185" y="30" fill="#ffffff" font-family="Inter, sans-serif" font-size="14" font-weight="700" text-anchor="middle">MULTIPASS (Hipervisores Nativos)</text>
+                    
+                    <rect x="25" y="50" width="320" height="40" rx="6" fill="#0f172a" stroke="#60a5fa" />
+                    <text x="185" y="75" fill="#38bdf8" font-family="Inter, sans-serif" font-size="12" font-weight="700" text-anchor="middle">Multipass CLI (Estilo Docker para VMs)</text>
+
+                    <rect x="25" y="100" width="320" height="65" rx="6" fill="#0f172a" stroke="#10b981" />
+                    <text x="185" y="125" fill="#34d399" font-family="Inter, sans-serif" font-size="12" font-weight="700" text-anchor="middle">Hipervisor Nativo de Kernel (Tipo 1)</text>
+                    <text x="185" y="145" fill="#94a3b8" font-family="Inter, sans-serif" font-size="11" text-anchor="middle">Windows: Hyper-V | Linux: KVM | Mac: Hypervisor</text>
+
+                    <rect x="25" y="185" width="320" height="25" rx="4" fill="#0284c7" />
+                    <text x="185" y="202" fill="#ffffff" font-family="JetBrains Mono, monospace" font-size="11" font-weight="700" text-anchor="middle">Hardware Físico</text>
+                </g>
+            </svg>
+        </div>
+
+        <div class="table-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Característica</th>
+                        <th>Vagrant + VirtualBox</th>
+                        <th>Multipass (Canonical)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Tipo de Hipervisor</strong></td>
+                        <td>Tipo 2 (Hosted, mayor consumo de CPU/RAM).</td>
+                        <td>Nativo (Hyper-V en Win, KVM en Linux, Hypervisor.framework en Mac).</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Sistemas Operativos</strong></td>
+                        <td>Cualquier SO (Ubuntu, Debian, CentOS, Windows).</td>
+                        <td>Especializado exclusivamente en imágenes oficiales <strong>Ubuntu</strong>.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Aprovisionamiento</strong></td>
+                        <td>Ruby DSL (Vagrantfile) + Shell / Ansible.</td>
+                        <td><strong>cloud-init (YAML)</strong>, estándar universal de AWS/Azure/GCP.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Velocidad de Arranque</strong></td>
+                        <td>40 – 90 segundos.</td>
+                        <td><strong>10 – 25 segundos</strong> (rendimiento casi nativo).</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <h3>Instalación de Multipass</h3>
+        <div class="code-block">
+            <div class="code-header">
+                <span class="code-lang">bash — Instalación según plataforma</span>
+                <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+            </div>
+            <pre><code class="language-bash"># En Windows (PowerShell Administrador vía winget)
+winget install Canonical.Multipass
+
+# En Linux (mediante Snap)
+sudo snap install multipass
+
+# En macOS (mediante Homebrew)
+brew install --cask multipass
+</code></pre>
+        </div>
+
+        <h3>Comandos Fundamentales de Multipass (Cheat Sheet)</h3>
+        <div class="code-block">
+            <div class="code-header">
+                <span class="code-lang">bash — CLI de Multipass</span>
+                <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+            </div>
+            <pre><code class="language-bash"># 1. Ver versiones de Ubuntu disponibles
+multipass find
+
+# 2. Lanzar una máquina virtual en 20 segundos
+multipass launch --name nodo-datos --cpus 2 --memory 2G --disk 15G 24.04
+
+# 3. Listar máquinas e IPs asignadas
+multipass list
+
+# 4. Entrar por SSH con sesión interactiva
+multipass shell nodo-datos
+
+# 5. Ejecutar un comando remoto sin entrar a la shell
+multipass exec nodo-datos -- uname -a
+
+# 6. Montar una carpeta del host en la máquina
+multipass mount ./datos nodo-datos:/opt/datos
+
+# 7. Apagar y purgar máquinas
+multipass stop nodo-datos
+multipass delete nodo-datos
+multipass purge
+</code></pre>
+        </div>
+
+        <h3>Aprovisionamiento Cloud-Native con 'cloud-init'</h3>
+        <p>En lugar de un <code>Vagrantfile</code> en Ruby, Multipass utiliza <code>cloud-init</code> mediante un archivo YAML estándar de la industria Cloud:</p>
+
+        <div class="code-block">
+            <div class="code-header">
+                <span class="code-lang">yaml — cloud-config.yaml para Multipass</span>
+                <button class="copy-btn" onclick="copyCode(this)">Copiar</button>
+            </div>
+            <pre><code class="language-yaml">#cloud-config
+package_update: true
+package_upgrade: true
+packages:
+  - curl
+  - git
+  - python3-pip
+  - docker.io
+
+runcmd:
+  - systemctl enable --now docker
+  - usermod -aG docker ubuntu
+  - echo "<h1>Multipass Cloud-Init BDA</h1>" > /var/www/html/index.html
+</code></pre>
+        </div>
+
+        <p>Para lanzar la máquina aprovisionada con ese archivo:</p>
+        <div class="code-block">
+            <pre><code class="language-bash">multipass launch --name srv-cloud --cloud-init cloud-config.yaml 24.04</code></pre>
+        </div>
+
+        <!-- CHECKLIST INTERACTIVA -->
+        <div class="checklist-card">
+            <h4>✓ Checklist del Módulo de Laboratorio</h4>
+            <ul class="checklist-items">
+                <li class="check-item" onclick="toggleCheck(this)">
+                    <input type="checkbox">
+                    <span>Completado el Lab 1 con Nginx y PostgreSQL comunicándose en <code>192.168.56.50</code>.</span>
+                </li>
+                <li class="check-item" onclick="toggleCheck(this)">
+                    <input type="checkbox">
+                    <span>Desplegado el Clúster Master/Worker del Lab 2 con resolución DNS en <code>/etc/hosts</code>.</span>
+                </li>
+                <li class="check-item" onclick="toggleCheck(this)">
+                    <input type="checkbox">
+                    <span>Exportada una Box limpia con <code>vagrant package</code> y verificada su re-importación.</span>
+                </li>
+                <li class="check-item" onclick="toggleCheck(this)">
+                    <input type="checkbox">
+                    <span>Comprendidas las ventajas arquitecturales de Multipass frente a la virtualización Hosted Tipo 2.</span>
+                </li>
+            </ul>
+        </div>
+
+        <!-- NAVEGACIÓN ENTRE CAPÍTULOS -->
+        <div class="chapter-nav">
+            <a href="07_troubleshooting_y_ssh.html" class="chapter-nav-btn">← 7. Troubleshooting &amp; SSH</a>
+            <a href="index.html" class="chapter-nav-btn primary">Volver al Índice General ⌂</a>
+        </div>
+
+    </main>
+
+    <!-- FOOTER -->
+    <footer class="footer">
+        <div class="footer-inner">
+            <div class="footer-brand">
+                <div class="brand-logo"><span class="brand-text">IES San Vicente</span> · Big Data &amp; Cloud</div>
+                <p>Material de laboratorio de Sistemas Informáticos &amp; Virtualización (Curso 2026-2027).</p>
+            </div>
+            <div class="footer-brand" style="text-align: right;">
+                <p>Módulo 1 · Unidad de Sistemas · <strong>Vagrant &amp; IaC Bootcamp</strong></p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- PRISM.JS PARA RESALTADO DE CÓDIGO -->
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/prism.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-ruby.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-bash.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-yaml.min.js"></script>
+
+    <!-- SCRIPTS -->
+    <script>
+        function copyCode(btn) {
+            const pre = btn.closest('.code-block').querySelector('pre code');
+            if (!pre) return;
+            const text = pre.innerText || pre.textContent;
+            navigator.clipboard.writeText(text).then(() => {
+                const originalText = btn.innerText;
+                btn.innerText = '✓ Copiado';
+                btn.classList.add('copied');
+                setTimeout(() => {
+                    btn.innerText = originalText;
+                    btn.classList.remove('copied');
+                }, 2000);
+            }).catch(err => {
+                console.error('Error al copiar:', err);
+            });
+        }
+
+        function toggleNav() {
+            const links = document.getElementById('navLinks');
+            links.classList.toggle('open');
+        }
+
+        function toggleCheck(item) {
+            const checkbox = item.querySelector('input[type="checkbox"]');
+            if (event.target !== checkbox) {
+                checkbox.checked = !checkbox.checked;
+            }
+            if (checkbox.checked) {
+                item.classList.add('completed');
+            } else {
+                item.classList.remove('completed');
+            }
+        }
+    </script>
+</body>
+
+</html>
